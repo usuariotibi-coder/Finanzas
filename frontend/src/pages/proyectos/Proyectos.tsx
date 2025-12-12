@@ -179,16 +179,16 @@ export default function Proyectos() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Proyectos</h1>
-          <p className="text-sm text-gray-600 mt-1">Gestiona todos los proyectos de la compañía</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Proyectos</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Gestiona todos los proyectos de la compañía</p>
         </div>
         <button
           onClick={() => abrirModal()}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center space-x-2"
+          className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center justify-center sm:justify-start space-x-2 text-sm sm:text-base"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -198,14 +198,14 @@ export default function Proyectos() {
       </div>
 
       {/* Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="bg-white rounded-lg shadow p-4 lg:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Proyectos Activos</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{metricas.proyectosActivos}</p>
+            <div className="flex-1">
+              <p className="text-xs lg:text-sm text-gray-600">Proyectos Activos</p>
+              <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-2">{metricas.proyectosActivos}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <div className="hidden sm:flex w-12 h-12 bg-green-100 rounded-full items-center justify-center flex-shrink-0 ml-3">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -218,15 +218,15 @@ export default function Proyectos() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 lg:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Presupuesto Total</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
+            <div className="flex-1">
+              <p className="text-xs lg:text-sm text-gray-600">Presupuesto Total</p>
+              <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-2">
                 ${(metricas.presupuestoTotal / 1000000).toFixed(1)}M
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <div className="hidden sm:flex w-12 h-12 bg-blue-100 rounded-full items-center justify-center flex-shrink-0 ml-3">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -239,15 +239,15 @@ export default function Proyectos() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 lg:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Gastado Total</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">
+            <div className="flex-1">
+              <p className="text-xs lg:text-sm text-gray-600">Gastado Total</p>
+              <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-2">
                 ${(metricas.gastadoTotal / 1000000).toFixed(1)}M
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+            <div className="hidden sm:flex w-12 h-12 bg-purple-100 rounded-full items-center justify-center flex-shrink-0 ml-3">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -260,13 +260,13 @@ export default function Proyectos() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 lg:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">% de Uso</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{metricas.porcentajeUso.toFixed(1)}%</p>
+            <div className="flex-1">
+              <p className="text-xs lg:text-sm text-gray-600">% de Uso</p>
+              <p className="text-2xl lg:text-3xl font-bold text-gray-900 mt-2">{metricas.porcentajeUso.toFixed(1)}%</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+            <div className="hidden sm:flex w-12 h-12 bg-orange-100 rounded-full items-center justify-center flex-shrink-0 ml-3">
               <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -287,15 +287,15 @@ export default function Proyectos() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow p-4 lg:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <div>
             <input
               type="text"
               placeholder="Buscar proyecto..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
@@ -303,7 +303,7 @@ export default function Proyectos() {
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value as ProyectoEstado | 'todos')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="todos">Todos los estados</option>
               <option value="activo">Activo</option>
@@ -317,7 +317,7 @@ export default function Proyectos() {
             <select
               value={filtroCliente}
               onChange={(e) => setFiltroCliente(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="todos">Todos los clientes</option>
               {clientes.map(cliente => (
@@ -326,78 +326,171 @@ export default function Proyectos() {
             </select>
           </div>
 
-          <div className="flex items-center justify-end">
-            <span className="text-sm text-gray-600">
+          <div className="flex items-center justify-start lg:justify-end">
+            <span className="text-xs lg:text-sm text-gray-600">
               {proyectosFiltrados.length} proyecto{proyectosFiltrados.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Tabla de Proyectos */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Código
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Presupuesto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gastado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  % Uso
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Responsable
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+      {/* Tabla de Proyectos - Responsive */}
+      <div className="bg-white rounded-lg shadow">
+        {proyectosFiltrados.length === 0 ? (
+          <div className="text-center py-12">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron proyectos</h3>
+            <p className="mt-1 text-sm text-gray-500">Intenta ajustar los filtros de búsqueda</p>
+          </div>
+        ) : (
+          <>
+            {/* Vista Desktop - Tabla */}
+            <div className="hidden lg:block overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Código
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Nombre
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cliente
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Estado
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Presupuesto
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      % Uso
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Responsable
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {proyectosFiltrados.map((proyecto) => {
+                    const porcentajeUso = (proyecto.gastado / proyecto.presupuesto) * 100;
+
+                    return (
+                      <tr key={proyecto.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-bold text-gray-900">{proyecto.codigo}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-medium text-gray-900">{proyecto.nombre}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-600">{proyecto.cliente}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded ${getEstadoBadgeColor(proyecto.estado)}`}>
+                            {getEstadoLabel(proyecto.estado)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900">${(proyecto.presupuesto / 1000).toFixed(0)}K</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  porcentajeUso > 90
+                                    ? 'bg-red-600'
+                                    : porcentajeUso > 75
+                                    ? 'bg-yellow-600'
+                                    : 'bg-green-600'
+                                }`}
+                                style={{ width: `${Math.min(porcentajeUso, 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-xs text-gray-600 w-8">{porcentajeUso.toFixed(0)}%</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-600">{proyecto.responsable}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => abrirModal(proyecto)}
+                            className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                          >
+                            Editar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista Móvil - Cards */}
+            <div className="lg:hidden divide-y divide-gray-200">
               {proyectosFiltrados.map((proyecto) => {
                 const porcentajeUso = (proyecto.gastado / proyecto.presupuesto) * 100;
 
                 return (
-                  <tr key={proyecto.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-bold text-gray-900">{proyecto.codigo}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-900">{proyecto.nombre}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{proyecto.cliente}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded ${getEstadoBadgeColor(proyecto.estado)}`}>
-                        {getEstadoLabel(proyecto.estado)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">${proyecto.presupuesto.toLocaleString()}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">${proyecto.gastado.toLocaleString()}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                  <div key={proyecto.id} className="p-4 hover:bg-gray-50">
+                    <div className="space-y-3">
+                      {/* Header Card */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded text-gray-700">
+                              {proyecto.codigo}
+                            </span>
+                            <span className={`px-2 py-1 text-xs font-semibold rounded ${getEstadoBadgeColor(proyecto.estado)}`}>
+                              {getEstadoLabel(proyecto.estado)}
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-semibold text-gray-900 mt-2">{proyecto.nombre}</h3>
+                          <p className="text-xs text-gray-600 mt-1">{proyecto.cliente}</p>
+                        </div>
+                        <button
+                          onClick={() => abrirModal(proyecto)}
+                          className="text-primary-600 hover:text-primary-900 ml-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Presupuesto Info */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-gray-600">Presupuesto</p>
+                          <p className="text-sm font-semibold text-gray-900">${(proyecto.presupuesto / 1000).toFixed(0)}K</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Gastado</p>
+                          <p className="text-sm font-semibold text-gray-900">${(proyecto.gastado / 1000).toFixed(0)}K</p>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs text-gray-600">Uso de Presupuesto</p>
+                          <span className="text-xs font-semibold text-gray-900">{porcentajeUso.toFixed(0)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               porcentajeUso > 90
@@ -409,59 +502,37 @@ export default function Proyectos() {
                             style={{ width: `${Math.min(porcentajeUso, 100)}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs text-gray-600">{porcentajeUso.toFixed(1)}%</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">{proyecto.responsable}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => abrirModal(proyecto)}
-                        className="text-primary-600 hover:text-primary-900 text-sm font-medium"
-                      >
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
+
+                      {/* Responsable */}
+                      <div className="text-xs text-gray-600">
+                        PM: <span className="font-medium text-gray-900">{proyecto.responsable}</span>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-
-          {proyectosFiltrados.length === 0 && (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron proyectos</h3>
-              <p className="mt-1 text-sm text-gray-500">Intenta ajustar los filtros de búsqueda</p>
             </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Modal Crear/Editar Proyecto */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="flex items-center justify-center min-h-screen px-4 py-8">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={cerrarModal}></div>
 
-            <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full">
-              <div className="px-6 py-4 border-b border-gray-200">
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {modoEdicion ? 'Editar Proyecto' : 'Nuevo Proyecto'}
                 </h3>
               </div>
 
-              <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+              <div className="px-4 sm:px-6 py-4">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Código <span className="text-red-500">*</span>
@@ -505,7 +576,7 @@ export default function Proyectos() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Cliente <span className="text-red-500">*</span>
@@ -533,7 +604,7 @@ export default function Proyectos() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Presupuesto (MXN)
@@ -561,7 +632,7 @@ export default function Proyectos() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Fecha de Inicio
@@ -628,16 +699,16 @@ export default function Proyectos() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <button
                   onClick={cerrarModal}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={guardarProyecto}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
                 >
                   {modoEdicion ? 'Guardar Cambios' : 'Crear Proyecto'}
                 </button>
