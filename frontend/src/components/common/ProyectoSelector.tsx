@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
+import useEscapeKey from '../../hooks/useEscapeKey';
 import type { Proyecto } from '../../types';
+import { NEW_PROJECT_ID } from '../../utils/proyectoLabel';
 
 interface ProyectoSelectorProps {
   value: string;                    // ID del proyecto seleccionado
@@ -7,8 +9,10 @@ interface ProyectoSelectorProps {
   required?: boolean;               // Obligatorio o no
   filterByUser?: boolean;           // Filtrar por proyectos del usuario
   showInactive?: boolean;           // Mostrar proyectos inactivos
+  showCreateOption?: boolean;       // Mostrar opcion de nuevo proyecto
   disabled?: boolean;
   label?: string;
+  inputClassName?: string;
 }
 
 // Mock data de proyectos - esto se reemplazará con data real del backend
@@ -81,6 +85,7 @@ const MOCK_PROYECTOS: Proyecto[] = [
 
 // Guardar en localStorage para persistencia
 const STORAGE_KEY = 'proyectos_data';
+const NEW_PROJECT_LABEL = 'Nuevo Proyecto';
 
 function getProyectos(): Proyecto[] {
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -98,10 +103,14 @@ export default function ProyectoSelector({
   required = false,
   filterByUser = false,
   showInactive = false,
+  showCreateOption = false,
   disabled = false,
-  label = 'Proyecto'
+  label = 'Proyecto',
+  inputClassName = ''
 }: ProyectoSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEscapeKey(() => setIsOpen(false), isOpen);
   const [searchTerm, setSearchTerm] = useState('');
 
   const proyectos = getProyectos();
@@ -130,9 +139,16 @@ export default function ProyectoSelector({
   }, [proyectos, showInactive, searchTerm]);
 
   const selectedProyecto = proyectos.find(p => p.id === value);
+  const isNewProjectSelected = value === NEW_PROJECT_ID;
 
   const handleSelect = (proyecto: Proyecto) => {
     onChange(proyecto.id, proyecto);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  const handleSelectNew = () => {
+    onChange(NEW_PROJECT_ID, null);
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -191,9 +207,13 @@ export default function ProyectoSelector({
           disabled
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
             : 'bg-white hover:border-primary-500 cursor-pointer'
-        } ${isOpen ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-300'}`}
+        } ${isOpen ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-300'} ${inputClassName}`}
       >
-        {selectedProyecto ? (
+        {isNewProjectSelected ? (
+          <div className="flex items-center space-x-2 flex-1">
+            <span className="text-sm font-medium text-gray-900">{NEW_PROJECT_LABEL}</span>
+          </div>
+        ) : selectedProyecto ? (
           <div className="flex items-center space-x-2 flex-1">
             <span className="text-xs font-semibold text-gray-600">{selectedProyecto.codigo}</span>
             <span className="text-sm font-medium text-gray-900">{selectedProyecto.nombre}</span>
@@ -234,6 +254,21 @@ export default function ProyectoSelector({
                 autoFocus
               />
             </div>
+
+            {showCreateOption && (
+              <button
+                type="button"
+                onClick={handleSelectNew}
+                className={`flex items-center justify-between px-4 py-2 text-sm border-b border-gray-200 transition-colors ${
+                  isNewProjectSelected ? 'bg-blue-50 text-blue-700' : 'text-primary-700 hover:bg-primary-50'
+                }`}
+              >
+                <span>{NEW_PROJECT_LABEL}</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            )}
 
             {/* Projects list */}
             <div className="overflow-y-auto flex-1">

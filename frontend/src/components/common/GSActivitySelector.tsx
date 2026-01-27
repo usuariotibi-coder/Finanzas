@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import useEscapeKey from '../../hooks/useEscapeKey';
 import { GS_ACTIVITIES, CATEGORY_LABELS, getActivityById } from '../../data/gsActivities';
 import type { GSActivity } from '../../data/gsActivities';
 
@@ -9,6 +10,7 @@ interface GSActivitySelectorProps {
   disabled?: boolean;
   required?: boolean;
   label?: string;
+  inputClassName?: string;
 }
 
 export default function GSActivitySelector({
@@ -17,9 +19,12 @@ export default function GSActivitySelector({
   filterByCategory,
   disabled = false,
   required = false,
-  label = 'Concepto (GS Activity)'
+  label = 'Concepto (GS Activity)',
+  inputClassName = ''
 }: GSActivitySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEscapeKey(() => setIsOpen(false), isOpen);
 
   const filteredActivities = filterByCategory
     ? GS_ACTIVITIES.filter(a => a.category === filterByCategory)
@@ -57,7 +62,7 @@ export default function GSActivitySelector({
           disabled
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
             : 'bg-white hover:border-primary-500 cursor-pointer'
-        } ${isOpen ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-300'}`}
+        } ${isOpen ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-300'} ${inputClassName}`}
       >
         {selectedActivity ? (
           <div className="flex items-center space-x-2 flex-1">

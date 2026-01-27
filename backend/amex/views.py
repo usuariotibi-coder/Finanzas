@@ -1,0 +1,17 @@
+﻿from rest_framework import viewsets
+
+from accounts.permissions import IsAdmin
+from .models import TarjetaAMEX, TicketAMEX
+from .serializers import TarjetaAMEXSerializer, TicketAMEXSerializer
+
+
+class TicketAMEXViewSet(viewsets.ModelViewSet):
+    queryset = TicketAMEX.objects.select_related('user', 'proyecto', 'factura').order_by('-created_at')
+    serializer_class = TicketAMEXSerializer
+    permission_classes = [IsAdmin]
+
+
+class TarjetaAMEXViewSet(viewsets.ModelViewSet):
+    queryset = TarjetaAMEX.objects.all().order_by('card_holder')
+    serializer_class = TarjetaAMEXSerializer
+    permission_classes = [IsAdmin]

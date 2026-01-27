@@ -1,15 +1,24 @@
 export default function Reportes() {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Reportes Contables</h1>
-        <p className="text-gray-600 mt-1">Generación y exportación de reportes</p>
-      </div>
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl" />
+          <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-indigo-200/40 blur-3xl" />
+          <div className="relative space-y-2">
+            <div className="space-y-1">
+              <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Reportes</p>
+              <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Reportes Contables</h1>
+              <p className="text-[11px] text-slate-600">Generacion y exportacion de reportes.</p>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard label="Reportes Generados" value={12} />
-        <MetricCard label="Este Mes" value={3} />
-        <MetricCard label="Pendientes" value={1} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <MetricCard label="Reportes Generados" value={12} />
+              <MetricCard label="Este Mes" value={3} />
+              <MetricCard label="Pendientes" value={1} />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
@@ -70,14 +79,20 @@ export default function Reportes() {
 
 function MetricCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <p className="text-sm text-gray-600">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-    </div>
+    <button
+      type="button"
+      className="relative w-full overflow-hidden rounded-lg border border-slate-200 bg-white/90 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md select-none"
+    >
+      <span className="absolute inset-y-0 left-0 w-1 bg-slate-300" />
+      <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="text-lg font-semibold text-slate-900">{value}</p>
+    </button>
   );
 }
 
 function ReportItem({ title, date, type, status }: { title: string; date: string; type: string; status: string }) {
+  const statusIcon = status === 'Completado' ? '✅' : status === 'Pendiente' ? '⏳' : '🧭';
+
   return (
     <div className="flex items-center justify-between p-6 hover:bg-gray-50">
       <div className="flex items-center space-x-4">
@@ -91,7 +106,9 @@ function ReportItem({ title, date, type, status }: { title: string; date: string
           <div className="flex items-center space-x-3 mt-1">
             <span className="text-xs text-gray-500">{date}</span>
             <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">{type}</span>
-            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">{status}</span>
+            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+              {statusIcon} {status}
+            </span>
           </div>
         </div>
       </div>

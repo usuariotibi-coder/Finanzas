@@ -1,4 +1,8 @@
-import { Link, useLocation } from 'react-router-dom';
+﻿import { Link, useLocation } from 'react-router-dom';
+import useAuth from '../../hooks/useAuth';
+import useLocalStorageState from '../../hooks/useLocalStorageState';
+import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, Viatico } from '../../types';
+import { canAccessPath } from '../../utils/access';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,13 +18,15 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: 'home' },
   { path: '/mi-portal', label: 'Mi Portal', icon: 'user' },
+  { path: '/portal-pm', label: 'Portal PM', icon: 'pm' },
   { path: '/proyectos', label: 'Proyectos', icon: 'briefcase' },
-  { path: '/viaticos', label: 'Viáticos', icon: 'money', badge: 3 },
-  { path: '/dispersion', label: 'Dispersión', icon: 'send' },
-  { path: '/recuperacion', label: 'Recuperación', icon: 'return' },
-  { path: '/conciliacion', label: 'Conciliación', icon: 'check', badge: 5 },
-  { path: '/amex', label: 'AMEX', icon: 'credit-card', badge: 2 },
+  { path: '/viaticos', label: 'Viaticos', icon: 'money' },
+  { path: '/dispersion', label: 'Dispersion', icon: 'send' },
+  { path: '/recuperacion', label: 'Recuperacion', icon: 'return' },
+  { path: '/conciliacion', label: 'Conciliacion', icon: 'check' },
+  { path: '/amex', label: 'AMEX', icon: 'credit-card' },
   { path: '/flotilla', label: 'Flotilla', icon: 'car' },
+  { path: '/viajes', label: 'Viajes', icon: 'airplane' },
   { path: '/reportes', label: 'Reportes', icon: 'document' },
 ];
 
@@ -105,17 +111,52 @@ const icons: Record<string, React.JSX.Element> = {
       d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
     />
   ),
+  airplane: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 9.5L9 3m0 0l7 7M9 3v11.5M9 21l4.5-4.5M15 9l6 3-6 3m0-6v6m0-6l-6 3"
+    />
+  ),
+  pm: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z M16 2v6h6"
+    />
+  ),
 };
 
 export default function Sidebar({ isOpen }: SidebarProps) {
   const location = useLocation();
+  const { user } = useAuth();
+  const [viaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
+  const [viajesPendientesPm] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', []);
+  const [viaticosAdmin] = useLocalStorageState<Viatico[]>('viaticos:list', []);
+  const [dispersionPendientes] = useLocalStorageState<Viatico[]>('dispersion:viaticosPendientes', []);
+  const [recuperacionPendientes] = useLocalStorageState<Viatico[]>('recuperacion:viaticosPendientes', []);
+  const [conciliacionAlertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
+  const [amexTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
+  const [viajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
+
+  const portalPmBadge = viaticosUsuario.filter((viatico) => viatico.status === 'pendiente').length + viajesPendientesPm.length;
+  const viaticosBadge = viaticosAdmin.filter((viatico) => viatico.status === 'pendiente').length;
+  const dispersionBadge = dispersionPendientes.length;
+  const recuperacionBadge = recuperacionPendientes.length;
+  const conciliacionBadge = conciliacionAlertas.length;
+  const amexBadge = amexTickets.filter((ticket) => !ticket.matched).length;
+  const viajesBadge = viajesSolicitudes.filter((viaje) => viaje.status === 'pendiente' || viaje.status === 'en_proceso').length;
+
+  const filteredItems = menuItems.filter((item) => canAccessPath(user?.role, item.path));
 
   if (!isOpen) return null;
 
   return (
     <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 overflow-y-auto">
       <nav className="p-4 space-y-1">
-        {menuItems.map((item) => {
+        {filteredItems.map((item) => {
           const isActive = location.pathname === item.path;
 
           return (
@@ -140,11 +181,26 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 <span className="font-medium">{item.label}</span>
               </div>
 
-              {item.badge && item.badge > 0 && (
-                <span className="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">
-                  {item.badge}
-                </span>
-              )}
+              {(() => {
+                const badgeMap: Record<string, number> = {
+                  '/portal-pm': portalPmBadge,
+                  '/viaticos': viaticosBadge,
+                  '/dispersion': dispersionBadge,
+                  '/recuperacion': recuperacionBadge,
+                  '/conciliacion': conciliacionBadge,
+                  '/amex': amexBadge,
+                  '/viajes': viajesBadge,
+                };
+                const badgeValue = badgeMap[item.path];
+                if (!badgeValue || badgeValue <= 0) {
+                  return null;
+                }
+                return (
+                  <span className="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">
+                    {badgeValue}
+                  </span>
+                );
+              })()}
             </Link>
           );
         })}
@@ -152,7 +208,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
         <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>Versión 1.0.0</span>
+          <span>Version 1.0.0</span>
           <button className="hover:text-primary-600 transition-colors">
             <svg
               className="w-5 h-5"

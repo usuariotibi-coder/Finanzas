@@ -171,7 +171,7 @@ function MantenimientoPreventivo({ alertas, historial, onSchedule, onComplete }:
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Próximos Servicios</h3>
         {alertas.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {alertas.map(alerta => (
               <AlertCard
                 key={alerta.id}
@@ -220,7 +220,7 @@ function MantenimientoPredictivo({ alertas, historial, onSchedule, onComplete }:
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Alertas Activas</h3>
         {alertas.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {alertas.map(alerta => (
               <AlertCard
                 key={alerta.id}
@@ -269,7 +269,7 @@ function MantenimientoCorrectivo({ alertas, historial, onSchedule, onComplete }:
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Reparaciones Pendientes</h3>
         {alertas.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {alertas.map(alerta => (
               <AlertCard
                 key={alerta.id}
@@ -329,7 +329,7 @@ function MantenimientoOtros({ alertas, onSchedule, onComplete }: MantenimientoOt
           Seguros ({alertasSeguro.length})
         </h3>
         {alertasSeguro.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {alertasSeguro.map(alerta => (
               <AlertCard key={alerta.id} alerta={alerta} onSchedule={onSchedule} onComplete={onComplete} />
             ))}
@@ -345,7 +345,7 @@ function MantenimientoOtros({ alertas, onSchedule, onComplete }: MantenimientoOt
           Verificación Vehicular ({alertasVerificacion.length})
         </h3>
         {alertasVerificacion.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {alertasVerificacion.map(alerta => (
               <AlertCard key={alerta.id} alerta={alerta} onSchedule={onSchedule} onComplete={onComplete} />
             ))}
@@ -361,7 +361,7 @@ function MantenimientoOtros({ alertas, onSchedule, onComplete }: MantenimientoOt
           Renovación de Placas ({alertasPlacas.length})
         </h3>
         {alertasPlacas.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {alertasPlacas.map(alerta => (
               <AlertCard key={alerta.id} alerta={alerta} onSchedule={onSchedule} onComplete={onComplete} />
             ))}

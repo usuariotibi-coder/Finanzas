@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { DashboardMetrics } from '../types';
 
 const mockMetrics: DashboardMetrics = {
@@ -14,42 +15,53 @@ const mockMetrics: DashboardMetrics = {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Vista general del sistema</p>
-      </div>
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl" />
+          <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-indigo-200/40 blur-3xl" />
+          <div className="relative space-y-2">
+            <div className="space-y-1">
+              <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel Principal</p>
+              <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Dashboard</h1>
+              <p className="text-[11px] text-slate-600">Vista general del sistema.</p>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Viáticos Activos"
-          value={mockMetrics.viaticosActivos}
-          icon="money"
-          color="blue"
-          subtitle="en proceso"
-        />
-        <MetricCard
-          title="Aprobación Pendiente"
-          value={mockMetrics.viaticosAprobacionPendiente}
-          icon="clock"
-          color="yellow"
-          subtitle="solicitudes"
-        />
-        <MetricCard
-          title="Total Dispersado"
-          value={`$${mockMetrics.totalDispersado.toLocaleString()}`}
-          icon="chart"
-          color="green"
-          subtitle="este mes"
-        />
-        <MetricCard
-          title="Total a Recuperar"
-          value={`$${mockMetrics.totalRecuperar.toLocaleString()}`}
-          icon="return"
-          color="orange"
-          subtitle="pendiente"
-        />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+              <MetricCard
+                title="Viaticos Activos"
+                value={mockMetrics.viaticosActivos}
+                icon="money"
+                color="blue"
+                subtitle="en proceso"
+              />
+              <MetricCard
+                title="Aprobacion Pendiente"
+                value={mockMetrics.viaticosAprobacionPendiente}
+                icon="clock"
+                color="yellow"
+                subtitle="solicitudes"
+              />
+              <MetricCard
+                title="Total Dispersado"
+                value={`$${mockMetrics.totalDispersado.toLocaleString()}`}
+                icon="chart"
+                color="green"
+                subtitle="este mes"
+              />
+              <MetricCard
+                title="Total a Recuperar"
+                value={`$${mockMetrics.totalRecuperar.toLocaleString()}`}
+                icon="return"
+                color="orange"
+                subtitle="pendiente"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -196,16 +208,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
-          <div className="space-y-2">
-            <QuickActionButton icon="plus" label="Nueva Solicitud de Viático" />
-            <QuickActionButton icon="upload" label="Cargar Facturas" />
-            <QuickActionButton icon="send" label="Realizar Dispersión" />
-            <QuickActionButton icon="car" label="Asignar Vehículo" />
-            <QuickActionButton icon="document" label="Generar Reporte" />
-          </div>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
+        <div className="space-y-2">
+          <QuickActionButton icon="plus" label="Nueva Solicitud de Viático" onClick={() => navigate('/mi-portal')} />
+          <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
+          <QuickActionButton icon="send" label="Realizar Dispersión" onClick={() => navigate('/dispersion')} />
+          <QuickActionButton icon="car" label="Asignar Vehículo" onClick={() => navigate('/flotilla')} />
+          <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
         </div>
+      </div>
       </div>
     </div>
   );
@@ -229,7 +241,10 @@ function MetricCard({ title, value, color, subtitle }: MetricCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <button
+      type="button"
+      className="w-full text-left bg-white rounded-lg shadow p-6 transition hover:-translate-y-0.5 hover:shadow-md select-none"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-gray-600">{title}</h3>
         <div className={`w-10 h-10 rounded-full ${colorClasses[color]} flex items-center justify-center`}>
@@ -242,7 +257,7 @@ function MetricCard({ title, value, color, subtitle }: MetricCardProps) {
         <p className="text-3xl font-bold text-gray-900">{value}</p>
         {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -280,11 +295,15 @@ function ActivityItem({ color, title, description, time }: ActivityItemProps) {
 interface QuickActionButtonProps {
   icon: string;
   label: string;
+  onClick?: () => void;
 }
 
-function QuickActionButton({ label }: QuickActionButtonProps) {
+function QuickActionButton({ label, onClick }: QuickActionButtonProps) {
   return (
-    <button className="w-full flex items-center space-x-3 px-4 py-3 bg-gray-50 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors text-left">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center space-x-3 px-4 py-3 bg-gray-50 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors text-left"
+    >
       <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>

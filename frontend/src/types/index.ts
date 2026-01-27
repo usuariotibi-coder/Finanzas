@@ -1,14 +1,16 @@
-// Tipos de Usuario y Roles
-export type UserRole = 'admin' | 'finanzas' | 'gerente_servicios' | 'usuario';
+// Tipos de Usuario y Roles (backend)
+export type UserRole = 'admin' | 'pm' | 'staff';
 
-export interface User {
-  id: string;
-  name: string;
+export interface AuthUser {
+  id: number;
   email: string;
+  full_name: string;
+  department: string;
+  position: string;
   role: UserRole;
-  department?: string;
-  avatar?: string;
 }
+
+export type User = AuthUser;
 
 // Tipos de Proyectos
 export type ProyectoEstado = 'activo' | 'en_pausa' | 'completado' | 'cancelado';
@@ -44,6 +46,7 @@ export interface Viatico {
   proyectoId: string;          // OBLIGATORIO - vinculado a proyecto
   proyectoNombre: string;      // Para mostrar en tabla
   motivo: string;
+  origen?: string;
   destino: string;
   destinoPais: DestinoPais;
   tipoViatico: TipoViatico;
@@ -59,6 +62,10 @@ export interface Viatico {
   status: ViaticoStatus;
   vehiculoAsignado?: string;
   gsActivityId?: number;       // GS Activity asociado
+  gastoFuente?: 'manual' | 'efectifintech';
+  efectifintechId?: string;
+  efectifintechStatus?: 'pendiente' | 'sincronizado' | 'error';
+  efectifintechLastSyncAt?: string;
   createdAt: string;
   aprobadoPor?: string;
   comentarios?: string;
@@ -70,6 +77,9 @@ export interface Dispersion {
   id: string;
   viaticoId: string;
   monto: number;
+  montoUSD?: number;
+  tipoCambio?: number;
+  moneda?: 'MXN' | 'USD';
   fecha: string;
   metodoPago: 'transferencia' | 'efectivo' | 'tarjeta';
   referencia?: string;
@@ -146,6 +156,9 @@ export interface Consumo {
   monto: number;
   categoria: string;
   facturaId?: string;
+  facturaPdfName?: string;
+  facturaXmlName?: string;
+  facturaNotas?: string;
   matched: boolean;
   autorizado: boolean;
 }
@@ -168,6 +181,9 @@ export interface TicketAMEX {
   gsActivityId?: number;       // GS Activity asociado
   paisComercio: string;        // México, USA, etc.
   facturaId?: string;
+  facturaPdfName?: string;
+  facturaXmlName?: string;
+  facturaNotas?: string;
   matched: boolean;
   autorizado: boolean;
   duplicado: boolean;
@@ -238,14 +254,50 @@ export interface Vehicle {
   createdAt: string;
 }
 
+// Checklist de condición del vehículo
+export interface VehicleConditionChecklist {
+  exterior: {
+    carroceria: 'bueno' | 'regular' | 'malo';
+    pintura: 'bueno' | 'regular' | 'malo';
+    llantas: 'bueno' | 'regular' | 'malo';
+    cristales: 'bueno' | 'regular' | 'malo';
+    espejos: 'bueno' | 'regular' | 'malo';
+  };
+  interior: {
+    asientos: 'bueno' | 'regular' | 'malo';
+    tablero: 'bueno' | 'regular' | 'malo';
+    tapiceria: 'bueno' | 'regular' | 'malo';
+    limpieza: 'bueno' | 'regular' | 'malo';
+  };
+  mecanico: {
+    motor: 'bueno' | 'regular' | 'malo';
+    frenos: 'bueno' | 'regular' | 'malo';
+    luces: 'bueno' | 'regular' | 'malo';
+    aire_acondicionado: 'bueno' | 'regular' | 'malo';
+  };
+  accesorios: {
+    gato: boolean;
+    llave_cruz: boolean;
+    triangulo_seguridad: boolean;
+    extintor: boolean;
+    llanta_refaccion: boolean;
+  };
+  nivelCombustible: '1/4' | '1/2' | '3/4' | 'lleno';
+  foto?: string;  // Foto opcional
+  observaciones?: string;
+}
+
 export interface VehicleAssignment {
   id: string;
   vehicleId: string;
+  vehiculoLabel?: string;
   userId: string;
   userName: string;
   viaticoId?: string;
   proyectoId?: string;         // Opcional pero recomendado
   proyectoNombre?: string;
+  origen?: string;
+  destino?: string;
   fechaInicio: string;
   fechaFin?: string;
   motivo: string;
@@ -254,8 +306,11 @@ export interface VehicleAssignment {
   kmFinal?: number;
   fotoOdometroInicial?: string;
   fotoOdometroFinal?: string;
-  status: 'activo' | 'completado';
+  checklistRecepcion?: VehicleConditionChecklist;  // Checklist al recibir
+  checklistEntrega?: VehicleConditionChecklist;    // Checklist al devolver
+  status: 'solicitado' | 'asignado' | 'activo' | 'completado' | 'rechazado';
   incidentes?: string[];
+  createdAt: string;
 }
 
 export interface VehicleExpense {
@@ -370,6 +425,41 @@ export interface DailyReportEntry {
   metodoPago: string;
   referencia: string;
   registradoPor: string;
+}
+
+// Solicitud de Viaje (Avión, Camión, Hotel)
+export interface SolicitudViaje {
+  id: string;
+  userId: string;
+  userName: string;
+  proyectoId: string;
+  proyectoNombre: string;
+  origen?: string;
+  destino: string;
+  fechaInicio: string;
+  fechaFin: string;
+  motivo: string;
+  necesitaAvion: boolean;
+  necesitaCamion: boolean;
+  necesitaHotel: boolean;
+  detallesAvion?: string;
+  detallesCamion?: string;
+  detallesHotel?: string;
+  status: 'pendiente' | 'en_proceso' | 'confirmado' | 'cancelado' | 'completado' | 'rechazado';
+  // Status individual de cada servicio
+  statusAvion?: 'pendiente' | 'gestionando' | 'confirmado';
+  statusCamion?: 'pendiente' | 'gestionando' | 'confirmado';
+  statusHotel?: 'pendiente' | 'gestionando' | 'confirmado';
+  notas?: string;
+  costoEstimado?: number;
+  costoFinal?: number;
+  confirmaciones?: {
+    avion?: { aerolinea: string; confirmacion: string; costo?: number }[];
+    camion?: { proveedor: string; confirmacion: string; costo?: number }[];
+    hotel?: { nombre: string; confirmacion: string; costo?: number }[];
+  };
+  createdAt: string;
+  atendidoPor?: string;
 }
 
 // Reservaciones
