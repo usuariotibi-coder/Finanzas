@@ -185,10 +185,41 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-primary-600 hover:text-primary-800"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-primary-600 hover:text-primary-800"
                 aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
               >
-                {showPassword ? 'Ocultar' : 'Ver'}
+                <span className="sr-only">{showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}</span>
+                {showPassword ? (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-4 w-4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3l18 18" />
+                    <path d="M10.5 10.5a2 2 0 0 0 2.83 2.83" />
+                    <path d="M6.23 6.23C4.2 7.76 2.77 10 2 12c1.5 3.5 5 6 10 6 1.7 0 3.2-.3 4.5-.9" />
+                    <path d="M9.5 5.1A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-4.16 4.82" />
+                  </svg>
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-4 w-4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
               </button>
             </div>
             <div className="mt-4 rounded-xl border border-gray-100 bg-neutral-50 px-4 py-3">
@@ -258,10 +289,41 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-primary-600 hover:text-primary-800"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-primary-600 hover:text-primary-800"
                 aria-label={showConfirmPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
               >
-                {showConfirmPassword ? 'Ocultar' : 'Ver'}
+                <span className="sr-only">{showConfirmPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}</span>
+                {showConfirmPassword ? (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-4 w-4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3l18 18" />
+                    <path d="M10.5 10.5a2 2 0 0 0 2.83 2.83" />
+                    <path d="M6.23 6.23C4.2 7.76 2.77 10 2 12c1.5 3.5 5 6 10 6 1.7 0 3.2-.3 4.5-.9" />
+                    <path d="M9.5 5.1A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-4.16 4.82" />
+                  </svg>
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-4 w-4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
