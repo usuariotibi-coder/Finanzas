@@ -10,6 +10,7 @@ export default function Login() {
   const { user, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -64,14 +65,24 @@ export default function Login() {
 
           <div>
             <label className="block text-sm font-medium text-neutral-700">Contrasena</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-              placeholder="********"
-            />
+            <div className="mt-2 relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-12 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                placeholder="********"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-primary-600 hover:text-primary-800"
+                aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+              >
+                {showPassword ? 'Ocultar' : 'Ver'}
+              </button>
+            </div>
           </div>
 
           {error && (
