@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { buildPath, saveLastPath } from '../../utils/lastPath';
+import { buildPath, getLastPath, saveLastPath, sanitizePath } from '../../utils/lastPath';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,10 +12,29 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+  const restoreAttempted = useRef(false);
 
   useEffect(() => {
-    saveLastPath(buildPath(location));
+    const currentPath = buildPath(location);
+    if (!restoreAttempted.current) {
+      const previousPath = sanitizePath(getLastPath());
+      if (location.pathname === '/' && previousPath && previousPath !== '/' && previousPath !== currentPath) {
+        return;
+      }
+    }
+    saveLastPath(currentPath);
   }, [location.pathname, location.search, location.hash]);
+
+  useEffect(() => {
+    if (restoreAttempted.current) return;
+    const lastPath = sanitizePath(getLastPath());
+    restoreAttempted.current = true;
+    if (!lastPath || lastPath === location.pathname) return;
+    if (location.pathname === '/' && lastPath !== '/') {
+      navigate(lastPath, { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   return (
     <div className="h-screen bg-neutral-50 text-primary-900 flex flex-col overflow-hidden">
