@@ -17,6 +17,10 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const allowedEmailDomain = 'na.scio-automation.com';
+  const normalizedEmail = email.trim().toLowerCase();
+  const emailDomain = normalizedEmail.split('@')[1] || '';
+  const isAllowedDomain = normalizedEmail.length > 0 && emailDomain === allowedEmailDomain;
   const passwordChecks = [
     { label: 'Minimo 8 caracteres', ok: password.length >= 8 },
     { label: 'Una mayuscula (A-Z)', ok: /[A-Z]/.test(password) },
@@ -55,6 +59,11 @@ export default function Register() {
       setError(
         'La contrasena debe tener minimo 8 caracteres e incluir mayuscula, minuscula, numero y simbolo.'
       );
+      return;
+    }
+
+    if (!isAllowedDomain) {
+      setError(`Solo se permite el dominio @${allowedEmailDomain}.`);
       return;
     }
 
@@ -121,8 +130,11 @@ export default function Register() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="mt-2 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-              placeholder="correo@empresa.com"
+              placeholder={`usuario@${allowedEmailDomain}`}
             />
+            <p className="mt-2 text-xs text-neutral-500">
+              Solo se permite el dominio <span className="font-semibold text-primary-700">@{allowedEmailDomain}</span>
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
