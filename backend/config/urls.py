@@ -47,6 +47,7 @@ router.register('amex/tickets', TicketAMEXViewSet, basename='amex-ticket')
 router.register('amex/tarjetas', TarjetaAMEXViewSet, basename='amex-tarjeta')
 
 urlpatterns = [
+    path('', HealthCheckView.as_view(), name='root-health'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('accounts.urls')),
     path('api/health/', HealthCheckView.as_view(), name='health'),
