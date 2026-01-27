@@ -32,6 +32,7 @@ raw_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
 allowed_hosts = [host.strip() for host in raw_allowed_hosts.split(',') if host.strip()]
 railway_public = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
 railway_private = os.environ.get('RAILWAY_PRIVATE_DOMAIN')
+railway_env = os.environ.get('RAILWAY_ENVIRONMENT')
 for host in (railway_public, railway_private):
     if host:
         allowed_hosts.append(host)
@@ -168,7 +169,9 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
+
+frontend_url = os.environ.get('FRONTEND_URL')
+cors_origins = [
     origin.strip()
     for origin in os.environ.get(
         'CORS_ALLOWED_ORIGINS',
@@ -176,8 +179,7 @@ CORS_ALLOWED_ORIGINS = [
     ).split(',')
     if origin.strip()
 ]
-
-CSRF_TRUSTED_ORIGINS = [
+csrf_origins = [
     origin.strip()
     for origin in os.environ.get(
         'CSRF_TRUSTED_ORIGINS',
@@ -185,12 +187,19 @@ CSRF_TRUSTED_ORIGINS = [
     ).split(',')
     if origin.strip()
 ]
+if frontend_url:
+    cors_origins.append(frontend_url)
+    csrf_origins.append(frontend_url)
 
-COOKIE_SAMESITE = os.environ.get('DJANGO_COOKIE_SAMESITE', 'Lax')
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(cors_origins))
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_origins))
+
+IS_PRODUCTION = (not DEBUG) or bool(railway_public or railway_private or railway_env)
+COOKIE_SAMESITE = os.environ.get('DJANGO_COOKIE_SAMESITE', 'None' if IS_PRODUCTION else 'Lax')
 SESSION_COOKIE_SAMESITE = COOKIE_SAMESITE
 CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE
-SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'false').lower() == 'true'
-CSRF_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'false').lower() == 'true'
+SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'true' if IS_PRODUCTION else 'false').lower() == 'true'
+CSRF_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'true' if IS_PRODUCTION else 'false').lower() == 'true'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
