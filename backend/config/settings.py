@@ -35,7 +35,8 @@ railway_private = os.environ.get('RAILWAY_PRIVATE_DOMAIN')
 for host in (railway_public, railway_private):
     if host:
         allowed_hosts.append(host)
-ALLOWED_HOSTS = allowed_hosts or ['*']
+# Fallback to allow all hosts to avoid healthcheck 400s on Railway.
+ALLOWED_HOSTS = list(dict.fromkeys(allowed_hosts + ['*']))
 
 
 # Application definition
