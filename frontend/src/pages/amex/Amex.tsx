@@ -542,7 +542,6 @@ export default function Amex() {
   const ticketsMatched = filteredTickets.filter(t => Boolean(t.facturaId)).length;
   const ticketsSinMatch = filteredTickets.filter(t => !t.facturaId).length;
   const gastosNoAutorizados = filteredTickets.filter(t => !t.autorizado).length;
-  const duplicados = filteredTickets.filter(t => t.duplicado).length;
 
   // Actualizar cuenta contable de un ticket
   const handleUpdateCuentaContable = (ticketId: string, nuevaCuenta: string) => {

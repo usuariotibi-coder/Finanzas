@@ -96,7 +96,7 @@ const getViajeStatusIcon = (status: string) => {
 
 export default function Viajes() {
   const [solicitudes, setSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', mockSolicitudes);
-  const [solicitudesUsuario, setSolicitudesUsuario] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
+  const [, setSolicitudesUsuario] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
   const [filter, setFilter] = useLocalStorageState<'todos' | 'pendiente' | 'en_proceso' | 'confirmado' | 'completado' | 'rechazado'>('viajes:filter', 'todos');
   const [selectedSolicitud, setSelectedSolicitud] = useLocalStorageState<SolicitudViaje | null>('viajes:selectedSolicitud', null);
 
@@ -968,12 +968,15 @@ function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitu
             <button
               onClick={() => {
                 const sanitizeConfirmaciones = <T extends { costo: number | '' }>(items: T[]) => {
-                  const mapped = items.map((item) => ({
-                    ...item,
-                    costo: item.costo === '' ? undefined : item.costo,
-                  }));
+                  const mapped = items.map((item) => {
+                    const costoValue = typeof item.costo === 'number' ? item.costo : undefined;
+                    return {
+                      ...item,
+                      costo: costoValue,
+                    };
+                  });
                   return mapped.filter((item) => (
-                    Object.values(item).some((value) => value !== '' && value !== undefined)
+                    Object.values(item).some((value) => value !== undefined && value !== null && String(value).trim() !== '')
                   ));
                 };
 

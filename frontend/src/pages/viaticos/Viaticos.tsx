@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Viatico, Proyecto } from '../../types';
-import type { GSActivity } from '../../data/gsActivities';
+import type { Viatico } from '../../types';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
@@ -437,7 +436,7 @@ function NewViaticoModal({ onClose }: NewViaticoModalProps) {
     fechaFin: !formData.fechaFin ? 'Selecciona la fecha de fin.' : '',
     montoSolicitado: montoInvalid ? 'Ingresa un monto válido.' : '',
   };
-  const errors = showErrors ? computedErrors : {};
+  const errors: Partial<typeof computedErrors> = showErrors ? computedErrors : {};
   const hasErrors = Object.values(computedErrors).some(Boolean);
 
   const handleProyectoChange = (proyectoId: string) => {

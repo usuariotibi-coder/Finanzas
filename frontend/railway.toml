@@ -1,0 +1,12 @@
+﻿[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npx serve -s dist -l $PORT"
+
+[build.env]
+NPM_CONFIG_PRODUCTION = "false"
+
+[build.commands]
+install = "npm ci"
+build = "npm run build"

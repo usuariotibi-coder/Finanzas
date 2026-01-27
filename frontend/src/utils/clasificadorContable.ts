@@ -26,7 +26,7 @@ export function clasificarGastoAuto(
 ): { cuentaContable: string; confianza: number; esAutomatico: boolean } {
 
   // 1. Primero verificar si hay un patrón aprendido para este comercio
-  const patronAprendido = buscarPatronAprendido(comercio, categoria);
+  const patronAprendido = buscarPatronAprendido(comercio);
   if (patronAprendido && patronAprendido.confianza > 0.7) {
     return {
       cuentaContable: patronAprendido.cuentaContable,
@@ -107,7 +107,7 @@ export function aprenderPatron(
 /**
  * Busca un patrón aprendido para el comercio
  */
-function buscarPatronAprendido(comercio: string, categoria: string): PatronClasificacion | undefined {
+function buscarPatronAprendido(comercio: string): PatronClasificacion | undefined {
   const comercioLower = comercio.toLowerCase();
   return patronesAprendidos.find(
     p => p.comercio === comercioLower

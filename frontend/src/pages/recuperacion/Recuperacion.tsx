@@ -137,7 +137,7 @@ export default function Recuperacion() {
     }
     const montoDispersado = selectedGastoViatico.montoDispersado ?? 0;
     const saldoRestante = Math.max(montoDispersado - gastoMontoValue, 0);
-    const applyUpdate = (viatico: Viatico) => ({
+    const applyUpdate = (viatico: Viatico): Viatico => ({
       ...viatico,
       montoGastado: gastoMontoValue,
       saldoRestante,

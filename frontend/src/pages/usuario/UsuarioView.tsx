@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Viatico, Proyecto, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
-import type { GSActivity } from '../../data/gsActivities';
+import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
@@ -86,6 +85,23 @@ const MOCK_VIATICOS: Viatico[] = [
 const MOCK_VEHICLES: Vehicle[] = [
   {
     id: 'VEH-001',
+    brand: 'Toyota',
+    model: 'Hilux',
+    year: 2023,
+    plates: 'ABC-123-D',
+    serialNumber: '1HGBH41JXMN109186',
+    insurance: {
+      company: 'GNP',
+      policyNumber: 'POL-12345',
+      expirationDate: '2025-12-31',
+    },
+    maintenance: {
+      lastServiceDate: '2025-11-01',
+      lastServiceKm: 45000,
+      nextServiceDate: '2026-02-01',
+      nextServiceKm: 50000,
+    },
+    currentKm: 47500,
     marca: 'Toyota',
     modelo: 'Hilux',
     anio: 2023,
@@ -109,6 +125,23 @@ const MOCK_VEHICLES: Vehicle[] = [
   },
   {
     id: 'VEH-002',
+    brand: 'Nissan',
+    model: 'Versa',
+    year: 2022,
+    plates: 'XYZ-789-M',
+    serialNumber: '3N1AB7AP0EY123456',
+    insurance: {
+      company: 'Qualitas',
+      policyNumber: 'POL-67890',
+      expirationDate: '2025-10-15',
+    },
+    maintenance: {
+      lastServiceDate: '2025-10-15',
+      lastServiceKm: 32000,
+      nextServiceDate: '2026-01-15',
+      nextServiceKm: 37000,
+    },
+    currentKm: 33200,
     marca: 'Nissan',
     modelo: 'Versa',
     anio: 2022,
@@ -473,13 +506,14 @@ export default function UsuarioView() {
   };
 
   const getVehiculoStatusIcon = (status: VehicleAssignment['status']) => {
-    const icons = {
+    const icons: Record<VehicleAssignment['status'], string> = {
       solicitado: '⏳',
       asignado: '📌',
       activo: '🚗',
       completado: '🏁',
+      rechazado: '⛔',
     };
-    return icons[status] || '🚗';
+    return icons[status] ?? '🚗';
   };
 
   const getViajeStatusIcon = (status: SolicitudViaje['status']) => {
@@ -2473,7 +2507,7 @@ interface VehicleChecklistModalProps {
   requireAllFields?: boolean;
 }
 
-function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto, setFoto, errors, onSubmit, onCancel, requireAllFields = false }: VehicleChecklistModalProps) {
+function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto: _foto, setFoto, errors, onSubmit, onCancel, requireAllFields = false }: VehicleChecklistModalProps) {
   useEscapeKey(onCancel);
   const kmError = errors?.km;
   const fotoError = errors?.foto;

@@ -382,8 +382,9 @@ interface AlertCardProps {
 }
 
 function AlertCard({ alerta, onSchedule, onComplete }: AlertCardProps) {
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
+  const severity = alerta.severity ?? 'low';
+  const getSeverityColor = (level: string) => {
+    switch (level) {
       case 'critical':
         return 'bg-red-50 border-red-200';
       case 'high':
@@ -396,25 +397,25 @@ function AlertCard({ alerta, onSchedule, onComplete }: AlertCardProps) {
   };
 
   return (
-    <div className={`border rounded-lg p-4 ${getSeverityColor(alerta.severity)}`}>
+    <div className={`border rounded-lg p-4 ${getSeverityColor(severity)}`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center space-x-2">
             <h4 className="text-sm font-semibold text-gray-900">{alerta.type}</h4>
             <span className={`px-2 py-0.5 text-xs rounded ${
-              alerta.severity === 'critical'
+              severity === 'critical'
                 ? 'bg-red-200 text-red-800'
-                : alerta.severity === 'high'
+                : severity === 'high'
                 ? 'bg-orange-200 text-orange-800'
-                : alerta.severity === 'medium'
+                : severity === 'medium'
                 ? 'bg-yellow-200 text-yellow-800'
                 : 'bg-blue-200 text-blue-800'
             }`}>
-              {alerta.severity === 'critical'
+              {severity === 'critical'
                 ? 'Crítico'
-                : alerta.severity === 'high'
+                : severity === 'high'
                 ? 'Alto'
-                : alerta.severity === 'medium'
+                : severity === 'medium'
                 ? 'Medio'
                 : 'Bajo'}
             </span>

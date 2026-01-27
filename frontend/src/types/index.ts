@@ -43,13 +43,13 @@ export interface Viatico {
   id: string;
   userId: string;
   userName: string;
-  proyectoId: string;          // OBLIGATORIO - vinculado a proyecto
-  proyectoNombre: string;      // Para mostrar en tabla
+  proyectoId?: string;          // Vinculado a proyecto
+  proyectoNombre?: string;      // Para mostrar en tabla
   motivo: string;
   origen?: string;
   destino: string;
-  destinoPais: DestinoPais;
-  tipoViatico: TipoViatico;
+  destinoPais?: DestinoPais;
+  tipoViatico?: TipoViatico;
   fechaInicio: string;
   fechaFin: string;
   fechaInicioReal?: string;
@@ -176,6 +176,7 @@ export interface TicketAMEX {
   tipoCambio?: number;
   categoria: string;
   cuentaContable: string;      // Ej: 5450, 6090, 6200
+  proyecto?: string;
   proyectoId?: string;         // Obligatorio si cuentaContable es 5450
   proyectoNombre?: string;     // Nombre del proyecto si aplica
   gsActivityId?: number;       // GS Activity asociado
@@ -227,28 +228,53 @@ export interface AlertaConciliacion {
 }
 
 // Tipos de Flotilla (Vehículos)
-export type VehicleStatus = 'disponible' | 'asignado' | 'en_taller' | 'baja';
+export type VehicleStatus =
+  | 'disponible'
+  | 'asignado'
+  | 'en_taller'
+  | 'baja'
+  | 'available'
+  | 'assigned'
+  | 'in_shop'
+  | 'out_of_service';
 
 export interface Vehicle {
   id: string;
-  marca: string;
-  modelo: string;
-  anio: number;
-  placas: string;
-  numeroSerie: string;
-  color: string;
-  seguro: {
+  brand: string;
+  model: string;
+  year: number;
+  plates: string;
+  serialNumber: string;
+  insurance: {
+    company: string;
+    policyNumber: string;
+    expirationDate: string;
+  };
+  maintenance: {
+    lastServiceDate: string;
+    lastServiceKm: number;
+    nextServiceDate: string;
+    nextServiceKm: number;
+  };
+  currentKm: number;
+  marca?: string;
+  modelo?: string;
+  anio?: number;
+  placas?: string;
+  numeroSerie?: string;
+  color?: string;
+  seguro?: {
     compania: string;
     poliza: string;
     vigencia: string;
   };
-  mantenimiento: {
+  mantenimiento?: {
     ultimoServicio: string;
     kmUltimoServicio: number;
     proximoServicio: string;
     kmProximoServicio: number;
   };
-  kmActual: number;
+  kmActual?: number;
   status: VehicleStatus;
   foto?: string;
   createdAt: string;
@@ -331,12 +357,17 @@ export interface VehicleAlert {
   vehicleId: string;
   tipoMantenimiento: 'preventivo' | 'predictivo' | 'correctivo' | 'otro';
   tipoAlerta: 'servicio' | 'seguro' | 'verificacion' | 'placas' | 'reparacion';
-  descripcion: string;
-  fechaVencimiento: string;
-  prioridad: 'alta' | 'media' | 'baja';
+  descripcion?: string;
+  fechaVencimiento?: string;
+  prioridad?: 'alta' | 'media' | 'baja';
+  type?: string;
+  message?: string;
+  dueDate?: string;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
   costoEstimado?: number;
   proveedorSugerido?: string;
-  atendido: boolean;
+  atendido?: boolean;
+  attended?: boolean;
 }
 
 // Carga de Gasolina
@@ -344,8 +375,8 @@ export interface CargaGasolina {
   id: string;
   vehicleId: string;
   assignmentId?: string;
-  userId: string;
-  userName: string;
+  userId?: string;
+  userName?: string;
   fecha: string;
   litros: number;
   precioLitro: number;
@@ -354,6 +385,18 @@ export interface CargaGasolina {
   estacion: string;
   facturaId?: string;
   eficiencia?: number; // KM recorridos / litros
+}
+
+// Historial de mantenimiento
+export interface MaintenanceRecord {
+  id: string;
+  vehicleId: string;
+  fecha: string;
+  tipo: 'preventivo' | 'predictivo' | 'correctivo' | 'otro';
+  descripcion: string;
+  costo: number;
+  km?: number;
+  proveedor?: string;
 }
 
 // Tipos de Reportes

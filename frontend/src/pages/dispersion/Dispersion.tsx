@@ -532,7 +532,6 @@ export default function Dispersion() {
           viatico={selectedViatico}
           onConfirm={handleGuardarDispersion}
           tipoCambioUSD={tipoCambioUSD}
-          onTipoCambioUSDChange={setTipoCambio}
           tipoCambioUpdatedAt={tipoCambioUpdatedAt}
           onClose={() => {
             setShowConfirmacionModal(false);
@@ -640,7 +639,6 @@ interface ConfirmacionDispersionModalProps{
     montoDispersado?: number;
   }) => void;
   tipoCambioUSD: number;
-  onTipoCambioUSDChange: (value: number) => void;
   tipoCambioUpdatedAt: string;
   onClose: () => void;
 }
@@ -649,7 +647,6 @@ function ConfirmacionDispersionModal({
   viatico,
   onConfirm,
   tipoCambioUSD,
-  onTipoCambioUSDChange,
   tipoCambioUpdatedAt,
   onClose,
 }: ConfirmacionDispersionModalProps) {

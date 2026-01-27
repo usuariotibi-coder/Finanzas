@@ -142,8 +142,8 @@ export default function PMPortal() {
   const [viaticosUsuario, setViaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticosResueltos, setViaticosResueltos] = useLocalStorageState<string[]>('pm-portal:viaticosResueltos', []);
   const [viajesPendientes, setViajesPendientes] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', MOCK_VIAJES_PENDIENTES);
-  const [solicitudesViajeUsuario, setSolicitudesViajeUsuario] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
-  const [viajesSolicitudes, setViajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
+  const [, setSolicitudesViajeUsuario] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
+  const [, setViajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
   const [proyectos, setProyectos] = useLocalStorageState<Proyecto[]>('pm-portal:proyectos', MOCK_PROYECTOS_PM);
   const [showModalViaticoDetalle, setShowModalViaticoDetalle] = useLocalStorageState('pm-portal:showModalViaticoDetalle', false);
   const [showModalViajeDetalle, setShowModalViajeDetalle] = useLocalStorageState('pm-portal:showModalViajeDetalle', false);

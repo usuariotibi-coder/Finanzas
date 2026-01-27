@@ -98,25 +98,30 @@ const getVehicleImageUrl = (brand: string, model: string) => {
 };
 
 const getVehicleStatusIcon = (status: Vehicle['status']) => {
-  const icons = {
+  const icons: Record<Vehicle['status'], string> = {
+    disponible: '✅',
+    asignado: '🚗',
+    en_taller: '🛠️',
+    baja: '⛔',
     available: '✅',
     assigned: '🚗',
     in_shop: '🛠️',
     out_of_service: '⛔',
   };
 
-  return icons[status] || '🚗';
+  return icons[status] ?? '🚗';
 };
 
 const getAssignmentStatusIcon = (status: VehicleAssignment['status']) => {
-  const icons = {
+  const icons: Record<VehicleAssignment['status'], string> = {
     solicitado: '⏳',
     asignado: '🚗',
     activo: '✅',
     completado: '🏁',
+    rechazado: '⛔',
   };
 
-  return icons[status] || '🚗';
+  return icons[status] ?? '🚗';
 };
 
 const mockAssignments: VehicleAssignment[] = [
@@ -378,7 +383,7 @@ export default function Flotilla() {
         ...assignment,
         vehicleId,
         vehiculoLabel,
-        status: 'asignado',
+        status: 'asignado' as VehicleAssignment['status'],
       };
     });
     saveAssignments(updatedAssignments);
@@ -402,7 +407,7 @@ export default function Flotilla() {
           ...assignment,
           kmFinal,
           fechaFin: new Date().toISOString(),
-          status: 'completado',
+          status: 'completado' as VehicleAssignment['status'],
           checklistEntrega,
         }
         : assignment
@@ -461,7 +466,7 @@ export default function Flotilla() {
             vehicle: vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plates})` : 'Desconocido',
             date: formatDate(m.fecha),
             type: m.tipo.charAt(0).toUpperCase() + m.tipo.slice(1),
-            km: m.km.toLocaleString(),
+            km: m.km ? m.km.toLocaleString() : 'N/A',
             description: m.descripcion,
             cost: formatCurrency(m.costo),
             provider: m.proveedor,
@@ -892,7 +897,11 @@ interface VehicleCardProps {
 }
 
 function VehicleCard({ vehicle, onVerDetalles, onVerHistorial }: VehicleCardProps) {
-  const statusConfig = {
+  const statusConfig: Record<Vehicle['status'], { color: string; label: string; icon: string }> = {
+    disponible: { color: 'bg-green-100 text-green-800', label: 'Disponible', icon: '✅' },
+    asignado: { color: 'bg-blue-100 text-blue-800', label: 'Asignado', icon: '🚗' },
+    en_taller: { color: 'bg-red-100 text-red-800', label: 'En Taller', icon: '🛠️' },
+    baja: { color: 'bg-gray-100 text-gray-800', label: 'De Baja', icon: '⛔' },
     available: { color: 'bg-green-100 text-green-800', label: 'Disponible', icon: '✅' },
     assigned: { color: 'bg-blue-100 text-blue-800', label: 'Asignado', icon: '🚗' },
     in_shop: { color: 'bg-red-100 text-red-800', label: 'En Taller', icon: '🛠️' },
@@ -1102,7 +1111,11 @@ function FinalizarAsignacionModal({
     }
   );
 
-  const statusConfig = {
+  const statusConfig: Record<Vehicle['status'], { label: string; color: string }> = {
+    disponible: { label: 'Disponible', color: 'bg-green-100 text-green-800' },
+    asignado: { label: 'Asignado', color: 'bg-blue-100 text-blue-800' },
+    en_taller: { label: 'En Taller', color: 'bg-red-100 text-red-800' },
+    baja: { label: 'De Baja', color: 'bg-gray-100 text-gray-800' },
     available: { label: 'Disponible', color: 'bg-green-100 text-green-800' },
     assigned: { label: 'Asignado', color: 'bg-blue-100 text-blue-800' },
     in_shop: { label: 'En Taller', color: 'bg-red-100 text-red-800' },
@@ -1410,7 +1423,7 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
     serialNumber: !formData.serialNumber.trim() ? 'Ingresa el número de serie.' : '',
     color: !formData.color.trim() ? 'Ingresa el color.' : '',
   };
-  const errors = showErrors ? computedErrors : {};
+  const errors: Partial<typeof computedErrors> = showErrors ? computedErrors : {};
   const hasErrors = Object.values(computedErrors).some(Boolean);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -2032,7 +2045,7 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
                         <h4 className="font-semibold text-gray-900">{alert.type}</h4>
                         <p className="text-sm text-gray-700 mt-1">{alert.message}</p>
                         <div className="flex items-center space-x-4 mt-2 text-xs text-gray-600">
-                          <span>Vence: {formatDate(alert.dueDate)}</span>
+                          <span>Vence: {alert.dueDate ? formatDate(alert.dueDate) : 'Sin fecha'}</span>
                           {alert.costoEstimado && (
                             <span>Costo Est: {formatCurrency(alert.costoEstimado)}</span>
                           )}
@@ -2146,7 +2159,7 @@ function HistorialVehiculoModal({ vehicle, maintenanceHistory, cargasGasolina, o
                         </div>
                         <h4 className="font-semibold text-gray-900">{record.descripcion}</h4>
                         <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
-                          <span>KM: {record.km.toLocaleString()}</span>
+                          <span>KM: {record.km ? record.km.toLocaleString() : 'N/A'}</span>
                           <span>Proveedor: {record.proveedor}</span>
                         </div>
                       </div>

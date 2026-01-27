@@ -288,12 +288,9 @@ export default function Conciliacion() {
   const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha));
 
   const facturasValidadas = facturasFiltradas.filter(f => f.status === 'validada').length;
-  const facturasRechazadas = facturasFiltradas.filter(f => f.status === 'rechazada').length;
   const facturasPendientes = facturasFiltradas.filter(f => f.status === 'pendiente').length;
 
-  const consumosMatched = consumosFiltrados.filter(c => c.matched).length;
   const consumosSinMatch = consumosFiltrados.filter(c => !c.matched).length;
-  const amexMatched = ticketsAMEXFiltrados.filter(a => a.matched).length;
   const amexSinMatch = ticketsAMEXFiltrados.filter(a => !a.matched).length;
   const totalFacturasEsperadas = consumosFiltrados.length + ticketsAMEXFiltrados.length;
   const uploadErrors = showUploadErrors
@@ -955,7 +952,6 @@ export default function Conciliacion() {
           alerta={alertas[selectedAlertaIndex]}
           facturas={facturas}
           consumos={consumos}
-          ticketsAMEX={ticketsAMEX}
           onClose={() => setShowAlertaModal(false)}
         />
       )}
@@ -1418,11 +1414,10 @@ interface AlertaDetalleModalProps {
   alerta: AlertaConciliacion;
   facturas: Factura[];
   consumos: Consumo[];
-  ticketsAMEX: TicketAMEX[];
   onClose: () => void;
 }
 
-function AlertaDetalleModal({ alerta, facturas, consumos, ticketsAMEX, onClose }: AlertaDetalleModalProps) {
+function AlertaDetalleModal({ alerta, facturas, consumos, onClose }: AlertaDetalleModalProps) {
   useEscapeKey(onClose);
 
   const factura = alerta.facturaId ? facturas.find(f => f.id === alerta.facturaId) : null;

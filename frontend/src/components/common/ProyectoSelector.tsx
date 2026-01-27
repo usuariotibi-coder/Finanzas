@@ -101,7 +101,7 @@ export default function ProyectoSelector({
   value,
   onChange,
   required = false,
-  filterByUser = false,
+  filterByUser: _filterByUser = false,
   showInactive = false,
   showCreateOption = false,
   disabled = false,
