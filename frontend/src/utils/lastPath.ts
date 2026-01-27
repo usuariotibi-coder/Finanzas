@@ -5,6 +5,7 @@ type LocationLike = {
 };
 
 const LAST_PATH_KEY = 'finanzas:lastPath';
+const SESSION_LAST_PATH_KEY = 'finanzas:lastPath:session';
 const BLOCKED_PATHS = new Set(['/login', '/registro']);
 
 export function buildPath(location?: LocationLike | null) {
@@ -28,6 +29,7 @@ export function saveLastPath(path: string | null) {
   if (!safePath) return;
   try {
     localStorage.setItem(LAST_PATH_KEY, safePath);
+    sessionStorage.setItem(SESSION_LAST_PATH_KEY, safePath);
   } catch {
     // Ignore storage errors (private mode, etc.).
   }
@@ -35,6 +37,10 @@ export function saveLastPath(path: string | null) {
 
 export function getLastPath() {
   try {
+    const sessionStored = sessionStorage.getItem(SESSION_LAST_PATH_KEY);
+    if (sessionStored && sessionStored.startsWith('/')) {
+      return sanitizePath(sessionStored);
+    }
     const stored = localStorage.getItem(LAST_PATH_KEY);
     if (stored && stored.startsWith('/')) {
       return sanitizePath(stored);

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import useAuth from '../../hooks/useAuth';
 import { canAccessPath } from '../../utils/access';
-import { buildPath, getLastPath, saveLastPath, sanitizePath, wasPageReload } from '../../utils/lastPath';
+import { buildPath, getLastPath, saveLastPath, sanitizePath } from '../../utils/lastPath';
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,15 +16,12 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const navigationType = useNavigationType();
   const restoreAttempted = useRef(false);
-  const wasReload = useRef(wasPageReload());
 
   useEffect(() => {
     const currentPath = buildPath(location);
     if (!currentPath) {
-      return;
-    }
-    if (!restoreAttempted.current && wasReload.current && location.pathname === '/') {
       return;
     }
     saveLastPath(currentPath);
@@ -38,20 +35,16 @@ export default function Layout({ children }: LayoutProps) {
     if (!currentPath) {
       return;
     }
-    if (!wasReload.current) {
-      saveLastPath(currentPath);
-      return;
-    }
     if (!lastPath || lastPath === location.pathname) {
       saveLastPath(currentPath);
       return;
     }
-    if (location.pathname === '/' && canAccessPath(user?.role, lastPath)) {
+    if (navigationType === 'POP' && location.pathname === '/' && canAccessPath(user?.role, lastPath)) {
       navigate(lastPath, { replace: true });
       return;
     }
     saveLastPath(currentPath);
-  }, [location.pathname, location.search, location.hash, loading, navigate, user?.role]);
+  }, [location.pathname, location.search, location.hash, loading, navigate, navigationType, user?.role]);
 
   return (
     <div className="h-screen bg-neutral-50 text-primary-900 flex flex-col overflow-hidden">

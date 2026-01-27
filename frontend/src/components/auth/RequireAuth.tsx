@@ -22,7 +22,7 @@ export default function RequireAuth({ children }: RequireAuthProps) {
     );
   }
 
-  if (!user) {
+  if (!user?.id) {
     saveLastPath(buildPath(location));
     return <Navigate to="/login" replace state={{ from: location }} />;
   }

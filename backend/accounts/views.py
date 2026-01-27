@@ -45,5 +45,9 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
+        if not request.user or not request.user.is_authenticated:
+            return Response({'detail': 'No autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(UserSerializer(request.user).data)

@@ -48,8 +48,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const data = await api.me();
-        setUser(data as AuthUser);
+        const data = (await api.me()) as AuthUser;
+        if (!data?.id || !data?.role) {
+          throw new Error('Sesion invalida');
+        }
+        setUser(data);
       } catch (error) {
         setUser(null);
       } finally {
