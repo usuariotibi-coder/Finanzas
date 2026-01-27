@@ -57,14 +57,14 @@ export default function Register() {
     <AuthLayout>
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 px-8 py-10">
         <div className="mb-8">
-          <p className="text-xs tracking-[0.3em] text-gray-400 uppercase">Registro</p>
-          <h1 className="text-2xl font-semibold text-gray-900">Crea una cuenta</h1>
-          <p className="text-sm text-gray-500 mt-2">Define tu departamento y rol desde el inicio.</p>
+          <p className="text-xs tracking-[0.3em] text-neutral-500 uppercase">Registro</p>
+          <h1 className="text-2xl font-semibold text-primary-900">Crea una cuenta</h1>
+          <p className="text-sm text-neutral-600 mt-2">Define tu departamento y rol desde el inicio.</p>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Nombre completo</label>
+            <label className="block text-sm font-medium text-neutral-700">Nombre completo</label>
             <input
               type="text"
               required
@@ -76,7 +76,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Correo</label>
+            <label className="block text-sm font-medium text-neutral-700">Correo</label>
             <input
               type="email"
               required
@@ -89,7 +89,7 @@ export default function Register() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Departamento</label>
+              <label className="block text-sm font-medium text-neutral-700">Departamento</label>
               <select
                 value={department}
                 onChange={(event) => setDepartment(event.target.value)}
@@ -104,7 +104,7 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Puesto</label>
+              <label className="block text-sm font-medium text-neutral-700">Puesto</label>
               <select
                 value={position}
                 onChange={(event) => setPosition(event.target.value)}
@@ -120,7 +120,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Contrasena</label>
+            <label className="block text-sm font-medium text-neutral-700">Contrasena</label>
             <input
               type="password"
               required
@@ -132,7 +132,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Confirmar contrasena</label>
+            <label className="block text-sm font-medium text-neutral-700">Confirmar contrasena</label>
             <input
               type="password"
               required
@@ -158,7 +158,7 @@ export default function Register() {
           </button>
         </form>
 
-        <p className="text-sm text-gray-500 mt-6 text-center">
+        <p className="text-sm text-neutral-600 mt-6 text-center">
           Ya tienes cuenta?{' '}
           <Link className="text-primary-600 font-semibold hover:underline" to="/login">
             Iniciar sesion

@@ -134,69 +134,69 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     const styles = {
       'portal-pm': {
         label: 'PM',
-        bg: 'bg-indigo-50',
-        text: 'text-indigo-600',
-        badge: 'bg-indigo-500',
-        border: 'border-indigo-200',
-        ring: 'ring-indigo-200',
+        bg: 'bg-primary-50',
+        text: 'text-primary-700',
+        badge: 'bg-accent-500',
+        border: 'border-primary-100',
+        ring: 'ring-primary-100',
       },
       viaticos: {
         label: '$',
-        bg: 'bg-blue-50',
-        text: 'text-blue-600',
-        badge: 'bg-blue-500',
-        border: 'border-blue-200',
-        ring: 'ring-blue-200',
+        bg: 'bg-accent-50',
+        text: 'text-accent-700',
+        badge: 'bg-accent-500',
+        border: 'border-accent-200',
+        ring: 'ring-accent-100',
       },
       dispersion: {
         label: 'DS',
-        bg: 'bg-emerald-50',
-        text: 'text-emerald-600',
-        badge: 'bg-emerald-500',
-        border: 'border-emerald-200',
-        ring: 'ring-emerald-200',
+        bg: 'bg-neutral-100',
+        text: 'text-primary-700',
+        badge: 'bg-primary-600',
+        border: 'border-neutral-200',
+        ring: 'ring-neutral-200',
       },
       recuperacion: {
         label: 'RC',
-        bg: 'bg-orange-50',
-        text: 'text-orange-600',
-        badge: 'bg-orange-500',
-        border: 'border-orange-200',
-        ring: 'ring-orange-200',
+        bg: 'bg-neutral-100',
+        text: 'text-primary-700',
+        badge: 'bg-primary-600',
+        border: 'border-neutral-200',
+        ring: 'ring-neutral-200',
       },
       conciliacion: {
         label: 'CC',
-        bg: 'bg-purple-50',
-        text: 'text-purple-600',
-        badge: 'bg-purple-500',
-        border: 'border-purple-200',
-        ring: 'ring-purple-200',
+        bg: 'bg-primary-100',
+        text: 'text-primary-800',
+        badge: 'bg-primary-700',
+        border: 'border-primary-200',
+        ring: 'ring-primary-200',
       },
       amex: {
         label: 'AM',
-        bg: 'bg-rose-50',
-        text: 'text-rose-600',
-        badge: 'bg-rose-500',
-        border: 'border-rose-200',
-        ring: 'ring-rose-200',
+        bg: 'bg-accent-50',
+        text: 'text-accent-700',
+        badge: 'bg-accent-600',
+        border: 'border-accent-200',
+        ring: 'ring-accent-100',
       },
       viajes: {
         label: 'VJ',
-        bg: 'bg-sky-50',
-        text: 'text-sky-600',
-        badge: 'bg-sky-500',
-        border: 'border-sky-200',
-        ring: 'ring-sky-200',
+        bg: 'bg-neutral-100',
+        text: 'text-primary-700',
+        badge: 'bg-primary-600',
+        border: 'border-neutral-200',
+        ring: 'ring-neutral-200',
       },
     };
 
     return styles[id as keyof typeof styles] ?? {
       label: 'N',
-      bg: 'bg-gray-50',
-      text: 'text-gray-600',
-      badge: 'bg-gray-500',
-      border: 'border-gray-200',
-      ring: 'ring-gray-200',
+      bg: 'bg-neutral-100',
+      text: 'text-primary-700',
+      badge: 'bg-primary-600',
+      border: 'border-neutral-200',
+      ring: 'ring-neutral-200',
     };
   };
 
@@ -222,15 +222,16 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
+    <nav className="fixed top-0 left-0 right-0 h-16 bg-white/95 border-b border-neutral-200 z-50 shadow-sm backdrop-blur">
+      <div className="absolute inset-x-0 top-0 h-1 bg-accent-500" />
       <div className="flex items-center justify-between h-full px-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-lg hover:bg-primary-50 transition-colors"
           >
             <svg
-              className="w-6 h-6 text-gray-600"
+              className="w-6 h-6 text-primary-700"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -244,7 +245,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             </svg>
           </button>
 
-          <h1 className="text-xl font-bold text-gray-800">
+          <h1 className="text-xl font-bold text-primary-900 tracking-tight">
             Sistema de Gestion Financiera
           </h1>
         </div>
@@ -253,11 +254,11 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           <div className="relative" ref={panelRef}>
             <button
               onClick={() => setIsOpen((prev) => !prev)}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="relative p-2 rounded-lg hover:bg-primary-50 transition-colors"
               aria-label="Notificaciones"
             >
               <svg
-                className="w-6 h-6 text-gray-600"
+                className="w-6 h-6 text-primary-700"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -270,42 +271,42 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                 />
               </svg>
               {totalNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] px-1.5 py-0.5 text-[10px] font-semibold text-white bg-red-500 rounded-full text-center">
+                <span className="absolute -top-1 -right-1 min-w-[18px] px-1.5 py-0.5 text-[10px] font-semibold text-white bg-accent-500 rounded-full text-center">
                   {totalNotifications > 9 ? '9+' : totalNotifications}
                 </span>
               )}
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-xl ring-1 ring-black/5 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+              <div className="absolute right-0 mt-2 w-80 bg-white border border-neutral-200 rounded-xl shadow-xl ring-1 ring-black/5 overflow-hidden">
+                <div className="px-4 py-3 border-b border-neutral-200 bg-gradient-to-r from-primary-50 via-white to-neutral-50">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-800">Notificaciones</p>
-                        <p className="text-xs text-gray-500">Resumen de pendientes</p>
+                        <p className="text-sm font-semibold text-primary-900">Notificaciones</p>
+                        <p className="text-xs text-neutral-600">Resumen de pendientes</p>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Total <span className="font-semibold text-gray-800">{totalNotifications}</span>
+                    <div className="text-xs text-neutral-600">
+                      Total <span className="font-semibold text-primary-900">{totalNotifications}</span>
                     </div>
                   </div>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
-                      <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
+                    <div className="px-4 py-8 text-center text-sm text-neutral-600">
+                      <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-neutral-100 text-neutral-500 flex items-center justify-center">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                       </div>
                       Todo al dia.
-                      <div className="text-xs text-gray-400 mt-1">No hay pendientes.</div>
+                      <div className="text-xs text-neutral-500 mt-1">No hay pendientes.</div>
                     </div>
                   ) : (
                     notifications.map((item) => {
@@ -317,15 +318,15 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                             setIsOpen(false);
                             navigate(item.path);
                           }}
-                          className={`w-full text-left px-4 py-3 hover:bg-gray-50 flex items-start justify-between gap-3 border-l-2 ${style.border}`}
+                          className={`w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-start justify-between gap-3 border-l-2 ${style.border}`}
                         >
                           <div className="flex items-start gap-3">
                             <div className={`w-9 h-9 rounded-lg ${style.bg} ${style.text} ring-1 ${style.ring} flex items-center justify-center text-xs font-semibold`}>
                               {style.label}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                              <p className="text-xs text-gray-500">{item.description}</p>
+                              <p className="text-sm font-medium text-primary-900">{item.title}</p>
+                              <p className="text-xs text-neutral-600">{item.description}</p>
                             </div>
                           </div>
                           <span className={`min-w-[28px] px-2 py-0.5 text-xs font-semibold text-white ${style.badge} rounded-full text-center`}>
@@ -342,15 +343,15 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
 
           <div className="flex items-center space-x-3">
             <div className="text-right">
-              <p className="text-sm font-medium text-gray-800">{userName}</p>
-              <p className="text-xs text-gray-500">{userRoleLabel}</p>
+              <p className="text-sm font-medium text-primary-900">{userName}</p>
+              <p className="text-xs text-neutral-600">{userRoleLabel}</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center text-white font-semibold">
+            <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold">
               {initials || 'US'}
             </div>
             <button
               onClick={handleLogout}
-              className="text-xs font-semibold text-gray-500 hover:text-primary-600 transition-colors"
+              className="text-xs font-semibold text-neutral-600 hover:text-accent-600 transition-colors"
             >
               Salir
             </button>

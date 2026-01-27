@@ -3,12 +3,17 @@
 @tailwind utilities;
 
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Barlow Semi Condensed', system-ui, sans-serif;
+  color: #2e1a47;
+  background-color: #f5f6f8;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  background: linear-gradient(180deg, #f5f6f8 0%, #ebecee 100%);
+  color: #2e1a47;
+  @apply font-body;
 }
 
 @layer base {
@@ -35,7 +40,30 @@ body {
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    @apply ring-2 ring-primary-500 ring-offset-1;
+    @apply ring-2 ring-accent-500 ring-offset-1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display font-semibold tracking-tight text-primary-800;
+  }
+
+  h1 {
+    @apply text-3xl sm:text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl sm:text-3xl;
+  }
+
+  h3 {
+    @apply text-xl sm:text-2xl;
+  }
+
+  p {
+    @apply text-neutral-800;
   }
 
   table tbody tr {

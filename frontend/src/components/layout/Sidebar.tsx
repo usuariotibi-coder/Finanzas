@@ -154,7 +154,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   if (!isOpen) return null;
 
   return (
-    <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 overflow-y-auto">
+    <aside className="fixed left-0 top-16 w-64 h-[calc(100vh-4rem)] bg-white border-r border-neutral-200 overflow-y-auto">
       <nav className="p-4 space-y-1">
         {filteredItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -163,15 +163,15 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+              className={`flex items-center justify-between py-3 rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'bg-primary-50 text-primary-800 border-l-4 border-accent-500 pl-3 pr-4'
+                  : 'text-neutral-700 hover:bg-neutral-50 px-4'
               }`}
             >
               <div className="flex items-center space-x-3">
                 <svg
-                  className={`w-5 h-5 ${isActive ? 'text-primary-600' : 'text-gray-500'}`}
+                  className={`w-5 h-5 ${isActive ? 'text-primary-700' : 'text-neutral-500'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -196,7 +196,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   return null;
                 }
                 return (
-                  <span className="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">
+                  <span className="px-2 py-1 text-xs font-semibold text-white bg-accent-500 rounded-full">
                     {badgeValue}
                   </span>
                 );
@@ -206,10 +206,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         })}
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-        <div className="flex items-center justify-between text-sm text-gray-600">
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-200 bg-white">
+        <div className="flex items-center justify-between text-sm text-neutral-600">
           <span>Version 1.0.0</span>
-          <button className="hover:text-primary-600 transition-colors">
+          <button className="hover:text-accent-600 transition-colors">
             <svg
               className="w-5 h-5"
               fill="none"
