@@ -28,7 +28,14 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'true').lower() == 'true'
 
-ALLOWED_HOSTS = [host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if host.strip()]
+raw_allowed_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+allowed_hosts = [host.strip() for host in raw_allowed_hosts.split(',') if host.strip()]
+railway_public = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+railway_private = os.environ.get('RAILWAY_PRIVATE_DOMAIN')
+for host in (railway_public, railway_private):
+    if host:
+        allowed_hosts.append(host)
+ALLOWED_HOSTS = allowed_hosts or ['*']
 
 
 # Application definition
