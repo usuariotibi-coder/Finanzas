@@ -1,7 +1,8 @@
 ﻿import type { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import type { UserRole } from '../../types';
 import useAuth from '../../hooks/useAuth';
+import { buildPath, saveLastPath } from '../../utils/lastPath';
 
 interface RequireRoleProps {
   allowed: UserRole[];
@@ -10,6 +11,7 @@ interface RequireRoleProps {
 
 export default function RequireRole({ allowed, children }: RequireRoleProps) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -23,7 +25,8 @@ export default function RequireRole({ allowed, children }: RequireRoleProps) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    saveLastPath(buildPath(location));
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   if (!allowed.includes(user.role)) {

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import { buildPath, saveLastPath } from '../../utils/lastPath';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +11,11 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const location = useLocation();
+
+  useEffect(() => {
+    saveLastPath(buildPath(location));
+  }, [location.pathname, location.search, location.hash]);
 
   return (
     <div className="h-screen bg-neutral-50 text-primary-900 flex flex-col overflow-hidden">

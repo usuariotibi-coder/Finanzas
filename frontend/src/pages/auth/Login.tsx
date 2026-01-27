@@ -1,21 +1,30 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
+import { buildPath, getLastPath, sanitizePath } from '../../utils/lastPath';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const redirectTarget =
+    sanitizePath(
+      buildPath((location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from)
+    ) ||
+    getLastPath() ||
+    '/';
+
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(redirectTarget, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTarget]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -23,7 +32,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate('/', { replace: true });
+      navigate(redirectTarget, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesion.');
     } finally {

@@ -1,6 +1,7 @@
 ﻿import type { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
+import { buildPath, saveLastPath } from '../../utils/lastPath';
 
 interface RequireAuthProps {
   children: ReactNode;
@@ -8,6 +9,7 @@ interface RequireAuthProps {
 
 export default function RequireAuth({ children }: RequireAuthProps) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -21,7 +23,8 @@ export default function RequireAuth({ children }: RequireAuthProps) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    saveLastPath(buildPath(location));
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   return <>{children}</>;

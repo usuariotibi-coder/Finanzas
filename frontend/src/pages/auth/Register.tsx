@@ -1,11 +1,13 @@
 ﻿import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
 import { departmentOptions, positionOptions } from '../../context/AuthContext';
+import { buildPath, getLastPath, sanitizePath } from '../../utils/lastPath';
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, register } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,11 +34,18 @@ export default function Register() {
     { label: 'Muy fuerte', color: 'bg-emerald-600', text: 'text-emerald-700' },
   ][Math.max(0, Math.min(4, strengthScore - 1))];
 
+  const redirectTarget =
+    sanitizePath(
+      buildPath((location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from)
+    ) ||
+    getLastPath() ||
+    '/';
+
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(redirectTarget, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTarget]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -63,7 +72,7 @@ export default function Register() {
         position,
         password,
       });
-      navigate('/', { replace: true });
+      navigate(redirectTarget, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo registrar.');
     } finally {
