@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { buildPath, getLastPath, saveLastPath, sanitizePath } from '../../utils/lastPath';
+import useAuth from '../../hooks/useAuth';
+import { canAccessPath } from '../../utils/access';
+import { buildPath, getLastPath, saveLastPath, sanitizePath, wasPageReload } from '../../utils/lastPath';
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,28 +15,43 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const restoreAttempted = useRef(false);
+  const wasReload = useRef(wasPageReload());
 
   useEffect(() => {
     const currentPath = buildPath(location);
-    if (!restoreAttempted.current) {
-      const previousPath = sanitizePath(getLastPath());
-      if (location.pathname === '/' && previousPath && previousPath !== '/' && previousPath !== currentPath) {
-        return;
-      }
+    if (!currentPath) {
+      return;
+    }
+    if (!restoreAttempted.current && wasReload.current && location.pathname === '/') {
+      return;
     }
     saveLastPath(currentPath);
   }, [location.pathname, location.search, location.hash]);
 
   useEffect(() => {
-    if (restoreAttempted.current) return;
+    if (restoreAttempted.current || loading) return;
     const lastPath = sanitizePath(getLastPath());
+    const currentPath = buildPath(location);
     restoreAttempted.current = true;
-    if (!lastPath || lastPath === location.pathname) return;
-    if (location.pathname === '/' && lastPath !== '/') {
-      navigate(lastPath, { replace: true });
+    if (!currentPath) {
+      return;
     }
-  }, [location.pathname, navigate]);
+    if (!wasReload.current) {
+      saveLastPath(currentPath);
+      return;
+    }
+    if (!lastPath || lastPath === location.pathname) {
+      saveLastPath(currentPath);
+      return;
+    }
+    if (location.pathname === '/' && canAccessPath(user?.role, lastPath)) {
+      navigate(lastPath, { replace: true });
+      return;
+    }
+    saveLastPath(currentPath);
+  }, [location.pathname, location.search, location.hash, loading, navigate, user?.role]);
 
   return (
     <div className="h-screen bg-neutral-50 text-primary-900 flex flex-col overflow-hidden">

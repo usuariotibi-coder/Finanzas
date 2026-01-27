@@ -44,3 +44,13 @@ export function getLastPath() {
   }
   return null;
 }
+
+export function wasPageReload() {
+  if (typeof performance === 'undefined') return false;
+  const navEntries = performance.getEntriesByType?.('navigation') as PerformanceNavigationTiming[] | undefined;
+  if (navEntries && navEntries.length > 0) {
+    return navEntries[0].type === 'reload';
+  }
+  const legacyNav = (performance as Performance & { navigation?: { type: number } }).navigation;
+  return legacyNav?.type === 1;
+}
