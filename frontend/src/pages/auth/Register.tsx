@@ -41,10 +41,15 @@ export default function Register() {
     { label: 'Muy fuerte', color: 'bg-emerald-600', text: 'text-emerald-700' },
   ][Math.max(0, Math.min(4, strengthScore - 1))];
 
+  const showFormError = (message: string) => {
+    setError(message);
+    setModalMessage(message);
+  };
+
   const formatRegisterError = (message: string) => {
     const normalized = message.toLowerCase();
-    if (normalized.includes('csrf')) {
-      return 'Tu sesion expiro. Recarga la pagina e intenta de nuevo.';
+    if (normalized.includes('csrf') || normalized.includes('token missing')) {
+      return 'No se pudo validar la sesion. Recarga la pagina e intenta de nuevo.';
     }
     if (normalized.includes('ya esta registrado') || normalized.includes('already exists')) {
       return 'Este correo ya esta registrado. Intenta iniciar sesion.';
@@ -71,20 +76,32 @@ export default function Register() {
     event.preventDefault();
     setError('');
 
+    if (
+      !fullName.trim() ||
+      !email.trim() ||
+      !department ||
+      !position.trim() ||
+      !password ||
+      !confirmPassword
+    ) {
+      showFormError('Completa todos los campos antes de crear la cuenta.');
+      return;
+    }
+
     if (passwordChecks.some((check) => !check.ok)) {
-      setError(
+      showFormError(
         'La contrasena debe tener minimo 8 caracteres e incluir mayuscula, minuscula, numero y simbolo.'
       );
       return;
     }
 
     if (!isAllowedDomain) {
-      setError(`Solo se permite el dominio @${allowedEmailDomain}.`);
+      showFormError(`Solo se permite el dominio @${allowedEmailDomain}.`);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Las contrasenas no coinciden.');
+      showFormError('Las contrasenas no coinciden.');
       return;
     }
 
@@ -99,11 +116,9 @@ export default function Register() {
       });
       navigate(redirectTarget, { replace: true });
     } catch (err) {
-      const message = formatRegisterError(
-        err instanceof Error ? err.message : 'No se pudo registrar.'
+      showFormError(
+        formatRegisterError(err instanceof Error ? err.message : 'No se pudo registrar.')
       );
-      setError(message);
-      setModalMessage(message);
     } finally {
       setSubmitting(false);
     }
