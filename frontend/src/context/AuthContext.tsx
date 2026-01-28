@@ -21,6 +21,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const departmentOptions = [
   { value: 'finanzas', label: 'Finanzas' },
+  { value: 'operaciones', label: 'Operaciones' },
   { value: 'diseno_mecanico', label: 'Diseno Mecanico' },
   { value: 'hardware_design', label: 'Hardware Design' },
   { value: 'ensamble', label: 'Ensamble' },
@@ -29,15 +30,9 @@ export const departmentOptions = [
   { value: 'otro', label: 'Otro' },
 ];
 
-export const positionOptions = [
-  { value: 'project_manager', label: 'Project Manager' },
-  { value: 'colaborador', label: 'Colaborador' },
-  { value: 'otro', label: 'Otro' },
-];
-
 export const roleLabels: Record<UserRole, string> = {
   admin: 'Administrador',
-  pm: 'Project Manager',
+  pm: 'Operaciones',
   staff: 'Colaborador',
 };
 

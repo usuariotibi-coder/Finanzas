@@ -2,7 +2,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
-import { departmentOptions, positionOptions } from '../../context/AuthContext';
+import { departmentOptions } from '../../context/AuthContext';
 import { buildPath, getLastPath, sanitizePath } from '../../utils/lastPath';
 
 export default function Register() {
@@ -12,7 +12,7 @@ export default function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState(departmentOptions[0]?.value || 'finanzas');
-  const [position, setPosition] = useState(positionOptions[1]?.value || 'colaborador');
+  const [position, setPosition] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -157,17 +157,14 @@ export default function Register() {
 
             <div>
               <label className="block text-sm font-medium text-neutral-700">Puesto</label>
-              <select
+              <input
+                type="text"
+                required
                 value={position}
                 onChange={(event) => setPosition(event.target.value)}
                 className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-              >
-                {positionOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                placeholder="Escribe tu puesto"
+              />
             </div>
           </div>
 

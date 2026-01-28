@@ -4,6 +4,7 @@ from django.db import models
 
 class Department(models.TextChoices):
     FINANZAS = 'finanzas', 'Finanzas'
+    OPERACIONES = 'operaciones', 'Operaciones'
     DISENO_MECANICO = 'diseno_mecanico', 'Diseno Mecanico'
     HARDWARE_DESIGN = 'hardware_design', 'Hardware Design'
     ENSAMBLE = 'ensamble', 'Ensamble'
@@ -11,16 +12,9 @@ class Department(models.TextChoices):
     MANUFACTURA = 'manufactura', 'Manufactura'
     OTRO = 'otro', 'Otro'
 
-
-class Position(models.TextChoices):
-    PROJECT_MANAGER = 'project_manager', 'Project Manager'
-    COLABORADOR = 'colaborador', 'Colaborador'
-    OTRO = 'otro', 'Otro'
-
-
 class Role(models.TextChoices):
     ADMIN = 'admin', 'Administrador'
-    PM = 'pm', 'Project Manager'
+    PM = 'pm', 'Operaciones'
     STAFF = 'staff', 'Colaborador'
 
 
@@ -39,7 +33,7 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('department', Department.FINANZAS)
-        extra_fields.setdefault('position', Position.OTRO)
+        extra_fields.setdefault('position', 'Administrador')
         user = self.create_user(email, password, **extra_fields)
         user.role = Role.ADMIN
         user.save(using=self._db)
@@ -50,7 +44,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=120)
     department = models.CharField(max_length=50, choices=Department.choices)
-    position = models.CharField(max_length=50, choices=Position.choices, default=Position.COLABORADOR)
+    position = models.CharField(max_length=50, default='Colaborador')
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STAFF)
 
     is_active = models.BooleanField(default=True)
@@ -67,7 +61,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def resolve_role(self) -> str:
         if self.department == Department.FINANZAS:
             return Role.ADMIN
-        if self.position == Position.PROJECT_MANAGER:
+        if self.department == Department.OPERACIONES:
             return Role.PM
         return Role.STAFF
 
