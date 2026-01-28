@@ -201,6 +201,13 @@ CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE
 SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'true' if IS_PRODUCTION else 'false').lower() == 'true'
 CSRF_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'true' if IS_PRODUCTION else 'false').lower() == 'true'
 
+cookie_domain = os.environ.get('DJANGO_COOKIE_DOMAIN')
+railway_domain = '.up.railway.app' if (railway_public or railway_private) else None
+resolved_cookie_domain = cookie_domain or railway_domain
+if resolved_cookie_domain:
+    SESSION_COOKIE_DOMAIN = resolved_cookie_domain
+    CSRF_COOKIE_DOMAIN = resolved_cookie_domain
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
