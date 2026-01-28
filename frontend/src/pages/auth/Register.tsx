@@ -18,6 +18,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [modalMessage, setModalMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const allowedEmailDomain = 'na.scio-automation.com';
   const normalizedEmail = email.trim().toLowerCase();
@@ -39,6 +40,17 @@ export default function Register() {
     { label: 'Fuerte', color: 'bg-emerald-500', text: 'text-emerald-600' },
     { label: 'Muy fuerte', color: 'bg-emerald-600', text: 'text-emerald-700' },
   ][Math.max(0, Math.min(4, strengthScore - 1))];
+
+  const formatRegisterError = (message: string) => {
+    const normalized = message.toLowerCase();
+    if (normalized.includes('csrf')) {
+      return 'Tu sesion expiro. Recarga la pagina e intenta de nuevo.';
+    }
+    if (normalized.includes('ya esta registrado') || normalized.includes('already exists')) {
+      return 'Este correo ya esta registrado. Intenta iniciar sesion.';
+    }
+    return message;
+  };
 
   const redirectTarget =
     sanitizePath(
@@ -87,7 +99,11 @@ export default function Register() {
       });
       navigate(redirectTarget, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo registrar.');
+      const message = formatRegisterError(
+        err instanceof Error ? err.message : 'No se pudo registrar.'
+      );
+      setError(message);
+      setModalMessage(message);
     } finally {
       setSubmitting(false);
     }
@@ -349,6 +365,34 @@ export default function Register() {
           </Link>
         </p>
       </div>
+
+      {modalMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-primary-900">No se pudo registrar</h2>
+                <p className="mt-2 text-sm text-neutral-600">{modalMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalMessage(null)}
+                className="rounded-full border border-neutral-200 px-2.5 py-1 text-sm text-neutral-600 hover:text-neutral-800"
+                aria-label="Cerrar mensaje"
+              >
+                ✕
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setModalMessage(null)}
+              className="mt-5 w-full rounded-lg bg-primary-600 py-2.5 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </AuthLayout>
   );
 }

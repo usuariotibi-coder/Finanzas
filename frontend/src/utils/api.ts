@@ -8,6 +8,28 @@ const getCookie = (name: string) => {
   return value ? decodeURIComponent(value.split('=')[1]) : '';
 };
 
+const extractErrorMessage = (data: unknown): string | null => {
+  if (!data) return null;
+  if (typeof data === 'string') return data;
+  if (typeof data !== 'object') return null;
+  const payload = data as Record<string, unknown>;
+  if (typeof payload.detail === 'string') return payload.detail;
+  if (Array.isArray(payload.non_field_errors) && payload.non_field_errors[0]) {
+    return String(payload.non_field_errors[0]);
+  }
+  const firstKey = Object.keys(payload)[0];
+  if (firstKey) {
+    const value = payload[firstKey];
+    if (Array.isArray(value) && value[0]) {
+      return String(value[0]);
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+  }
+  return null;
+};
+
 export const apiFetch = async (path: string, options: RequestInit = {}) => {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
   const method = (options.method || 'GET').toUpperCase();
@@ -39,7 +61,7 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
   const data = contentType.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const detail = typeof data === 'string' ? data : data?.detail;
+    const detail = extractErrorMessage(data);
     throw new Error(detail || 'Error en la solicitud.');
   }
 

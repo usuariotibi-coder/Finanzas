@@ -28,6 +28,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f'Solo se permiten correos @{ALLOWED_EMAIL_DOMAIN}.'
             )
+        if User.objects.filter(email=normalized).exists():
+            raise serializers.ValidationError('Este correo ya esta registrado.')
         return normalized
 
     def create(self, validated_data):
