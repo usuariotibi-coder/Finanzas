@@ -15,8 +15,8 @@ const ACCESS_MAP: Record<string, UserRole[]> = {
   '/reportes': ['admin'],
 };
 
-export const canAccessPath = (role: UserRole | undefined, path: string) => {
-  if (!role) return false;
+export const canAccessPath = (role: UserRole | undefined, path?: string | null) => {
+  if (!role || !path) return false;
   if (path === '/') {
     return ACCESS_MAP['/']?.includes(role);
   }
@@ -26,7 +26,8 @@ export const canAccessPath = (role: UserRole | undefined, path: string) => {
   return ACCESS_MAP[matchedKey].includes(role);
 };
 
-export const getAllowedRoles = (path: string): UserRole[] => {
+export const getAllowedRoles = (path?: string | null): UserRole[] => {
+  if (!path) return [];
   if (path === '/') {
     return ACCESS_MAP['/'] ?? [];
   }
