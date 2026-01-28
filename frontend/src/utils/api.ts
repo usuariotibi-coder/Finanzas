@@ -1,5 +1,12 @@
-﻿const API_ROOT = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-const API_BASE = `${String(API_ROOT).replace(/\/$/, '')}/api`;
+﻿const resolveApiRoot = () => {
+  const raw = String((import.meta as any).env?.VITE_API_URL || 'http://localhost:8000').trim();
+  if (!raw) return 'http://localhost:8000';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+};
+
+const API_ROOT = resolveApiRoot();
+const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
 
 const getCookie = (name: string) => {
   const value = document.cookie
