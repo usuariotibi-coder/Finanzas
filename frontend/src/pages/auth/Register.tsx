@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
 import { departmentOptions } from '../../context/AuthContext';
-import { buildPath, getLastPath, sanitizePath } from '../../utils/lastPath';
+import { buildPath, getLastPath, sanitizePath, wasPageReload } from '../../utils/lastPath';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -48,10 +48,12 @@ export default function Register() {
     '/';
 
   useEffect(() => {
-    if (user) {
-      navigate(redirectTarget, { replace: true });
+    if (!user) return;
+    if (wasPageReload() && location.pathname === '/registro') {
+      return;
     }
-  }, [user, navigate, redirectTarget]);
+    navigate(redirectTarget, { replace: true });
+  }, [user, navigate, redirectTarget, location.pathname]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
