@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { SolicitudViaje } from '../../types';
+import { syncCoreAppData, updateViaje } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
 const mockSolicitudes: SolicitudViaje[] = [
@@ -337,20 +338,26 @@ export default function Viajes() {
         <DetallesSolicitudModal
           solicitud={selectedSolicitud}
           onClose={() => setSelectedSolicitud(null)}
-          onSave={(updatedSolicitud) => {
-            setSolicitudes((prev) => {
-              const map = new Map(prev.map((solicitud) => [solicitud.id, solicitud]));
-              map.set(updatedSolicitud.id, updatedSolicitud);
-              return Array.from(map.values());
-            });
-            setSolicitudesUsuario((prev) => {
-              const map = new Map(prev.map((solicitud) => [solicitud.id, solicitud]));
-              if (map.has(updatedSolicitud.id)) {
-                map.set(updatedSolicitud.id, updatedSolicitud);
-              }
-              return Array.from(map.values());
-            });
-            setSelectedSolicitud(null);
+          onSave={async (updatedSolicitud) => {
+            try {
+              const persisted = await updateViaje(updatedSolicitud.id, updatedSolicitud);
+              setSolicitudes((prev) => {
+                const map = new Map(prev.map((solicitud) => [solicitud.id, solicitud]));
+                map.set(persisted.id, persisted);
+                return Array.from(map.values());
+              });
+              setSolicitudesUsuario((prev) => {
+                const map = new Map(prev.map((solicitud) => [solicitud.id, solicitud]));
+                if (map.has(persisted.id)) {
+                  map.set(persisted.id, persisted);
+                }
+                return Array.from(map.values());
+              });
+              await syncCoreAppData({ userId: persisted.userId });
+              setSelectedSolicitud(null);
+            } catch (error) {
+              window.alert(error instanceof Error ? error.message : 'No se pudo guardar la solicitud.');
+            }
           }}
         />
       )}
@@ -435,7 +442,7 @@ function StatusBadge({ status }: { status: string }) {
 interface DetallesSolicitudModalProps {
   solicitud: SolicitudViaje;
   onClose: () => void;
-  onSave: (updatedSolicitud: SolicitudViaje) => void;
+  onSave: (updatedSolicitud: SolicitudViaje) => Promise<void> | void;
 }
 
 type ConfirmacionAvionDraft = { aerolinea: string; confirmacion: string; costo: number | '' };

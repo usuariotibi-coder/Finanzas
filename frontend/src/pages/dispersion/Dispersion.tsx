@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import { toStorageKey } from '../../utils/storage';
 import type { Dispersion as DispersionType, Viatico } from '../../types';
+import { createDispersion, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 
 // Solo viáticos aprobados por el PM (status: 'aprobado')
 const mockViaticosPendientes: Viatico[] = [
@@ -75,6 +76,7 @@ const formatUsd = (value: number) =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Dispersion() {
+  const { user } = useAuth();
   const [viaticosPendientes, setViaticosPendientes] = useLocalStorageState<Viatico[]>('dispersion:viaticosPendientes', mockViaticosPendientes);
   const [dispersiones, setDispersiones] = useLocalStorageState<DispersionType[]>('dispersion:dispersiones', mockDispersiones);
   const [showConfirmacionModal, setShowConfirmacionModal] = useLocalStorageState('dispersion:showConfirmacionModal', false);
@@ -104,30 +106,6 @@ export default function Dispersion() {
     }
     setTipoCambioUSD(value);
     setTipoCambioUpdatedAt(new Date().toISOString());
-  };
-
-  const readStorageList = <T,>(key: string): T[] => {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-    const stored = localStorage.getItem(toStorageKey(key));
-    if (!stored) {
-      return [];
-    }
-    try {
-      return JSON.parse(stored) as T[];
-    } catch {
-      return [];
-    }
-  };
-
-  const writeStorageList = <T,>(key: string, value: T[]) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const storageKey = toStorageKey(key);
-    localStorage.setItem(storageKey, JSON.stringify(value));
-    window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: storageKey } }));
   };
 
   const getViaticoStatusIcon = (status: Viatico['status']) => {
@@ -187,7 +165,7 @@ export default function Dispersion() {
     };
   }, [tipoCambioUpdatedAt]);
 
-  const handleGuardarDispersion = (payload: {
+  const handleGuardarDispersion = async (payload: {
     metodoPago: 'transferencia' | 'tarjeta';
     status: 'dispersado' | 'en_viaje' | 'viaje_finalizado';
     notas: string;
@@ -207,45 +185,32 @@ export default function Dispersion() {
     const montoUSD = payload.moneda === 'USD' && payload.tipoCambioUSD
       ? Number((montoDispersado / payload.tipoCambioUSD).toFixed(2))
       : payload.montoUSD;
-    const fecha = new Date().toISOString().split('T')[0];
-    const referencia = `DISP-${Date.now()}`;
+    try {
+      const createdDispersion = await createDispersion({
+        viaticoId: selectedViatico.id,
+        monto: montoDispersado,
+        metodoPago: payload.metodoPago,
+        moneda: payload.moneda ?? 'MXN',
+        tipoCambio: payload.tipoCambioUSD,
+        montoUSD,
+        referencia: `DISP-${Date.now()}`,
+        dispersadoPor: user?.full_name || 'Tesoreria',
+        notas: payload.notas,
+      });
 
-    const nuevaDispersion: DispersionType = {
-      id: `d-${Date.now()}`,
-      viaticoId: selectedViatico.id,
-      monto: montoDispersado,
-      montoUSD,
-      tipoCambio: payload.tipoCambioUSD,
-      moneda: payload.moneda ?? 'MXN',
-      fecha,
-      metodoPago: payload.metodoPago,
-      referencia,
-      confirmado: true,
-      dispersadoPor: 'Tesoreria',
-    };
+      const updatedViatico = await updateViatico(selectedViatico.id, {
+        status: payload.status,
+        montoAprobado: selectedViatico.montoAprobado ?? selectedViatico.montoSolicitado,
+        montoDispersado,
+        comentarios: payload.notas || selectedViatico.comentarios,
+      });
 
-    setDispersiones((prev) => [nuevaDispersion, ...prev]);
-    setViaticosPendientes((prev) => prev.filter((viatico) => viatico.id !== selectedViatico.id));
-
-    const updateViatico = (viatico: Viatico) => ({
-      ...viatico,
-      status: payload.status,
-      montoAprobado: viatico.montoAprobado ?? viatico.montoSolicitado,
-      montoDispersado: montoDispersado,
-      comentarios: payload.notas || viatico.comentarios,
-    });
-
-    const usuarioList = readStorageList<Viatico>('usuario:viaticos');
-    const nextUsuario = usuarioList.some((viatico) => viatico.id === selectedViatico.id)
-      ? usuarioList.map((viatico) => (viatico.id === selectedViatico.id ? updateViatico(viatico) : viatico))
-      : [...usuarioList, updateViatico(selectedViatico)];
-    writeStorageList('usuario:viaticos', nextUsuario);
-
-    const adminList = readStorageList<Viatico>('viaticos:list');
-    const nextAdmin = adminList.some((viatico) => viatico.id === selectedViatico.id)
-      ? adminList.map((viatico) => (viatico.id === selectedViatico.id ? updateViatico(viatico) : viatico))
-      : [...adminList, updateViatico(selectedViatico)];
-    writeStorageList('viaticos:list', nextAdmin);
+      setDispersiones((prev) => [createdDispersion, ...prev]);
+      setViaticosPendientes((prev) => prev.filter((viatico) => viatico.id !== updatedViatico.id));
+      await syncCoreAppData({ userId: updatedViatico.userId });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo guardar la dispersion.');
+    }
   };
 
   const hoy = new Date().toISOString().split('T')[0];

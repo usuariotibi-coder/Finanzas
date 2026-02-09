@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import type { Proyecto } from '../../types';
+import { getCachedProyectos } from '../../utils/backendSync';
 import { NEW_PROJECT_ID } from '../../utils/proyectoLabel';
 
 interface ProyectoSelectorProps {
@@ -88,6 +89,15 @@ const STORAGE_KEY = 'proyectos_data';
 const NEW_PROJECT_LABEL = 'Nuevo Proyecto';
 
 function getProyectos(): Proyecto[] {
+  const cached = getCachedProyectos();
+  if (cached.length > 0) {
+    return cached;
+  }
+
+  if (typeof window === 'undefined') {
+    return MOCK_PROYECTOS;
+  }
+
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     return JSON.parse(stored);

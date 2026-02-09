@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DashboardMetrics } from '../types';
+import { fetchDashboardMetrics } from '../utils/backendSync';
 
 const mockMetrics: DashboardMetrics = {
   viaticosActivos: 12,
@@ -16,6 +18,28 @@ const mockMetrics: DashboardMetrics = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [metrics, setMetrics] = useState<DashboardMetrics>(mockMetrics);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadMetrics = async () => {
+      try {
+        const data = await fetchDashboardMetrics();
+        if (active) {
+          setMetrics(data);
+        }
+      } catch {
+        // Keep mock fallback if backend is unavailable.
+      }
+    };
+
+    void loadMetrics();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -33,28 +57,28 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
               <MetricCard
                 title="Viaticos Activos"
-                value={mockMetrics.viaticosActivos}
+                value={metrics.viaticosActivos}
                 icon="money"
                 color="blue"
                 subtitle="en proceso"
               />
               <MetricCard
                 title="Aprobacion Pendiente"
-                value={mockMetrics.viaticosAprobacionPendiente}
+                value={metrics.viaticosAprobacionPendiente}
                 icon="clock"
                 color="yellow"
                 subtitle="solicitudes"
               />
               <MetricCard
                 title="Total Dispersado"
-                value={`$${mockMetrics.totalDispersado.toLocaleString()}`}
+                value={`$${metrics.totalDispersado.toLocaleString()}`}
                 icon="chart"
                 color="green"
                 subtitle="este mes"
               />
               <MetricCard
                 title="Total a Recuperar"
-                value={`$${mockMetrics.totalRecuperar.toLocaleString()}`}
+                value={`$${metrics.totalRecuperar.toLocaleString()}`}
                 icon="return"
                 color="orange"
                 subtitle="pendiente"
@@ -66,7 +90,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Conciliación</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">ConciliaciÃ³n</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
               <div className="flex items-center space-x-3">
@@ -76,11 +100,11 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Alertas de Conciliación</p>
-                  <p className="text-sm text-gray-600">{mockMetrics.alertasConciliacion} discrepancias encontradas</p>
+                  <p className="font-medium text-gray-900">Alertas de ConciliaciÃ³n</p>
+                  <p className="text-sm text-gray-600">{metrics.alertasConciliacion} discrepancias encontradas</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-red-600">{mockMetrics.alertasConciliacion}</span>
+              <span className="text-2xl font-bold text-red-600">{metrics.alertasConciliacion}</span>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -95,7 +119,7 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-600">Por validar</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-yellow-600">{mockMetrics.facturasPendientes}</span>
+              <span className="text-2xl font-bold text-yellow-600">{metrics.facturasPendientes}</span>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
@@ -110,7 +134,7 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-600">Sin conciliar</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-purple-600">{mockMetrics.gastosAMEXPendientes}</span>
+              <span className="text-2xl font-bold text-purple-600">{metrics.gastosAMEXPendientes}</span>
             </div>
           </div>
         </div>
@@ -126,11 +150,11 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Vehículos Disponibles</p>
+                  <p className="font-medium text-gray-900">VehÃ­culos Disponibles</p>
                   <p className="text-sm text-gray-600">Listos para asignar</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-green-600">{mockMetrics.vehiculosDisponibles}</span>
+              <span className="text-2xl font-bold text-green-600">{metrics.vehiculosDisponibles}</span>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -141,11 +165,11 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Vehículos Asignados</p>
+                  <p className="font-medium text-gray-900">VehÃ­culos Asignados</p>
                   <p className="text-sm text-gray-600">En uso actualmente</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-blue-600">{mockMetrics.vehiculosAsignados}</span>
+              <span className="text-2xl font-bold text-blue-600">{metrics.vehiculosAsignados}</span>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
@@ -157,10 +181,10 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Alertas de Mantenimiento</p>
-                  <p className="text-sm text-gray-600">Requieren atención</p>
+                  <p className="text-sm text-gray-600">Requieren atenciÃ³n</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-orange-600">{mockMetrics.alertasMantenimiento}</span>
+              <span className="text-2xl font-bold text-orange-600">{metrics.alertasMantenimiento}</span>
             </div>
           </div>
         </div>
@@ -173,28 +197,28 @@ export default function Dashboard() {
             <ActivityItem
               icon="check"
               color="green"
-              title="Viático aprobado"
-              description="Juan Pérez - Viaje a Guadalajara"
+              title="ViÃ¡tico aprobado"
+              description="Juan PÃ©rez - Viaje a Guadalajara"
               time="Hace 10 minutos"
             />
             <ActivityItem
               icon="money"
               color="blue"
-              title="Dispersión realizada"
-              description="$12,500 - María González"
+              title="DispersiÃ³n realizada"
+              description="$12,500 - MarÃ­a GonzÃ¡lez"
               time="Hace 1 hora"
             />
             <ActivityItem
               icon="alert"
               color="red"
-              title="Alerta de conciliación"
+              title="Alerta de conciliaciÃ³n"
               description="Factura sin consumo asociado"
               time="Hace 2 horas"
             />
             <ActivityItem
               icon="car"
               color="purple"
-              title="Vehículo asignado"
+              title="VehÃ­culo asignado"
               description="Toyota Corolla - ABC-123"
               time="Hace 3 horas"
             />
@@ -209,12 +233,12 @@ export default function Dashboard() {
         </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones RÃ¡pidas</h2>
         <div className="space-y-2">
-          <QuickActionButton icon="plus" label="Nueva Solicitud de Viático" onClick={() => navigate('/mi-portal')} />
+          <QuickActionButton icon="plus" label="Nueva Solicitud de ViÃ¡tico" onClick={() => navigate('/mi-portal')} />
           <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
-          <QuickActionButton icon="send" label="Realizar Dispersión" onClick={() => navigate('/dispersion')} />
-          <QuickActionButton icon="car" label="Asignar Vehículo" onClick={() => navigate('/flotilla')} />
+          <QuickActionButton icon="send" label="Realizar DispersiÃ³n" onClick={() => navigate('/dispersion')} />
+          <QuickActionButton icon="car" label="Asignar VehÃ­culo" onClick={() => navigate('/flotilla')} />
           <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
         </div>
       </div>
@@ -311,3 +335,4 @@ function QuickActionButton({ label, onClick }: QuickActionButtonProps) {
     </button>
   );
 }
+

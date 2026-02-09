@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Viatico } from '../../types';
+import type { AuthUser, Viatico } from '../../types';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
+import { createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
 const mockViaticos: Viatico[] = [
@@ -113,6 +115,7 @@ type ViaticoFilter = 'todos' | 'pendiente' | 'aprobado' | 'dispersado';
 type StoredViaticoFilter = ViaticoFilter | 'completado';
 
 export default function Viaticos() {
+  const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('viaticos:list', mockViaticos);
   const [viaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [showNewForm, setShowNewForm] = useLocalStorageState('viaticos:showNewForm', false);
@@ -318,7 +321,17 @@ export default function Viaticos() {
       </div>
 
       {showNewForm && (
-        <NewViaticoModal onClose={() => setShowNewForm(false)} />
+        <NewViaticoModal
+          currentUser={user}
+          onClose={() => setShowNewForm(false)}
+          onCreated={(createdViatico) => {
+            setViaticos((prev) => {
+              const map = new Map(prev.map((item) => [item.id, item]));
+              map.set(createdViatico.id, createdViatico);
+              return Array.from(map.values());
+            });
+          }}
+        />
       )}
 
       {showStatusModal && selectedViatico && (
@@ -406,10 +419,12 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 interface NewViaticoModalProps {
+  currentUser: AuthUser | null;
+  onCreated: (viatico: Viatico) => void;
   onClose: () => void;
 }
 
-function NewViaticoModal({ onClose }: NewViaticoModalProps) {
+function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalProps) {
   useEscapeKey(onClose);
 
   const [selectedProyectoId, setSelectedProyectoId] = useLocalStorageState<string>('viaticos:newForm:selectedProyectoId', '');
@@ -424,6 +439,8 @@ function NewViaticoModal({ onClose }: NewViaticoModalProps) {
     comentarios: '',
   });
   const [showErrors, setShowErrors] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const montoValue = Number(formData.montoSolicitado);
   const montoInvalid = !formData.montoSolicitado || Number.isNaN(montoValue) || montoValue <= 0;
@@ -447,13 +464,40 @@ function NewViaticoModal({ onClose }: NewViaticoModalProps) {
     setSelectedActivityId(activityId);
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setError('');
     if (hasErrors) {
       setShowErrors(true);
       return;
     }
-    onClose();
+
+    setSubmitting(true);
+    try {
+      const created = await createViatico({
+        userId: currentUser ? String(currentUser.id) : undefined,
+        proyectoId: selectedProyectoId || undefined,
+        gsActivityId: selectedActivityId ?? undefined,
+        motivo: formData.motivo.trim(),
+        destino: formData.destino.trim(),
+        fechaInicio: formData.fechaInicio,
+        fechaFin: formData.fechaFin,
+        montoSolicitado: montoValue,
+        status: 'pendiente',
+        comentarios: formData.comentarios.trim(),
+      });
+
+      await syncCoreAppData({ userId: currentUser ? String(currentUser.id) : undefined });
+      onCreated({
+        ...created,
+        userName: created.userName || currentUser?.full_name || created.userId,
+      });
+      onClose();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'No se pudo crear el viatico.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -627,6 +671,12 @@ function NewViaticoModal({ onClose }: NewViaticoModalProps) {
             ></textarea>
           </div>
 
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
             <button
               type="button"
@@ -637,9 +687,10 @@ function NewViaticoModal({ onClose }: NewViaticoModalProps) {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+              disabled={submitting}
+              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60"
             >
-              Enviar Solicitud
+              {submitting ? 'Enviando...' : 'Enviar Solicitud'}
             </button>
           </div>
         </form>

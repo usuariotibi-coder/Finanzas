@@ -1,7 +1,8 @@
-﻿import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { api } from '../utils/api';
 import type { AuthUser, UserRole } from '../types';
+import { syncCoreAppData } from '../utils/backendSync';
+import { api } from '../utils/api';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -48,19 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error('Sesion invalida');
         }
         setUser(data);
-      } catch (error) {
+        await syncCoreAppData({ userId: String(data.id) });
+      } catch {
         setUser(null);
       } finally {
         setLoading(false);
       }
     };
-    loadUser();
+
+    void loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {
     await api.csrf();
     const data = (await api.login(email.trim().toLowerCase(), password)) as AuthUser;
     setUser(data);
+    await syncCoreAppData({ userId: String(data.id) });
   };
 
   const register = async (payload: {
@@ -76,13 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: payload.email.trim().toLowerCase(),
     })) as AuthUser;
     setUser(data);
+    await syncCoreAppData({ userId: String(data.id) });
   };
 
   const logout = async () => {
     try {
+      await api.csrf();
       await api.logout();
     } finally {
       setUser(null);
+      await syncCoreAppData();
     }
   };
 

@@ -1,9 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import useAuth from '../../hooks/useAuth';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import { toStorageKey } from '../../utils/storage';
 import type { Viatico, Proyecto, SolicitudViaje } from '../../types';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
+import {
+  createProyecto,
+  deleteProyecto,
+  fetchProyectos,
+  fetchViajes,
+  fetchViaticos,
+  syncCoreAppData,
+  updateProyecto,
+  updateViaje,
+  updateViatico,
+} from '../../utils/backendSync';
 
 // Mock data: Viáticos pendientes de aprobación del PM
 const MOCK_VIATICOS_PENDIENTES: Viatico[] = [
@@ -139,12 +150,11 @@ const MOCK_PROYECTOS_PM: Proyecto[] = [
 ];
 
 export default function PMPortal() {
+  const { user } = useAuth();
   const [viaticosUsuario, setViaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticosResueltos, setViaticosResueltos] = useLocalStorageState<string[]>('pm-portal:viaticosResueltos', []);
-  const [viajesPendientes, setViajesPendientes] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', MOCK_VIAJES_PENDIENTES);
-  const [, setSolicitudesViajeUsuario] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
-  const [, setViajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
-  const [proyectos, setProyectos] = useLocalStorageState<Proyecto[]>('pm-portal:proyectos', MOCK_PROYECTOS_PM);
+  const [viajesPendientes, setViajesPendientes] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', []);
+  const [proyectos, setProyectos] = useLocalStorageState<Proyecto[]>('pm-portal:proyectos', []);
   const [showModalViaticoDetalle, setShowModalViaticoDetalle] = useLocalStorageState('pm-portal:showModalViaticoDetalle', false);
   const [showModalViajeDetalle, setShowModalViajeDetalle] = useLocalStorageState('pm-portal:showModalViajeDetalle', false);
   const [showModalCrearProyecto, setShowModalCrearProyecto] = useLocalStorageState('pm-portal:showModalCrearProyecto', false);
@@ -169,92 +179,47 @@ export default function PMPortal() {
   const [showProyectoErrors, setShowProyectoErrors] = useState(false);
 
   const viaticosPendientes = useMemo(() => {
-    const pendientesUsuario = viaticosUsuario.filter((viatico) => viatico.status === 'pendiente');
-    const merged = [...MOCK_VIATICOS_PENDIENTES, ...pendientesUsuario];
-    const unique = new Map<string, Viatico>();
-    merged.forEach((viatico) => {
-      unique.set(viatico.id, viatico);
-    });
-    return Array.from(unique.values()).filter((viatico) => !viaticosResueltos.includes(viatico.id));
+    return viaticosUsuario
+      .filter((viatico) => viatico.status === 'pendiente')
+      .filter((viatico) => !viaticosResueltos.includes(viatico.id));
   }, [viaticosUsuario, viaticosResueltos]);
-
-  const dispersionStorageKey = toStorageKey('dispersion:viaticosPendientes');
-  const recuperacionStorageKey = toStorageKey('recuperacion:viaticosPendientes');
-  const adminViaticosStorageKey = toStorageKey('viaticos:list');
-  const getDispersionPendientes = () => {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-    const stored = localStorage.getItem(dispersionStorageKey);
-    if (!stored) {
-      return [];
-    }
-    try {
-      return JSON.parse(stored) as Viatico[];
-    } catch {
-      return [];
-    }
-  };
-  const saveDispersionPendientes = (next: Viatico[]) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.setItem(dispersionStorageKey, JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: dispersionStorageKey } }));
-  };
-  const getRecuperacionPendientes = () => {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-    const stored = localStorage.getItem(recuperacionStorageKey);
-    if (!stored) {
-      return [];
-    }
-    try {
-      return JSON.parse(stored) as Viatico[];
-    } catch {
-      return [];
-    }
-  };
-  const saveRecuperacionPendientes = (next: Viatico[]) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.setItem(recuperacionStorageKey, JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: recuperacionStorageKey } }));
-  };
-  const getAdminViaticos = () => {
-    if (typeof window === 'undefined') {
-      return [];
-    }
-    const stored = localStorage.getItem(adminViaticosStorageKey);
-    if (!stored) {
-      return [];
-    }
-    try {
-      return JSON.parse(stored) as Viatico[];
-    } catch {
-      return [];
-    }
-  };
-  const saveAdminViaticos = (next: Viatico[]) => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    localStorage.setItem(adminViaticosStorageKey, JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: adminViaticosStorageKey } }));
-  };
-  const upsertAdminViatico = (nextViatico: Viatico) => {
-    const prev = getAdminViaticos();
-    const map = new Map(prev.map((viatico) => [viatico.id, viatico]));
-    map.set(nextViatico.id, { ...map.get(nextViatico.id), ...nextViatico });
-    saveAdminViaticos(Array.from(map.values()));
-  };
 
   useEscapeKey(() => setShowModalViaticoDetalle(false), showModalViaticoDetalle);
   useEscapeKey(() => setShowModalViajeDetalle(false), showModalViajeDetalle);
   useEscapeKey(() => setShowModalCrearProyecto(false), showModalCrearProyecto);
   useEscapeKey(() => setShowModalProyectoDetalle(false), showModalProyectoDetalle);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadPortalData = async () => {
+      try {
+        const [remoteProyectos, remoteViaticos, remoteViajes] = await Promise.all([
+          fetchProyectos(),
+          fetchViaticos(),
+          fetchViajes(),
+        ]);
+        if (!isActive) {
+          return;
+        }
+        setProyectos(remoteProyectos);
+        setViaticosUsuario(remoteViaticos);
+        setViajesPendientes(remoteViajes.filter((viaje) => viaje.status === 'pendiente'));
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setProyectos((prev) => (prev.length > 0 ? prev : MOCK_PROYECTOS_PM));
+        setViaticosUsuario((prev) => (prev.length > 0 ? prev : MOCK_VIATICOS_PENDIENTES));
+        setViajesPendientes((prev) => (prev.length > 0 ? prev : MOCK_VIAJES_PENDIENTES));
+      }
+    };
+
+    void loadPortalData();
+    return () => {
+      isActive = false;
+    };
+  }, [setProyectos, setViaticosUsuario, setViajesPendientes]);
 
   const resetNuevoProyecto = () => {
     setNuevoProyecto({
@@ -293,7 +258,7 @@ export default function PMPortal() {
     }
   };
 
-  const handleCrearProyecto = () => {
+  const handleCrearProyecto = async () => {
     const requiredFields = [
       nuevoProyecto.codigo,
       nuevoProyecto.nombre,
@@ -311,96 +276,65 @@ export default function PMPortal() {
       return;
     }
 
-    const now = new Date().toISOString();
-    const nuevo: Proyecto = {
-      id: `PRJ-${Date.now()}`,
-      codigo: nuevoProyecto.codigo.trim(),
-      nombre: nuevoProyecto.nombre.trim(),
-      cliente: nuevoProyecto.cliente.trim(),
-      estado: 'activo',
-      presupuesto: presupuestoValue,
-      gastado: 0,
-      fechaInicio: nuevoProyecto.fechaInicio,
-      fechaFinEstimada: nuevoProyecto.fechaFinEstimada,
-      responsable: nuevoProyecto.responsable.trim(),
-      departamento: nuevoProyecto.departamento,
-      descripcion: nuevoProyecto.descripcion.trim(),
-      notas: nuevoProyecto.notas.trim() || undefined,
-      createdAt: now,
-      updatedAt: now,
-    };
+    try {
+      const nuevo = await createProyecto({
+        codigo: nuevoProyecto.codigo.trim(),
+        nombre: nuevoProyecto.nombre.trim(),
+        cliente: nuevoProyecto.cliente.trim(),
+        estado: 'activo',
+        presupuesto: presupuestoValue,
+        gastado: 0,
+        fechaInicio: nuevoProyecto.fechaInicio,
+        fechaFinEstimada: nuevoProyecto.fechaFinEstimada,
+        responsable: nuevoProyecto.responsable.trim(),
+        departamento: nuevoProyecto.departamento,
+        descripcion: nuevoProyecto.descripcion.trim(),
+        notas: nuevoProyecto.notas.trim() || undefined,
+      });
 
-    setProyectos((prev) => {
-      const next = [...prev, nuevo];
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('proyectos_data', JSON.stringify(next));
-        } catch {
-          // ignore storage errors
-        }
-      }
-      return next;
-    });
-    setShowModalCrearProyecto(false);
-    resetNuevoProyecto();
-    setShowProyectoErrors(false);
+      setProyectos((prev) => {
+        const map = new Map(prev.map((item) => [item.id, item]));
+        map.set(nuevo.id, nuevo);
+        return Array.from(map.values());
+      });
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowModalCrearProyecto(false);
+      resetNuevoProyecto();
+      setShowProyectoErrors(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo crear el proyecto.');
+    }
   };
 
-  const handleAprobarViatico = (viaticoId: string) => {
+  const handleAprobarViatico = async (viaticoId: string) => {
     const selected = viaticoSeleccionado;
     if (!selected) {
       setShowModalViaticoDetalle(false);
       return;
     }
 
-    const updatedRecord: Viatico = {
-      ...selected,
-      status: 'aprobado',
-      montoAprobado: selected.montoAprobado ?? selected.montoSolicitado,
-      aprobadoPor: 'Project Manager',
-    };
+    try {
+      const updatedRecord = await updateViatico(viaticoId, {
+        status: 'aprobado',
+        montoAprobado: selected.montoAprobado ?? selected.montoSolicitado,
+        aprobadoPor: user?.full_name || 'Project Manager',
+      });
 
-    const updatedViaticos = viaticosUsuario.some((viatico) => viatico.id === viaticoId)
-      ? viaticosUsuario.map((viatico) => (
-        viatico.id === viaticoId
-          ? {
-            ...viatico,
-            ...updatedRecord,
-          }
-          : viatico
-      ))
-      : [
-        ...viaticosUsuario,
-        updatedRecord,
-      ];
-
-    setViaticosUsuario(updatedViaticos);
-    upsertAdminViatico(updatedRecord);
-    setViaticosResueltos((prev) => (prev.includes(viaticoId) ? prev : [...prev, viaticoId]));
-    const prevPendientes = getDispersionPendientes();
-    const map = new Map(prevPendientes.map((viatico) => [viatico.id, viatico]));
-    map.set(viaticoId, updatedRecord);
-    saveDispersionPendientes(Array.from(map.values()));
-    const montoDispersado = updatedRecord.montoDispersado ?? updatedRecord.montoAprobado ?? updatedRecord.montoSolicitado ?? 0;
-    const montoGastado = updatedRecord.montoGastado ?? 0;
-    const saldoRestante = Math.max(montoDispersado - montoGastado, 0);
-    const recuperacionRecord: Viatico = {
-      ...updatedRecord,
-      montoDispersado,
-      montoGastado,
-      saldoRestante,
-      gastoFuente: updatedRecord.gastoFuente ?? 'manual',
-      efectifintechStatus: updatedRecord.efectifintechStatus ?? 'pendiente',
-    };
-    const prevRecuperacion = getRecuperacionPendientes();
-    const recuperacionMap = new Map(prevRecuperacion.map((viatico) => [viatico.id, viatico]));
-    recuperacionMap.set(viaticoId, recuperacionRecord);
-    saveRecuperacionPendientes(Array.from(recuperacionMap.values()));
-    setShowModalViaticoDetalle(false);
-    setViaticoSeleccionado(null);
+      setViaticosUsuario((prev) => {
+        const map = new Map(prev.map((viatico) => [viatico.id, viatico]));
+        map.set(updatedRecord.id, { ...map.get(updatedRecord.id), ...updatedRecord });
+        return Array.from(map.values());
+      });
+      setViaticosResueltos((prev) => (prev.includes(viaticoId) ? prev : [...prev, viaticoId]));
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowModalViaticoDetalle(false);
+      setViaticoSeleccionado(null);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo aprobar el viatico.');
+    }
   };
 
-  const handleRechazarViatico = (viaticoId: string) => {
+  const handleRechazarViatico = async (viaticoId: string) => {
     const selected = viaticoSeleccionado ?? viaticosUsuario.find((viatico) => viatico.id === viaticoId);
     if (!selected) {
       setShowModalViaticoDetalle(false);
@@ -408,32 +342,27 @@ export default function PMPortal() {
       return;
     }
 
-    const updatedRecord: Viatico = {
-      ...selected,
-      status: 'rechazado',
-      aprobadoPor: 'Project Manager',
-    };
+    try {
+      const updatedRecord = await updateViatico(viaticoId, {
+        status: 'rechazado',
+        aprobadoPor: user?.full_name || 'Project Manager',
+      });
 
-    const updatedViaticos = viaticosUsuario.some((viatico) => viatico.id === viaticoId)
-      ? viaticosUsuario.map((viatico) => (
-        viatico.id === viaticoId
-          ? { ...viatico, ...updatedRecord }
-          : viatico
-      ))
-      : [...viaticosUsuario, updatedRecord];
-
-    setViaticosUsuario(updatedViaticos);
-    upsertAdminViatico(updatedRecord);
-    setViaticosResueltos((prev) => (prev.includes(viaticoId) ? prev : [...prev, viaticoId]));
-    const prevPendientes = getDispersionPendientes();
-    saveDispersionPendientes(prevPendientes.filter((viatico) => viatico.id !== viaticoId));
-    const prevRecuperacion = getRecuperacionPendientes();
-    saveRecuperacionPendientes(prevRecuperacion.filter((viatico) => viatico.id !== viaticoId));
-    setShowModalViaticoDetalle(false);
-    setViaticoSeleccionado(null);
+      setViaticosUsuario((prev) => {
+        const map = new Map(prev.map((viatico) => [viatico.id, viatico]));
+        map.set(updatedRecord.id, { ...map.get(updatedRecord.id), ...updatedRecord });
+        return Array.from(map.values());
+      });
+      setViaticosResueltos((prev) => (prev.includes(viaticoId) ? prev : [...prev, viaticoId]));
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowModalViaticoDetalle(false);
+      setViaticoSeleccionado(null);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo rechazar el viatico.');
+    }
   };
 
-  const handleAprobarViaje = (viajeId: string) => {
+  const handleAprobarViaje = async (viajeId: string) => {
     const selected = viajeSeleccionado ?? viajesPendientes.find((viaje) => viaje.id === viajeId);
     if (!selected) {
       setShowModalViajeDetalle(false);
@@ -441,32 +370,30 @@ export default function PMPortal() {
       return;
     }
 
-    const updatedViaje: SolicitudViaje = {
-      ...selected,
-      status: 'en_proceso',
-      statusAvion: selected.necesitaAvion ? (selected.statusAvion === 'confirmado' ? 'confirmado' : 'gestionando') : undefined,
-      statusCamion: selected.necesitaCamion ? (selected.statusCamion === 'confirmado' ? 'confirmado' : 'gestionando') : undefined,
-      statusHotel: selected.necesitaHotel ? (selected.statusHotel === 'confirmado' ? 'confirmado' : 'gestionando') : undefined,
-    };
+    try {
+      const updatedViaje = await updateViaje(viajeId, {
+        status: 'en_proceso',
+        statusAvion: selected.necesitaAvion ? (selected.statusAvion === 'confirmado' ? 'confirmado' : 'gestionando') : undefined,
+        statusCamion: selected.necesitaCamion ? (selected.statusCamion === 'confirmado' ? 'confirmado' : 'gestionando') : undefined,
+        statusHotel: selected.necesitaHotel ? (selected.statusHotel === 'confirmado' ? 'confirmado' : 'gestionando') : undefined,
+      });
 
-    setSolicitudesViajeUsuario((prev) => {
-      const map = new Map(prev.map((viaje) => [viaje.id, viaje]));
-      map.set(updatedViaje.id, { ...map.get(updatedViaje.id), ...updatedViaje });
-      return Array.from(map.values());
-    });
-
-    setViajesSolicitudes((prev) => {
-      const map = new Map(prev.map((viaje) => [viaje.id, viaje]));
-      map.set(updatedViaje.id, { ...map.get(updatedViaje.id), ...updatedViaje });
-      return Array.from(map.values());
-    });
-
-    setViajesPendientes((prev) => prev.filter((viaje) => viaje.id !== viajeId));
-    setShowModalViajeDetalle(false);
-    setViajeSeleccionado(null);
+      setViajesPendientes((prev) => {
+        const next = prev.filter((viaje) => viaje.id !== viajeId);
+        if (updatedViaje.status === 'pendiente') {
+          next.push(updatedViaje);
+        }
+        return next;
+      });
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowModalViajeDetalle(false);
+      setViajeSeleccionado(null);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo aprobar el viaje.');
+    }
   };
 
-  const handleRechazarViaje = (viajeId: string) => {
+  const handleRechazarViaje = async (viajeId: string) => {
     const selected = viajeSeleccionado ?? viajesPendientes.find((viaje) => viaje.id === viajeId);
     if (!selected) {
       setShowModalViajeDetalle(false);
@@ -474,21 +401,52 @@ export default function PMPortal() {
       return;
     }
 
-    const updatedViaje: SolicitudViaje = {
-      ...selected,
-      status: 'rechazado',
-    };
+    try {
+      await updateViaje(viajeId, { status: 'rechazado' });
+      setViajesPendientes((prev) => prev.filter((viaje) => viaje.id !== viajeId));
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowModalViajeDetalle(false);
+      setViajeSeleccionado(null);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo rechazar el viaje.');
+    }
+  };
 
-    setSolicitudesViajeUsuario((prev) => {
-      const map = new Map(prev.map((viaje) => [viaje.id, viaje]));
-      map.set(updatedViaje.id, { ...map.get(updatedViaje.id), ...updatedViaje });
-      return Array.from(map.values());
-    });
+  const handleEliminarProyecto = async (proyectoId: string) => {
+    if (!window.confirm('Eliminar proyecto seleccionado?')) {
+      return;
+    }
 
-    setViajesSolicitudes((prev) => prev.filter((viaje) => viaje.id !== viajeId));
-    setViajesPendientes((prev) => prev.filter((viaje) => viaje.id !== viajeId));
-    setShowModalViajeDetalle(false);
-    setViajeSeleccionado(null);
+    try {
+      await deleteProyecto(proyectoId);
+      setProyectos((prev) => prev.filter((item) => item.id !== proyectoId));
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowModalProyectoDetalle(false);
+      setIsEditingProyecto(false);
+      setProyectoForm(null);
+      setProyectoSeleccionado(null);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo eliminar el proyecto.');
+    }
+  };
+
+  const handleGuardarProyectoCambios = async () => {
+    if (!proyectoForm) {
+      return;
+    }
+
+    try {
+      const updatedProyecto = await updateProyecto(proyectoForm.id, {
+        ...proyectoForm,
+        updatedAt: new Date().toISOString(),
+      });
+      setProyectos((prev) => prev.map((item) => (item.id === updatedProyecto.id ? updatedProyecto : item)));
+      setProyectoSeleccionado(updatedProyecto);
+      setIsEditingProyecto(false);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.');
+    }
   };
 
   const getEstadoColor = (estado: string) => {
@@ -982,13 +940,17 @@ export default function PMPortal() {
 
             <div className="p-6 bg-gray-50 border-t border-gray-200 flex gap-3">
               <button
-                onClick={() => handleRechazarViatico(viaticoSeleccionado.id)}
+                onClick={() => {
+                  void handleRechazarViatico(viaticoSeleccionado.id);
+                }}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
                 Rechazar
               </button>
               <button
-                onClick={() => handleAprobarViatico(viaticoSeleccionado.id)}
+                onClick={() => {
+                  void handleAprobarViatico(viaticoSeleccionado.id);
+                }}
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
               >
                 Aprobar
@@ -1102,13 +1064,17 @@ export default function PMPortal() {
 
             <div className="p-6 bg-gray-50 border-t border-gray-200 flex gap-3">
               <button
-                onClick={() => handleRechazarViaje(viajeSeleccionado.id)}
+                onClick={() => {
+                  void handleRechazarViaje(viajeSeleccionado.id);
+                }}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
                 Rechazar
               </button>
               <button
-                onClick={() => handleAprobarViaje(viajeSeleccionado.id)}
+                onClick={() => {
+                  void handleAprobarViaje(viajeSeleccionado.id);
+                }}
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
               >
                 Aprobar y Enviar a Gerente de Servicios
@@ -1588,24 +1554,7 @@ export default function PMPortal() {
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
               <button
                 onClick={() => {
-                  if (!window.confirm('Eliminar proyecto seleccionado?')) {
-                    return;
-                  }
-                  setProyectos((prev) => {
-                    const next = prev.filter((item) => item.id !== proyectoDetalle.id);
-                    if (typeof window !== 'undefined') {
-                      try {
-                        localStorage.setItem('proyectos_data', JSON.stringify(next));
-                      } catch {
-                        // ignore storage errors
-                      }
-                    }
-                    return next;
-                  });
-                  setShowModalProyectoDetalle(false);
-                  setIsEditingProyecto(false);
-                  setProyectoForm(null);
-                  setProyectoSeleccionado(null);
+                  void handleEliminarProyecto(proyectoDetalle.id);
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                 type="button"
@@ -1626,18 +1575,7 @@ export default function PMPortal() {
               {isEditingProyecto && (
                 <button
                   onClick={() => {
-                    if (!proyectoForm) {
-                      return;
-                    }
-                    const updatedProyecto = {
-                      ...proyectoForm,
-                      updatedAt: new Date().toISOString(),
-                    };
-                    setProyectos((prev) => prev.map((item) => (
-                      item.id === updatedProyecto.id ? updatedProyecto : item
-                    )));
-                    setProyectoSeleccionado(updatedProyecto);
-                    setIsEditingProyecto(false);
+                    void handleGuardarProyectoCambios();
                   }}
                   className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
                 >

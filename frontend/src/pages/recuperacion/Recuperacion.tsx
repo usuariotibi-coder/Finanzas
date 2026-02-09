@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import { toStorageKey } from '../../utils/storage';
 import type { Viatico } from '../../types';
+import { createRecuperacion, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 
 const mockViaticosPendientes: Viatico[] = [
   {
@@ -39,30 +40,6 @@ const getViaticoStatusIcon = (status: Viatico['status']) => {
   return icons[status as keyof typeof icons] || 'P';
 };
 
-const readStorageList = <T,>(key: string): T[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-  const stored = localStorage.getItem(toStorageKey(key));
-  if (!stored) {
-    return [];
-  }
-  try {
-    return JSON.parse(stored) as T[];
-  } catch {
-    return [];
-  }
-};
-
-const writeStorageList = <T,>(key: string, value: T[]) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  const storageKey = toStorageKey(key);
-  localStorage.setItem(storageKey, JSON.stringify(value));
-  window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: storageKey } }));
-};
-
 const getGastoSourceBadge = (viatico: Viatico) => {
   if (viatico.gastoFuente === 'efectifintech') {
     return { label: 'Efectifintech', className: 'border border-blue-200 bg-blue-50 text-blue-700' };
@@ -93,6 +70,7 @@ const formatSyncTimestamp = (value?: string) => {
 };
 
 export default function Recuperacion() {
+  const { user } = useAuth();
   const [viaticosPendientes, setViaticosPendientes] = useLocalStorageState<Viatico[]>('recuperacion:viaticosPendientes', mockViaticosPendientes);
   const [showRecuperacionForm, setShowRecuperacionForm] = useLocalStorageState('recuperacion:showRecuperacionForm', false);
   const [selectedViatico, setSelectedViatico] = useLocalStorageState<Viatico | null>('recuperacion:selectedViatico', null);
@@ -127,7 +105,7 @@ export default function Recuperacion() {
   const gastoMontoInvalid = !Number.isFinite(gastoMontoValue) || gastoMontoValue < 0;
   const gastoMontoError = showGastoErrors && gastoMontoInvalid ? 'Ingresa un monto valido.' : '';
 
-  const handleGuardarGasto = () => {
+  const handleGuardarGasto = async () => {
     if (!selectedGastoViatico) {
       return;
     }
@@ -144,22 +122,29 @@ export default function Recuperacion() {
       gastoFuente: 'manual',
       efectifintechStatus: viatico.efectifintechStatus ?? 'pendiente',
     });
-    setViaticosPendientes((prev) => prev.map((viatico) => (viatico.id === selectedGastoViatico.id ? applyUpdate(viatico) : viatico)));
-    ['usuario:viaticos', 'viaticos:list'].forEach((key) => {
-      const list = readStorageList<Viatico>(key);
-      if (!list.length) {
-        return;
-      }
-      const next = list.map((viatico) => (viatico.id === selectedGastoViatico.id ? applyUpdate(viatico) : viatico));
-      writeStorageList(key, next);
-    });
-    setShowGastoModal(false);
-    setSelectedGastoViatico(null);
-    setGastoMonto('');
-    setShowGastoErrors(false);
+
+    try {
+      const persisted = await updateViatico(selectedGastoViatico.id, {
+        montoGastado: gastoMontoValue,
+        saldoRestante,
+        gastoFuente: 'manual',
+        efectifintechStatus: selectedGastoViatico.efectifintechStatus ?? 'pendiente',
+      });
+
+      setViaticosPendientes((prev) =>
+        prev.map((viatico) => (viatico.id === selectedGastoViatico.id ? { ...applyUpdate(viatico), ...persisted } : viatico))
+      );
+      await syncCoreAppData({ userId: persisted.userId });
+      setShowGastoModal(false);
+      setSelectedGastoViatico(null);
+      setGastoMonto('');
+      setShowGastoErrors(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo guardar el gasto.');
+    }
   };
 
-  const handleConfirmarRecuperacion = (viatico: Viatico, comentarios: string) => {
+  const handleConfirmarRecuperacion = async (viatico: Viatico, comentarios: string) => {
     const nextComentarios = comentarios.trim();
     const updatedRecord: Viatico = {
       ...viatico,
@@ -167,15 +152,28 @@ export default function Recuperacion() {
       saldoRestante: 0,
       status: 'completado',
     };
-    setViaticosPendientes((prev) => prev.map((item) => (item.id === viatico.id ? updatedRecord : item)));
-    ['usuario:viaticos', 'viaticos:list'].forEach((key) => {
-      const list = readStorageList<Viatico>(key);
-      if (!list.length) {
-        return;
-      }
-      const next = list.map((item) => (item.id === viatico.id ? { ...item, ...updatedRecord } : item));
-      writeStorageList(key, next);
-    });
+    try {
+      await createRecuperacion({
+        viaticoId: viatico.id,
+        montoRecuperado: viatico.saldoRestante ?? 0,
+        metodoPago: 'transferencia',
+        referencia: `REC-${Date.now()}`,
+        registradoPor: user?.full_name || '',
+        notas: nextComentarios,
+      });
+      const persisted = await updateViatico(viatico.id, {
+        comentarios: nextComentarios || viatico.comentarios,
+        saldoRestante: 0,
+        status: 'completado',
+      });
+
+      setViaticosPendientes((prev) =>
+        prev.map((item) => (item.id === viatico.id ? { ...updatedRecord, ...persisted } : item))
+      );
+      await syncCoreAppData({ userId: persisted.userId });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo confirmar la recuperacion.');
+    }
   };
 
   const isRecuperado = (viatico: Viatico) => (viatico.status === 'completado' || (viatico.saldoRestante ?? 0) === 0);
@@ -589,7 +587,7 @@ export default function Recuperacion() {
 
 interface RecuperacionModalProps {
   viatico: Viatico;
-  onConfirm: (viatico: Viatico, comentarios: string) => void;
+  onConfirm: (viatico: Viatico, comentarios: string) => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -729,8 +727,8 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
     const url = 'https://www.efectivalefintech.com.mx/';
     window.open(url, '_blank', 'noopener,noreferrer');
   };
-  const handleConfirmar = () => {
-    onConfirm(viatico, comentarios);
+  const handleConfirmar = async () => {
+    await onConfirm(viatico, comentarios);
     onClose();
   };
 

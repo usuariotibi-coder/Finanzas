@@ -1,13 +1,19 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
+import useAuth from '../../hooks/useAuth';
 import type { Proyecto, ProyectoEstado } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
-
-const STORAGE_KEY = 'proyectos_data';
+import {
+  createProyecto,
+  fetchProyectos,
+  syncCoreAppData,
+  updateProyecto,
+} from '../../utils/backendSync';
 
 export default function Proyectos() {
   const [proyectos, setProyectos] = useState<Proyecto[]>(getProyectos());
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useLocalStorageState('proyectos:searchTerm', '');
   const [filtroEstado, setFiltroEstado] = useLocalStorageState<ProyectoEstado | 'todos'>('proyectos:filtroEstado', 'todos');
   const [filtroCliente, setFiltroCliente] = useLocalStorageState<string>('proyectos:filtroCliente', 'todos');
@@ -31,6 +37,27 @@ export default function Proyectos() {
     notas: ''
   });
   const [showFormErrors, setShowFormErrors] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProyectos = async () => {
+      try {
+        const data = await fetchProyectos();
+        if (active) {
+          setProyectos(data);
+        }
+      } catch {
+        // Keep local cached data if backend request fails.
+      }
+    };
+
+    void loadProyectos();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Clientes únicos para filtro
   const clientes = useMemo(() => {
@@ -103,11 +130,6 @@ export default function Proyectos() {
     }
     : {};
 
-  const guardarProyectos = (nuevosProyectos: Proyecto[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nuevosProyectos));
-    setProyectos(nuevosProyectos);
-  };
-
   const abrirModal = (proyecto?: Proyecto) => {
     setShowFormErrors(false);
     if (proyecto) {
@@ -145,40 +167,26 @@ export default function Proyectos() {
 
   useEscapeKey(cerrarModal, isModalOpen);
 
-  const guardarProyecto = () => {
+  const guardarProyecto = async () => {
     if (!formData.codigo?.trim() || !formData.nombre?.trim() || !formData.cliente?.trim() || !formData.responsable?.trim()) {
       setShowFormErrors(true);
       return;
     }
 
-    const ahora = new Date().toISOString();
+    try {
+      if (modoEdicion && proyectoSeleccionado) {
+        const actualizado = await updateProyecto(proyectoSeleccionado.id, formData);
+        setProyectos((prev) => prev.map((proyecto) => (proyecto.id === actualizado.id ? actualizado : proyecto)));
+      } else {
+        const nuevoProyecto = await createProyecto(formData);
+        setProyectos((prev) => [...prev, nuevoProyecto]);
+      }
 
-    if (modoEdicion && proyectoSeleccionado) {
-      // Actualizar proyecto existente
-      const actualizado: Proyecto = {
-        ...formData as Proyecto,
-        id: proyectoSeleccionado.id,
-        createdAt: proyectoSeleccionado.createdAt,
-        updatedAt: ahora
-      };
-
-      const nuevosProyectos = proyectos.map(p =>
-        p.id === proyectoSeleccionado.id ? actualizado : p
-      );
-      guardarProyectos(nuevosProyectos);
-    } else {
-      // Crear nuevo proyecto
-      const nuevoProyecto: Proyecto = {
-        ...(formData as Proyecto),
-        id: `PRJ-${Date.now()}`,
-        createdAt: ahora,
-        updatedAt: ahora
-      };
-
-      guardarProyectos([...proyectos, nuevoProyecto]);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      cerrarModal();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.');
     }
-
-    cerrarModal();
   };
 
   const getEstadoBadgeColor = (estado: ProyectoEstado) => {

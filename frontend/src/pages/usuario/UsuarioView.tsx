@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
+import { createViaje, createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
-import { clearAppStorage, toStorageKey } from '../../utils/storage';
+import { clearAppStorage } from '../../utils/storage';
 
-const PROYECTOS_STORAGE_KEY = 'proyectos_data';
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 
 // Mock data: viáticos del usuario actual
@@ -264,6 +265,7 @@ interface GastoDocumento {
 }
 
 export default function UsuarioView() {
+  const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', MOCK_VIATICOS);
   const [viaticoSeleccionado, setViaticoSeleccionado] = useLocalStorageState<string | null>('usuario:viaticoSeleccionado', null);
   const [filtro, setFiltro] = useLocalStorageState<'todos' | 'activos' | 'completados'>('usuario:filtro', 'activos');
@@ -587,80 +589,51 @@ export default function UsuarioView() {
   const viaticoActual = viaticos.find(v => v.id === viaticoSeleccionado);
   const proyectoActual = proyectos.find(p => p.id === viaticoActual?.proyectoId);
 
-  const handleCrearNuevoViatico = () => {
+  const handleCrearNuevoViatico = async () => {
     if (!isFormValid) {
       setShowNuevoViaticoErrors(true);
       return;
     }
 
-    const nuevoViatico: Viatico = {
-      id: `VIA-${String(viaticos.length + 1).padStart(3, '0')}`,
-      userId: 'user1',
-      userName: 'Juan Pérez',
-      proyectoId: formNuevoViatico.proyectoId,
-      proyectoNombre: formatProyectoLabel(
-        proyectos.find(p => p.id === formNuevoViatico.proyectoId)?.nombre,
-        formNuevoViatico.proyectoId
-      ),
-      gsActivityId: formNuevoViatico.gsActivityId || undefined,
-      motivo: formNuevoViatico.motivo,
-      origen: formNuevoViatico.origen,
-      destino: formNuevoViatico.destino,
-      destinoPais: formNuevoViatico.destinoPais,
-      tipoViatico: formNuevoViatico.tipoViatico,
-      fechaInicio: formNuevoViatico.fechaInicio,
-      fechaFin: formNuevoViatico.fechaFin,
-      montoSolicitado: totalAlimentos,
-      status: 'pendiente',
-      createdAt: new Date().toISOString(),
-    };
+    const currentUserId = user ? String(user.id) : '';
 
-    const proyectosActuales = getProyectos();
-    const proyectosActualizados = proyectosActuales.map((proyecto) => {
-      if (proyecto.id !== formNuevoViatico.proyectoId) {
-        return proyecto;
-      }
+    try {
+      const nuevoViatico = await createViatico({
+        userId: currentUserId || undefined,
+        proyectoId: formNuevoViatico.proyectoId,
+        gsActivityId: formNuevoViatico.gsActivityId || undefined,
+        motivo: formNuevoViatico.motivo,
+        origen: formNuevoViatico.origen,
+        destino: formNuevoViatico.destino,
+        destinoPais: formNuevoViatico.destinoPais,
+        tipoViatico: formNuevoViatico.tipoViatico,
+        fechaInicio: formNuevoViatico.fechaInicio,
+        fechaFin: formNuevoViatico.fechaFin,
+        montoSolicitado: totalAlimentos,
+        status: 'pendiente',
+      });
 
-      return {
-        ...proyecto,
-        gastado: proyecto.gastado + totalAlimentos,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-    localStorage.setItem(PROYECTOS_STORAGE_KEY, JSON.stringify(proyectosActualizados));
-
-    setViaticos([...viaticos, nuevoViatico]);
-    const adminStorageKey = toStorageKey('viaticos:list');
-    const storedAdmin = localStorage.getItem(adminStorageKey);
-    let adminList: Viatico[] = [];
-    if (storedAdmin) {
-      try {
-        adminList = JSON.parse(storedAdmin) as Viatico[];
-      } catch {
-        adminList = [];
-      }
+      setViaticos((prev) => [...prev, nuevoViatico]);
+      await syncCoreAppData({ userId: currentUserId || undefined });
+      setShowModalNuevoViatico(false);
+      setFormNuevoViatico({
+        proyectoId: '',
+        gsActivityId: null,
+        motivo: '',
+        origen: 'Queretaro',
+        destino: '',
+        destinoPais: 'Mexico',
+        tipoViatico: 'efectifintech',
+        fechaInicio: '',
+        fechaFin: '',
+        desayunos: 0,
+        comidas: 0,
+        cenas: 0,
+      });
+      setShowNuevoViaticoErrors(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo crear el viatico.');
     }
-    if (!adminList.some((viatico) => viatico.id === nuevoViatico.id)) {
-      const nextAdminList = [...adminList, nuevoViatico];
-      localStorage.setItem(adminStorageKey, JSON.stringify(nextAdminList));
-      window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: adminStorageKey } }));
-    }
-    setShowModalNuevoViatico(false);
-    setFormNuevoViatico({
-      proyectoId: '',
-      gsActivityId: null,
-      motivo: '',
-      origen: 'Queretaro',
-      destino: '',
-      destinoPais: 'Mexico',
-      tipoViatico: 'efectifintech',
-      fechaInicio: '',
-      fechaFin: '',
-      desayunos: 0,
-      comidas: 0,
-      cenas: 0,
-    });
-    setShowNuevoViaticoErrors(false);
   };
 
   // Funciones para vehículos (solo coches)
@@ -714,7 +687,7 @@ export default function UsuarioView() {
   };
 
   // Función para solicitar viaje (avión, camión, hotel)
-  const handleSolicitarViaje = () => {
+  const handleSolicitarViaje = async () => {
     if (!formSolicitudViaje.proyectoId || !formSolicitudViaje.motivo || !formSolicitudViaje.origen || !formSolicitudViaje.destino || !formSolicitudViaje.fechaInicio || !formSolicitudViaje.fechaFin) {
       setShowSolicitarViajeErrors(true);
       return;
@@ -725,86 +698,57 @@ export default function UsuarioView() {
       return;
     }
 
+    const currentUserId = user ? String(user.id) : '';
     const proyectoLabel = formatProyectoLabel(
-      proyectos.find(p => p.id === formSolicitudViaje.proyectoId)?.nombre,
+      proyectos.find((p) => p.id === formSolicitudViaje.proyectoId)?.nombre,
       formSolicitudViaje.proyectoId
     );
 
-    const nuevaSolicitud: SolicitudViaje = {
-      id: `VJ-${Date.now()}`,
-      userId: 'user1',
-      userName: 'Juan Pérez',
-      proyectoId: formSolicitudViaje.proyectoId,
-      proyectoNombre: proyectoLabel,
-      origen: formSolicitudViaje.origen,
-      destino: formSolicitudViaje.destino,
-      fechaInicio: formSolicitudViaje.fechaInicio,
-      fechaFin: formSolicitudViaje.fechaFin,
-      motivo: formSolicitudViaje.motivo,
-      necesitaAvion: formSolicitudViaje.necesitaAvion,
-      necesitaCamion: formSolicitudViaje.necesitaCamion,
-      necesitaHotel: formSolicitudViaje.necesitaHotel,
-      detallesAvion: formSolicitudViaje.detallesAvion || undefined,
-      detallesCamion: formSolicitudViaje.detallesCamion || undefined,
-      detallesHotel: formSolicitudViaje.detallesHotel || undefined,
-      status: 'pendiente',
-      statusAvion: formSolicitudViaje.necesitaAvion ? 'pendiente' : undefined,
-      statusCamion: formSolicitudViaje.necesitaCamion ? 'pendiente' : undefined,
-      statusHotel: formSolicitudViaje.necesitaHotel ? 'pendiente' : undefined,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const nuevaSolicitud = await createViaje({
+        userId: currentUserId || undefined,
+        proyectoId: formSolicitudViaje.proyectoId,
+        proyectoNombre: proyectoLabel,
+        origen: formSolicitudViaje.origen,
+        destino: formSolicitudViaje.destino,
+        fechaInicio: formSolicitudViaje.fechaInicio,
+        fechaFin: formSolicitudViaje.fechaFin,
+        motivo: formSolicitudViaje.motivo,
+        necesitaAvion: formSolicitudViaje.necesitaAvion,
+        necesitaCamion: formSolicitudViaje.necesitaCamion,
+        necesitaHotel: formSolicitudViaje.necesitaHotel,
+        detallesAvion: formSolicitudViaje.detallesAvion || undefined,
+        detallesCamion: formSolicitudViaje.detallesCamion || undefined,
+        detallesHotel: formSolicitudViaje.detallesHotel || undefined,
+        status: 'pendiente',
+        statusAvion: formSolicitudViaje.necesitaAvion ? 'pendiente' : undefined,
+        statusCamion: formSolicitudViaje.necesitaCamion ? 'pendiente' : undefined,
+        statusHotel: formSolicitudViaje.necesitaHotel ? 'pendiente' : undefined,
+      });
 
-    setSolicitudesViaje([...solicitudesViaje, nuevaSolicitud]);
+      setSolicitudesViaje((prev) => [...prev, nuevaSolicitud]);
+      await syncCoreAppData({ userId: currentUserId || undefined });
+      alert('Solicitud de viaje enviada. El administrador te contactará para coordinar los servicios.');
 
-    const viajesPendientesKey = toStorageKey('pm-portal:viajesPendientes');
-    const storedPendientes = localStorage.getItem(viajesPendientesKey);
-    let viajesPendientesList: SolicitudViaje[] = [];
-    if (storedPendientes) {
-      try {
-        viajesPendientesList = JSON.parse(storedPendientes) as SolicitudViaje[];
-      } catch {
-        viajesPendientesList = [];
-      }
+      setShowModalSolicitarViaje(false);
+      setFormSolicitudViaje({
+        proyectoId: '',
+        motivo: '',
+        origen: '',
+        destino: '',
+        fechaInicio: '',
+        fechaFin: '',
+        necesitaAvion: false,
+        necesitaCamion: false,
+        necesitaHotel: false,
+        detallesAvion: '',
+        detallesCamion: '',
+        detallesHotel: '',
+      });
+      setShowSolicitarViajeErrors(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo crear la solicitud de viaje.');
     }
-    if (!viajesPendientesList.some((viaje) => viaje.id === nuevaSolicitud.id)) {
-      const updatedPendientes = [...viajesPendientesList, nuevaSolicitud];
-      localStorage.setItem(viajesPendientesKey, JSON.stringify(updatedPendientes));
-      window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: viajesPendientesKey } }));
-    }
-
-    // Construir descripción del viaje
-    const servicios = [];
-    if (formSolicitudViaje.necesitaAvion) servicios.push(`Avión: ${formSolicitudViaje.detallesAvion || 'Sin detalles'}`);
-    if (formSolicitudViaje.necesitaCamion) servicios.push(`Camión: ${formSolicitudViaje.detallesCamion || 'Sin detalles'}`);
-    if (formSolicitudViaje.necesitaHotel) servicios.push(`Hotel: ${formSolicitudViaje.detallesHotel || 'Sin detalles'}`);
-
-    console.log('Solicitud de viaje:', {
-      proyecto: proyectoLabel,
-      motivo: formSolicitudViaje.motivo,
-      origen: formSolicitudViaje.origen,
-      destino: formSolicitudViaje.destino,
-      fechas: `${formSolicitudViaje.fechaInicio} - ${formSolicitudViaje.fechaFin}`,
-      servicios: servicios.join(', '),
-    });
-
-    alert('Solicitud de viaje enviada. El administrador te contactará para coordinar los servicios.');
-
-    setShowModalSolicitarViaje(false);
-    setFormSolicitudViaje({
-      proyectoId: '',
-      motivo: '',
-      origen: '',
-      destino: '',
-      fechaInicio: '',
-      fechaFin: '',
-      necesitaAvion: false,
-      necesitaCamion: false,
-      necesitaHotel: false,
-      detallesAvion: '',
-      detallesCamion: '',
-      detallesHotel: '',
-    });
-    setShowSolicitarViajeErrors(false);
   };
 
   const handleRecibirVehiculo = () => {
@@ -2755,4 +2699,3 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
     </div>
   );
 }
-
