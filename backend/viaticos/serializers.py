@@ -11,6 +11,9 @@ class ViaticoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Viatico
         fields = '__all__'
+        extra_kwargs = {
+            'user': {'required': False},
+        }
 
 
 class ViaticoDocumentoSerializer(serializers.ModelSerializer):

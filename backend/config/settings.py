@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 
 import dj_database_url
 
@@ -201,9 +202,24 @@ CSRF_COOKIE_SAMESITE = COOKIE_SAMESITE
 SESSION_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'true' if IS_PRODUCTION else 'false').lower() == 'true'
 CSRF_COOKIE_SECURE = os.environ.get('DJANGO_SECURE_COOKIES', 'true' if IS_PRODUCTION else 'false').lower() == 'true'
 
-cookie_domain = os.environ.get('DJANGO_COOKIE_DOMAIN')
-railway_domain = '.up.railway.app' if (railway_public or railway_private) else None
-resolved_cookie_domain = cookie_domain or railway_domain
+def normalize_cookie_domain(raw_value: str | None) -> str | None:
+    value = (raw_value or '').strip()
+    if not value:
+        return None
+    if '://' in value:
+        parsed = urlparse(value)
+        value = parsed.hostname or ''
+    value = value.strip().lower()
+    if not value:
+        return None
+    stripped = value.lstrip('.')
+    # `up.railway.app` is a public suffix, so browsers reject domain cookies for it.
+    if stripped == 'up.railway.app':
+        return None
+    return f'.{stripped}'
+
+
+resolved_cookie_domain = normalize_cookie_domain(os.environ.get('DJANGO_COOKIE_DOMAIN'))
 if resolved_cookie_domain:
     SESSION_COOKIE_DOMAIN = resolved_cookie_domain
     CSRF_COOKIE_DOMAIN = resolved_cookie_domain

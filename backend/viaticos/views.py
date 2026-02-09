@@ -18,11 +18,12 @@ class ViaticoViewSet(viewsets.ModelViewSet):
         return queryset.filter(user=user)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        if user.role in (Role.ADMIN, Role.PM):
-            serializer.save()
+        request_user = self.request.user
+        payload_user = serializer.validated_data.get('user')
+        if request_user.role in (Role.ADMIN, Role.PM):
+            serializer.save(user=payload_user or request_user)
         else:
-            serializer.save(user=user)
+            serializer.save(user=request_user)
 
 
 class ViaticoDocumentoViewSet(viewsets.ModelViewSet):

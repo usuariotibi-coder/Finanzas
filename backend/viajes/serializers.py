@@ -10,3 +10,6 @@ class SolicitudViajeSerializer(serializers.ModelSerializer):
     class Meta:
         model = SolicitudViaje
         fields = '__all__'
+        extra_kwargs = {
+            'user': {'required': False},
+        }

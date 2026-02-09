@@ -24,6 +24,9 @@ class VehicleAssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleAssignment
         fields = '__all__'
+        extra_kwargs = {
+            'user': {'required': False},
+        }
 
     def get_vehicle_label(self, obj):
         if not obj.vehicle_id:
