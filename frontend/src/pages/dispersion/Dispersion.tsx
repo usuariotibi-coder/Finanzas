@@ -5,80 +5,15 @@ import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Dispersion as DispersionType, Viatico } from '../../types';
 import { createDispersion, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 
-// Solo viáticos aprobados por el PM (status: 'aprobado')
-const mockViaticosPendientes: Viatico[] = [
-  {
-    id: '3',
-    userId: 'user3',
-    userName: 'Carlos López',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Proyecto GDL',
-    destinoPais: 'Mexico',
-    tipoViatico: 'efectifintech',
-    motivo: 'Auditoría de sucursal',
-    destino: 'Puebla, Puebla',
-    fechaInicio: '2025-12-13',
-    fechaFin: '2025-12-15',
-    montoSolicitado: 12000,
-    montoAprobado: 12000,
-    status: 'aprobado',
-    createdAt: '2025-12-09',
-    aprobadoPor: 'Francisco Aguilar (PM)',
-    comentarios: 'Aprobado por Project Manager',
-  },
-  {
-    id: '4',
-    userId: 'user4',
-    userName: 'Laura Sánchez',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    destinoPais: 'Mexico',
-    tipoViatico: 'amex',
-    motivo: 'Visita a proveedor',
-    destino: 'Querétaro, Qro',
-    fechaInicio: '2025-12-16',
-    fechaFin: '2025-12-17',
-    montoSolicitado: 8000,
-    montoAprobado: 8000,
-    status: 'aprobado',
-    createdAt: '2025-12-10',
-    aprobadoPor: 'Francisco Aguilar (PM)',
-    comentarios: 'Aprobado por Project Manager',
-  },
-];
-
-const mockDispersiones: DispersionType[] = [
-  {
-    id: 'd1',
-    viaticoId: '1',
-    monto: 14000,
-    fecha: '2025-12-11',
-    metodoPago: 'transferencia',
-    referencia: 'TRANS-2025-001',
-    confirmado: true,
-    dispersadoPor: 'María González',
-  },
-  {
-    id: 'd2',
-    viaticoId: '5',
-    monto: 10000,
-    fecha: '2025-12-10',
-    metodoPago: 'transferencia',
-    referencia: 'TRANS-2025-002',
-    confirmado: true,
-    dispersadoPor: 'María González',
-  },
-];
 
 const esDestinoExtranjero = (viatico: Viatico) => viatico.destinoPais === 'USA' || viatico.destinoPais === 'Otro';
 
 const formatUsd = (value: number) =>
   value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export default function Dispersion() {
   const { user } = useAuth();
-  const [viaticosPendientes, setViaticosPendientes] = useLocalStorageState<Viatico[]>('dispersion:viaticosPendientes', mockViaticosPendientes);
-  const [dispersiones, setDispersiones] = useLocalStorageState<DispersionType[]>('dispersion:dispersiones', mockDispersiones);
+  const [viaticosPendientes, setViaticosPendientes] = useLocalStorageState<Viatico[]>('dispersion:viaticosPendientes', []);
+  const [dispersiones, setDispersiones] = useLocalStorageState<DispersionType[]>('dispersion:dispersiones', []);
   const [showConfirmacionModal, setShowConfirmacionModal] = useLocalStorageState('dispersion:showConfirmacionModal', false);
   const [selectedViatico, setSelectedViatico] = useLocalStorageState<Viatico | null>('dispersion:selectedViatico', null);
   const [filtroAnio, setFiltroAnio] = useLocalStorageState<string>('dispersion:filtroAnio', '2025');

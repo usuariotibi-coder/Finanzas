@@ -5,26 +5,6 @@ import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Viatico } from '../../types';
 import { createRecuperacion, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 
-const mockViaticosPendientes: Viatico[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    motivo: 'Reunión con clientes',
-    destino: 'Guadalajara, Jalisco',
-    fechaInicio: '2025-12-15',
-    fechaFin: '2025-12-17',
-    montoSolicitado: 15000,
-    montoAprobado: 14000,
-    montoDispersado: 14000,
-    montoGastado: 12500,
-    saldoRestante: 1500,
-    status: 'dispersado',
-    gastoFuente: 'manual',
-    efectifintechStatus: 'pendiente',
-    createdAt: '2025-12-10',
-  },
-];
 
 const getViaticoStatusIcon = (status: Viatico['status']) => {
   const icons = {
@@ -68,10 +48,9 @@ const formatSyncTimestamp = (value?: string) => {
   }
   return parsed.toLocaleDateString('es-MX');
 };
-
 export default function Recuperacion() {
   const { user } = useAuth();
-  const [viaticosPendientes, setViaticosPendientes] = useLocalStorageState<Viatico[]>('recuperacion:viaticosPendientes', mockViaticosPendientes);
+  const [viaticosPendientes, setViaticosPendientes] = useLocalStorageState<Viatico[]>('recuperacion:viaticosPendientes', []);
   const [showRecuperacionForm, setShowRecuperacionForm] = useLocalStorageState('recuperacion:showRecuperacionForm', false);
   const [selectedViatico, setSelectedViatico] = useLocalStorageState<Viatico | null>('recuperacion:selectedViatico', null);
   const [showInfoModal, setShowInfoModal] = useLocalStorageState('recuperacion:showInfoModal', false);

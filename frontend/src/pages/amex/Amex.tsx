@@ -9,129 +9,6 @@ import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExc
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 
-// Mock data con todos los campos nuevos
-const mockTickets: TicketAMEX[] = [
-  {
-    id: 't1',
-    userId: 'user1',
-    fecha: '2025-11-28',
-    comercio: 'Marriott Cancun',
-    monto: 12500,
-    categoria: 'Hospedaje',
-    matched: true,
-    autorizado: true,
-    duplicado: false,
-    facturaId: 'f10',
-    cardNumber: '1001',
-    cardHolder: 'Francisco Aguilar',
-    cuentaContable: '5450',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    gsActivityId: 1,
-    proyecto: 'Obra Aeropuerto TLM',
-    paisComercio: 'México',
-    clasificacionAuto: true,
-  },
-  {
-    id: 't2',
-    userId: 'user2',
-    fecha: '2025-12-05',
-    comercio: 'Uber USA',
-    monto: 850,
-    categoria: 'Transporte',
-    matched: false,
-    autorizado: true,
-    duplicado: false,
-    cardNumber: '1002',
-    cardHolder: 'Luis Kuara',
-    cuentaContable: '5450',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    gsActivityId: 1,
-    proyecto: 'Proyecto Houston',
-    paisComercio: 'USA',
-    clasificacionAuto: true,
-    montoUSD: 45.50,
-    tipoCambio: 18.68,
-    observaciones: 'Sin factura asociada',
-  },
-  {
-    id: 't3',
-    userId: 'user1',
-    fecha: '2025-12-10',
-    comercio: 'Office Depot',
-    monto: 2800,
-    categoria: 'Suministros',
-    matched: true,
-    autorizado: true,
-    duplicado: false,
-    cardNumber: '1003',
-    cardHolder: 'María González',
-    cuentaContable: '6090',
-    gsActivityId: 19,
-    paisComercio: 'México',
-    clasificacionAuto: true,
-    facturaId: 'f11',
-  },
-  {
-    id: 't4',
-    userId: 'user3',
-    fecha: '2025-12-08',
-    comercio: 'Shell Gas Station',
-    monto: 800,
-    categoria: 'Gasolina',
-    matched: true,
-    autorizado: true,
-    duplicado: false,
-    cardNumber: '1004',
-    cardHolder: 'Carlos Mendoza',
-    cuentaContable: '5450',
-    proyectoId: 'PRJ-003',
-    proyectoNombre: 'Supervisión Obra GDL',
-    gsActivityId: 1,
-    proyecto: 'Supervisión Obra GDL',
-    paisComercio: 'México',
-    clasificacionAuto: true,
-    facturaId: 'f12',
-  },
-  {
-    id: 't5',
-    userId: 'user4',
-    fecha: '2025-12-11',
-    comercio: 'Amazon Business',
-    monto: 3200,
-    categoria: 'Electrónica',
-    matched: false,
-    autorizado: true,
-    duplicado: false,
-    cardNumber: '1005',
-    cardHolder: 'Ana Martínez',
-    cuentaContable: '6200',
-    paisComercio: 'USA',
-    clasificacionAuto: false,
-    montoUSD: 170,
-    tipoCambio: 18.82,
-  },
-  {
-    id: 't6',
-    userId: 'user5',
-    fecha: '2025-12-09',
-    comercio: 'Restaurante La Nacional',
-    monto: 1450,
-    categoria: 'Alimentos',
-    matched: true,
-    autorizado: true,
-    duplicado: false,
-    cardNumber: '1006',
-    cardHolder: 'Roberto Sánchez',
-    cuentaContable: '5450',
-    proyecto: 'Reunión Cliente MTY',
-    paisComercio: 'México',
-    clasificacionAuto: true,
-    facturaId: 'f13',
-  },
-];
-
 const safeString = (value: unknown) => {
   if (value === null || value === undefined) {
     return '';
@@ -350,10 +227,9 @@ const mergeTickets = (prev: TicketAMEX[], incoming: TicketAMEX[]) => {
 
   return updated.sort((a, b) => b.fecha.localeCompare(a.fecha));
 };
-
 export default function Amex() {
   const [selectedCard, setSelectedCard] = useLocalStorageState<string>('amex:selectedCard', 'all');
-  const [tickets, setTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', mockTickets);
+  const [tickets, setTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
   const [showExportModal, setShowExportModal] = useLocalStorageState('amex:showExportModal', false);
   const [showAddModal, setShowAddModal] = useLocalStorageState('amex:showAddModal', false);
   const [showFacturaModal, setShowFacturaModal] = useLocalStorageState('amex:showFacturaModal', false);

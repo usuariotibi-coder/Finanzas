@@ -7,79 +7,6 @@ import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
-// Mock data actualizado con tipoMantenimiento y tipoAlerta
-const mockVehicles: Vehicle[] = [
-  {
-    id: 'v1',
-    brand: 'Toyota',
-    model: 'Corolla',
-    year: 2023,
-    plates: 'ABC-123',
-    serialNumber: 'JTD12345678901234',
-    color: 'Blanco',
-    insurance: {
-      company: 'GNP Seguros',
-      policyNumber: 'POL-2025-001',
-      expirationDate: '2025-12-31',
-    },
-    maintenance: {
-      lastServiceDate: '2025-11-15',
-      lastServiceKm: 45000,
-      nextServiceDate: '2026-02-15',
-      nextServiceKm: 50000,
-    },
-    currentKm: 47500,
-    status: 'assigned',
-    createdAt: '2023-01-15',
-  },
-  {
-    id: 'v2',
-    brand: 'Nissan',
-    model: 'Versa',
-    year: 2022,
-    plates: 'XYZ-456',
-    serialNumber: 'NIS98765432109876',
-    color: 'Gris',
-    insurance: {
-      company: 'Qualitas',
-      policyNumber: 'POL-2025-002',
-      expirationDate: '2026-03-15',
-    },
-    maintenance: {
-      lastServiceDate: '2025-10-20',
-      lastServiceKm: 30000,
-      nextServiceDate: '2026-01-20',
-      nextServiceKm: 35000,
-    },
-    currentKm: 32100,
-    status: 'available',
-    createdAt: '2022-05-10',
-  },
-  {
-    id: 'v3',
-    brand: 'Honda',
-    model: 'Civic',
-    year: 2024,
-    plates: 'DEF-789',
-    serialNumber: 'HON45678901234567',
-    color: 'Azul',
-    insurance: {
-      company: 'AXA Seguros',
-      policyNumber: 'POL-2025-003',
-      expirationDate: '2025-11-30',
-    },
-    maintenance: {
-      lastServiceDate: '2025-09-10',
-      lastServiceKm: 15000,
-      nextServiceDate: '2025-12-10',
-      nextServiceKm: 20000,
-    },
-    currentKm: 19800,
-    status: 'in_shop',
-    createdAt: '2024-01-20',
-  },
-];
-
 const VEHICLE_IMAGE_FALLBACK = 'https://via.placeholder.com/1200x800/e5e7eb/6b7280?text=Sin+Imagen';
 
 const getVehicleImageSeed = (brand: string, model: string) => {
@@ -124,157 +51,9 @@ const getAssignmentStatusIcon = (status: VehicleAssignment['status']) => {
   return icons[status] ?? '🚗';
 };
 
-const mockAssignments: VehicleAssignment[] = [
-  {
-    id: 'a1',
-    vehicleId: 'v1',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    viaticoId: 'via1',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    origen: 'Guadalajara',
-    destino: 'Guadalajara',
-    fechaInicio: '2025-12-10',
-    motivo: 'Viaje de negocios a Guadalajara',
-    proposito: 'viaje',
-    kmInicial: 47000,
-    status: 'activo',
-    createdAt: '2025-12-09',
-  },
-];
 
-const mockAlertas: VehicleAlert[] = [
-  {
-    id: 'alert1',
-    vehicleId: 'v3',
-    type: 'Mantenimiento preventivo - Servicio 20,000 KM',
-    message: 'Honda Civic (DEF-789) - Próximo servicio programado en 200 km',
-    dueDate: '2025-12-10',
-    severity: 'high',
-    attended: false,
-    tipoMantenimiento: 'preventivo',
-    tipoAlerta: 'servicio',
-    costoEstimado: 3500,
-    proveedorSugerido: 'Honda San Pedro',
-  },
-  {
-    id: 'alert2',
-    vehicleId: 'v1',
-    type: 'Pastillas de freno desgastadas',
-    message: 'Toyota Corolla (ABC-123) - Indicador de desgaste activado',
-    dueDate: '2025-12-15',
-    severity: 'medium',
-    attended: false,
-    tipoMantenimiento: 'predictivo',
-    tipoAlerta: 'reparacion',
-    costoEstimado: 2800,
-  },
-  {
-    id: 'alert3',
-    vehicleId: 'v2',
-    type: 'Renovación de seguro',
-    message: 'Nissan Versa (XYZ-456) - Seguro vence en 90 días',
-    dueDate: '2026-03-15',
-    severity: 'low',
-    attended: false,
-    tipoMantenimiento: 'preventivo',
-    tipoAlerta: 'seguro',
-    costoEstimado: 8500,
-    proveedorSugerido: 'Qualitas',
-  },
-  {
-    id: 'alert4',
-    vehicleId: 'v3',
-    type: 'Motor sobrecalentando',
-    message: 'Honda Civic (DEF-789) - Falla en el sistema de enfriamiento',
-    dueDate: '2025-12-12',
-    severity: 'critical',
-    attended: false,
-    tipoMantenimiento: 'correctivo',
-    tipoAlerta: 'reparacion',
-    costoEstimado: 15000,
-  },
-];
 
-const mockCargasGasolina: CargaGasolina[] = [
-  {
-    id: 'cg1',
-    vehicleId: 'v1',
-    fecha: '2025-12-08',
-    litros: 45.5,
-    precioLitro: 23.50,
-    total: 1069.25,
-    odometro: 47500,
-    estacion: 'Pemex Centro',
-    facturaId: 'f20',
-  },
-  {
-    id: 'cg2',
-    vehicleId: 'v2',
-    fecha: '2025-12-09',
-    litros: 38.2,
-    precioLitro: 23.80,
-    total: 909.16,
-    odometro: 32100,
-    estacion: 'Shell Norte',
-  },
-  {
-    id: 'cg3',
-    vehicleId: 'v1',
-    fecha: '2025-12-05',
-    litros: 42.0,
-    precioLitro: 23.40,
-    total: 982.80,
-    odometro: 47200,
-    estacion: 'Pemex Centro',
-    facturaId: 'f18',
-  },
-  {
-    id: 'cg4',
-    vehicleId: 'v3',
-    fecha: '2025-12-07',
-    litros: 35.0,
-    precioLitro: 23.60,
-    total: 826.00,
-    odometro: 19800,
-    estacion: 'BP Sur',
-    facturaId: 'f19',
-  },
-];
 
-const mockMaintenanceHistory: MaintenanceRecord[] = [
-  {
-    id: 'mh1',
-    vehicleId: 'v1',
-    fecha: '2025-11-15',
-    tipo: 'preventivo',
-    descripcion: 'Cambio de aceite y filtros - Servicio 45,000 KM',
-    costo: 3200,
-    km: 45000,
-    proveedor: 'Toyota Lomas',
-  },
-  {
-    id: 'mh2',
-    vehicleId: 'v2',
-    fecha: '2025-10-20',
-    tipo: 'preventivo',
-    descripcion: 'Servicio mayor 30,000 KM',
-    costo: 4500,
-    km: 30000,
-    proveedor: 'Nissan Plaza',
-  },
-  {
-    id: 'mh3',
-    vehicleId: 'v1',
-    fecha: '2025-09-10',
-    tipo: 'predictivo',
-    descripcion: 'Cambio de balatas delanteras',
-    costo: 2800,
-    km: 42000,
-    proveedor: 'Refaccionaria AutoPartes',
-  },
-];
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 
@@ -284,13 +63,11 @@ const getVehicleAssignments = (): VehicleAssignment[] => {
     try {
       return JSON.parse(stored) as VehicleAssignment[];
     } catch {
-      // ignore parse errors and fall back to mock
+      // ignore parse errors and fall back to empty
     }
   }
-  localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(mockAssignments));
-  return mockAssignments;
+  return [];
 };
-
 export default function Flotilla() {
   const [showNewVehicleForm, setShowNewVehicleForm] = useLocalStorageState('flotilla:showNewVehicleForm', false);
   const [showAssignmentForm, setShowAssignmentForm] = useLocalStorageState('flotilla:showAssignmentForm', false);
@@ -299,6 +76,10 @@ export default function Flotilla() {
   const [selectedVehicleId, setSelectedVehicleId] = useLocalStorageState<string | null>('flotilla:selectedVehicleId', null);
   const [showDetalleModal, setShowDetalleModal] = useLocalStorageState('flotilla:showDetalleModal', false);
   const [showHistorialModal, setShowHistorialModal] = useLocalStorageState('flotilla:showHistorialModal', false);
+  const [vehicles] = useLocalStorageState<Vehicle[]>('flotilla:vehiculos', []);
+  const [alerts] = useLocalStorageState<VehicleAlert[]>('flotilla:alertas', []);
+  const [cargasGasolina] = useLocalStorageState<CargaGasolina[]>('flotilla:cargasGasolina', []);
+  const [maintenanceHistory] = useLocalStorageState<MaintenanceRecord[]>('flotilla:maintenanceHistory', []);
   const [assignments, setAssignments] = useState<VehicleAssignment[]>(getVehicleAssignments);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
@@ -341,7 +122,7 @@ export default function Flotilla() {
       .filter(a => a.vehicleId && (a.status === 'asignado' || a.status === 'activo'))
       .map(a => a.vehicleId)
   );
-  const vehiclesWithStatus = mockVehicles.map((vehicle) => {
+  const vehiclesWithStatus = vehicles.map((vehicle) => {
     if (vehicle.status === 'in_shop' || vehicle.status === 'out_of_service') {
       return vehicle;
     }
@@ -357,7 +138,7 @@ export default function Flotilla() {
   const vehiculosDisponibles = vehiclesWithStatus.filter(v => v.status === 'available').length;
   const vehiculosAsignados = vehiclesWithStatus.filter(v => v.status === 'assigned').length;
   const vehiculosEnTaller = vehiclesWithStatus.filter(v => v.status === 'in_shop').length;
-  const alertasPendientes = mockAlertas.filter(a => !a.attended).length;
+  const alertasPendientes = alerts.filter(a => !(a.atendido ?? a.attended)).length;
   const solicitudesPendientes = assignments.filter(a => a.status === 'solicitado');
   const asignacionesActivas = assignments.filter(a => a.status !== 'completado');
   const asignacionesCompletadas = assignments.filter(a => a.status === 'completado');
@@ -460,7 +241,7 @@ export default function Flotilla() {
           { header: 'Costo', key: 'cost', width: 15 },
           { header: 'Proveedor', key: 'provider', width: 25 },
         ],
-        data: mockMaintenanceHistory.map(m => {
+        data: maintenanceHistory.map(m => {
           const vehicle = vehiclesWithStatus.find(v => v.id === m.vehicleId);
           return {
             vehicle: vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plates})` : 'Desconocido',
@@ -486,7 +267,7 @@ export default function Flotilla() {
           { header: 'Estación', key: 'station', width: 25 },
           { header: 'Factura', key: 'invoice', width: 10 },
         ],
-        data: mockCargasGasolina.map(c => {
+        data: cargasGasolina.map(c => {
           const vehicle = vehiclesWithStatus.find(v => v.id === c.vehicleId);
           return {
             vehicle: vehicle ? `${vehicle.brand} ${vehicle.model} (${vehicle.plates})` : 'Desconocido',
@@ -511,9 +292,9 @@ export default function Flotilla() {
           { header: 'Total', key: 'total', width: 15 },
         ],
         data: vehiclesWithStatus.map(v => {
-          const gasolina = mockCargasGasolina.filter(c => c.vehicleId === v.id).reduce((sum, c) => sum + c.total, 0);
-          const mantenimiento = mockMaintenanceHistory.filter(m => m.vehicleId === v.id).reduce((sum, m) => sum + m.costo, 0);
-          const seguro = 8500; // Mock - debería venir de los datos reales
+          const gasolina = cargasGasolina.filter(c => c.vehicleId === v.id).reduce((sum, c) => sum + c.total, 0);
+          const mantenimiento = maintenanceHistory.filter(m => m.vehicleId === v.id).reduce((sum, m) => sum + m.costo, 0);
+          const seguro = 0;
           const total = gasolina + mantenimiento + seguro;
 
           return {
@@ -701,15 +482,15 @@ export default function Flotilla() {
 
           {activeTab === 'mantenimiento' && (
             <MenuMantenimiento
-              alerts={mockAlertas}
-              maintenanceHistory={mockMaintenanceHistory}
+              alerts={alerts}
+              maintenanceHistory={maintenanceHistory}
               onScheduleService={handleScheduleService}
               onCompleteService={handleCompleteService}
             />
           )}
 
           {activeTab === 'gasolina' && (
-            <GasolinaKPI cargas={mockCargasGasolina} vehicles={vehiclesWithStatus} />
+            <GasolinaKPI cargas={cargasGasolina} vehicles={vehiclesWithStatus} />
           )}
         </div>
       </div>
@@ -790,7 +571,7 @@ export default function Flotilla() {
         <DetalleVehiculoModal
           vehicle={vehiclesWithStatus.find(v => v.id === selectedVehicleId)!}
           assignments={assignments.filter(a => a.vehicleId === selectedVehicleId)}
-          alerts={mockAlertas.filter(a => a.vehicleId === selectedVehicleId)}
+          alerts={alerts.filter(a => a.vehicleId === selectedVehicleId)}
           onClose={() => {
             setShowDetalleModal(false);
             setSelectedVehicleId(null);
@@ -802,8 +583,8 @@ export default function Flotilla() {
       {showHistorialModal && selectedVehicleId && (
         <HistorialVehiculoModal
           vehicle={vehiclesWithStatus.find(v => v.id === selectedVehicleId)!}
-          maintenanceHistory={mockMaintenanceHistory.filter(m => m.vehicleId === selectedVehicleId)}
-          cargasGasolina={mockCargasGasolina.filter(c => c.vehicleId === selectedVehicleId)}
+          maintenanceHistory={maintenanceHistory.filter(m => m.vehicleId === selectedVehicleId)}
+          cargasGasolina={cargasGasolina.filter(c => c.vehicleId === selectedVehicleId)}
           onClose={() => {
             setShowHistorialModal(false);
             setSelectedVehicleId(null);

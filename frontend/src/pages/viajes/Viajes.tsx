@@ -5,82 +5,6 @@ import type { SolicitudViaje } from '../../types';
 import { syncCoreAppData, updateViaje } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
-const mockSolicitudes: SolicitudViaje[] = [
-  {
-    id: 'VJ-001',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    destino: 'Houston, Texas, USA',
-    fechaInicio: '2025-12-20',
-    fechaFin: '2025-12-23',
-    motivo: 'Reunión con cliente y supervisión de instalaciones',
-    necesitaAvion: true,
-    necesitaCamion: false,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo desde Guadalajara, preferencia salida temprano',
-    detallesHotel: 'Hotel cerca del aeropuerto, 3 noches',
-    status: 'pendiente',
-    statusAvion: 'pendiente',
-    statusHotel: 'pendiente',
-    createdAt: '2025-12-10T10:00:00Z',
-  },
-  {
-    id: 'VJ-002',
-    userId: 'user2',
-    userName: 'Ana Martínez',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    destino: 'Monterrey, Nuevo León',
-    fechaInicio: '2025-12-18',
-    fechaFin: '2025-12-20',
-    motivo: 'Inspección de obra y reunión con contratistas',
-    necesitaAvion: true,
-    necesitaCamion: true,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo, asiento de ventana preferido',
-    detallesCamion: 'Camión de carga para transporte de material',
-    detallesHotel: 'Hotel céntrico, 2 noches',
-    status: 'en_proceso',
-    statusAvion: 'gestionando',
-    statusCamion: 'gestionando',
-    statusHotel: 'confirmado',
-    notas: 'Coordinar con proveedor local',
-    createdAt: '2025-12-08T14:30:00Z',
-    atendidoPor: 'María González',
-    confirmaciones: {
-      hotel: [{ nombre: 'Hotel Hampton Inn', confirmacion: 'HTL789', costo: 1800 }],
-    },
-  },
-  {
-    id: 'VJ-003',
-    userId: 'user3',
-    userName: 'Carlos López',
-    proyectoId: 'PRJ-003',
-    proyectoNombre: 'Proyecto GDL',
-    destino: 'Ciudad de México',
-    fechaInicio: '2025-12-15',
-    fechaFin: '2025-12-16',
-    motivo: 'Capacitación técnica',
-    necesitaAvion: true,
-    necesitaCamion: false,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo, salida tarde y regreso en la tarde',
-    detallesHotel: '1 noche, hotel cerca del centro de capacitación',
-    status: 'confirmado',
-    statusAvion: 'confirmado',
-    statusHotel: 'confirmado',
-    confirmaciones: {
-      avion: [{ aerolinea: 'Volaris', confirmacion: 'ABC123', costo: 3500 }],
-      hotel: [{ nombre: 'Hotel Fiesta Inn', confirmacion: 'HTL456', costo: 1200 }],
-    },
-    costoEstimado: 5000,
-    costoFinal: 4700,
-    createdAt: '2025-12-05T09:00:00Z',
-    atendidoPor: 'María González',
-  },
-];
 
 const getViajeStatusIcon = (status: string) => {
   const icons = {
@@ -94,9 +18,8 @@ const getViajeStatusIcon = (status: string) => {
 
   return icons[status as keyof typeof icons] || '⏳';
 };
-
 export default function Viajes() {
-  const [solicitudes, setSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', mockSolicitudes);
+  const [solicitudes, setSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
   const [, setSolicitudesUsuario] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
   const [filter, setFilter] = useLocalStorageState<'todos' | 'pendiente' | 'en_proceso' | 'confirmado' | 'completado' | 'rechazado'>('viajes:filter', 'todos');
   const [selectedSolicitud, setSelectedSolicitud] = useLocalStorageState<SolicitudViaje | null>('viajes:selectedSolicitud', null);

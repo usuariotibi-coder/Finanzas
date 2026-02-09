@@ -1,4 +1,19 @@
-import type { DashboardMetrics, Dispersion, Proyecto, SolicitudViaje, Viatico } from '../types';
+import type {
+  AlertaConciliacion,
+  CargaGasolina,
+  Consumo,
+  DashboardMetrics,
+  Dispersion,
+  Factura,
+  MaintenanceRecord,
+  Proyecto,
+  SolicitudViaje,
+  TicketAMEX,
+  Vehicle,
+  VehicleAlert,
+  VehicleAssignment,
+  Viatico,
+} from '../types';
 import { apiFetch } from './api';
 import { toStorageKey } from './storage';
 
@@ -186,6 +201,208 @@ const mapDispersionFromApi = (raw: RawRecord): Dispersion => ({
   dispersadoPor: parseString(raw.dispersado_por),
 });
 
+const mapFacturaFromApi = (raw: RawRecord): Factura => ({
+  id: toStringId(raw.id),
+  viaticoId: toNullableString(raw.viatico ? toStringId(raw.viatico) : undefined),
+  userId: toStringId(raw.user),
+  folio: parseString(raw.folio),
+  uuid: parseString(raw.uuid),
+  rfc: parseString(raw.rfc),
+  razonSocial: parseString(raw.razon_social),
+  fecha: parseString(raw.fecha),
+  subtotal: parseNumber(raw.subtotal),
+  iva: parseNumber(raw.iva),
+  total: parseNumber(raw.total),
+  formaPago: parseString(raw.forma_pago),
+  metodoPago: parseString(raw.metodo_pago),
+  conceptos: Array.isArray(raw.conceptos) ? (raw.conceptos as Factura['conceptos']) : [],
+  status: (parseString(raw.status) || 'pendiente') as Factura['status'],
+  archivoXML: toNullableString(raw.archivo_xml),
+  archivoPDF: toNullableString(raw.archivo_pdf),
+  validacionCFDI:
+    raw.validacion_cfdi && typeof raw.validacion_cfdi === 'object'
+      ? (raw.validacion_cfdi as Factura['validacionCFDI'])
+      : undefined,
+  matchConsumo: parseBoolean(raw.match_consumo),
+  createdAt: parseString(raw.created_at),
+});
+
+const mapConsumoFromApi = (raw: RawRecord): Consumo => ({
+  id: toStringId(raw.id),
+  userId: toStringId(raw.user),
+  viaticoId: toNullableString(raw.viatico ? toStringId(raw.viatico) : undefined),
+  fecha: parseString(raw.fecha),
+  comercio: parseString(raw.comercio),
+  monto: parseNumber(raw.monto),
+  categoria: parseString(raw.categoria),
+  facturaId: toNullableString(raw.factura ? toStringId(raw.factura) : undefined),
+  facturaPdfName: toNullableString(raw.factura_pdf_name),
+  facturaXmlName: toNullableString(raw.factura_xml_name),
+  facturaNotas: toNullableString(raw.factura_notas),
+  matched: parseBoolean(raw.matched),
+  autorizado: parseBoolean(raw.autorizado),
+});
+
+const mapAlertaConciliacionFromApi = (raw: RawRecord): AlertaConciliacion => ({
+  tipo: (parseString(raw.tipo) || 'monto_diferente') as AlertaConciliacion['tipo'],
+  descripcion: parseString(raw.descripcion),
+  gravedad: (parseString(raw.gravedad) || 'media') as AlertaConciliacion['gravedad'],
+  facturaId: toNullableString(raw.factura ? toStringId(raw.factura) : undefined),
+  consumoId: toNullableString(raw.consumo ? toStringId(raw.consumo) : undefined),
+});
+
+const mapTicketAmexFromApi = (raw: RawRecord): TicketAMEX => ({
+  id: toStringId(raw.id),
+  userId: toStringId(raw.user),
+  cardNumber: parseString(raw.card_number),
+  cardHolder: parseString(raw.card_holder),
+  fecha: parseString(raw.fecha),
+  comercio: parseString(raw.comercio),
+  monto: parseNumber(raw.monto),
+  montoUSD: toNullableNumber(raw.monto_usd),
+  tipoCambio: toNullableNumber(raw.tipo_cambio),
+  categoria: parseString(raw.categoria),
+  cuentaContable: parseString(raw.cuenta_contable),
+  proyectoId: toNullableString(raw.proyecto ? toStringId(raw.proyecto) : undefined),
+  proyectoNombre: toNullableString(raw.proyecto_nombre),
+  gsActivityId: toNullableNumber(raw.gs_activity_id),
+  paisComercio: parseString(raw.pais_comercio),
+  facturaId: toNullableString(raw.factura ? toStringId(raw.factura) : undefined),
+  facturaPdfName: toNullableString(raw.factura_pdf_name),
+  facturaXmlName: toNullableString(raw.factura_xml_name),
+  facturaNotas: toNullableString(raw.factura_notas),
+  matched: parseBoolean(raw.matched),
+  autorizado: parseBoolean(raw.autorizado),
+  duplicado: parseBoolean(raw.duplicado),
+  clasificacionAuto: parseBoolean(raw.clasificacion_auto),
+  observaciones: toNullableString(raw.observaciones),
+});
+
+const mapVehicleFromApi = (raw: RawRecord): Vehicle => ({
+  id: toStringId(raw.id),
+  brand: parseString(raw.marca),
+  model: parseString(raw.modelo),
+  year: parseNumber(raw.anio),
+  plates: parseString(raw.placas),
+  serialNumber: parseString(raw.numero_serie),
+  color: parseString(raw.color),
+  insurance: {
+    company: parseString(raw.seguro_compania),
+    policyNumber: parseString(raw.seguro_poliza),
+    expirationDate: parseString(raw.seguro_vigencia),
+  },
+  maintenance: {
+    lastServiceDate: parseString(raw.mantenimiento_ultimo_servicio),
+    lastServiceKm: parseNumber(raw.mantenimiento_km_ultimo),
+    nextServiceDate: parseString(raw.mantenimiento_proximo_servicio),
+    nextServiceKm: parseNumber(raw.mantenimiento_km_proximo),
+  },
+  currentKm: parseNumber(raw.km_actual),
+  marca: parseString(raw.marca),
+  modelo: parseString(raw.modelo),
+  anio: parseNumber(raw.anio),
+  placas: parseString(raw.placas),
+  numeroSerie: parseString(raw.numero_serie),
+  seguro: {
+    compania: parseString(raw.seguro_compania),
+    poliza: parseString(raw.seguro_poliza),
+    vigencia: parseString(raw.seguro_vigencia),
+  },
+  mantenimiento: {
+    ultimoServicio: parseString(raw.mantenimiento_ultimo_servicio),
+    kmUltimoServicio: parseNumber(raw.mantenimiento_km_ultimo),
+    proximoServicio: parseString(raw.mantenimiento_proximo_servicio),
+    kmProximoServicio: parseNumber(raw.mantenimiento_km_proximo),
+  },
+  kmActual: parseNumber(raw.km_actual),
+  status: (parseString(raw.status) || 'disponible') as Vehicle['status'],
+  foto: toNullableString(raw.foto),
+  createdAt: parseString(raw.created_at),
+});
+
+const mapVehicleAssignmentFromApi = (raw: RawRecord): VehicleAssignment => ({
+  id: toStringId(raw.id),
+  vehicleId: toStringId(raw.vehicle),
+  vehiculoLabel: toNullableString(raw.vehicle_label),
+  userId: toStringId(raw.user),
+  userName: parseString(raw.user_name) || toStringId(raw.user),
+  viaticoId: toNullableString(raw.viatico ? toStringId(raw.viatico) : undefined),
+  proyectoId: toNullableString(raw.proyecto ? toStringId(raw.proyecto) : undefined),
+  proyectoNombre: toNullableString(raw.proyecto_nombre),
+  origen: toNullableString(raw.origen),
+  destino: toNullableString(raw.destino),
+  fechaInicio: parseString(raw.fecha_inicio),
+  fechaFin: toNullableString(raw.fecha_fin),
+  motivo: parseString(raw.motivo),
+  proposito: (parseString(raw.proposito) || 'operaciones') as VehicleAssignment['proposito'],
+  kmInicial: parseNumber(raw.km_inicial),
+  kmFinal: toNullableNumber(raw.km_final),
+  fotoOdometroInicial: toNullableString(raw.foto_odometro_inicial),
+  fotoOdometroFinal: toNullableString(raw.foto_odometro_final),
+  checklistRecepcion:
+    raw.checklist_recepcion && typeof raw.checklist_recepcion === 'object'
+      ? (raw.checklist_recepcion as VehicleAssignment['checklistRecepcion'])
+      : undefined,
+  checklistEntrega:
+    raw.checklist_entrega && typeof raw.checklist_entrega === 'object'
+      ? (raw.checklist_entrega as VehicleAssignment['checklistEntrega'])
+      : undefined,
+  status: (parseString(raw.status) || 'solicitado') as VehicleAssignment['status'],
+  incidentes: Array.isArray(raw.incidentes) ? (raw.incidentes as string[]) : undefined,
+  createdAt: parseString(raw.created_at),
+});
+
+const mapPriorityToSeverity = (priority: string): VehicleAlert['severity'] => {
+  if (priority === 'alta') return 'high';
+  if (priority === 'baja') return 'low';
+  return 'medium';
+};
+
+const mapVehicleAlertFromApi = (raw: RawRecord): VehicleAlert => ({
+  id: toStringId(raw.id),
+  vehicleId: toStringId(raw.vehicle),
+  tipoMantenimiento: (parseString(raw.tipo_mantenimiento) || 'otro') as VehicleAlert['tipoMantenimiento'],
+  tipoAlerta: (parseString(raw.tipo_alerta) || 'servicio') as VehicleAlert['tipoAlerta'],
+  descripcion: parseString(raw.descripcion),
+  fechaVencimiento: parseString(raw.fecha_vencimiento),
+  prioridad: (parseString(raw.prioridad) || 'media') as VehicleAlert['prioridad'],
+  type: parseString(raw.tipo_alerta),
+  message: parseString(raw.descripcion),
+  dueDate: parseString(raw.fecha_vencimiento),
+  severity: mapPriorityToSeverity(parseString(raw.prioridad)),
+  costoEstimado: toNullableNumber(raw.costo_estimado),
+  proveedorSugerido: toNullableString(raw.proveedor_sugerido),
+  atendido: parseBoolean(raw.atendido),
+  attended: parseBoolean(raw.atendido),
+});
+
+const mapCargaGasolinaFromApi = (raw: RawRecord): CargaGasolina => ({
+  id: toStringId(raw.id),
+  vehicleId: toStringId(raw.vehicle),
+  assignmentId: toNullableString(raw.assignment ? toStringId(raw.assignment) : undefined),
+  userId: toNullableString(raw.user ? toStringId(raw.user) : undefined),
+  userName: toNullableString(raw.user_name),
+  fecha: parseString(raw.fecha),
+  litros: parseNumber(raw.litros),
+  precioLitro: parseNumber(raw.precio_litro),
+  total: parseNumber(raw.total),
+  odometro: parseNumber(raw.odometro),
+  estacion: parseString(raw.estacion),
+  facturaId: toNullableString(raw.factura_id),
+  eficiencia: toNullableNumber(raw.eficiencia),
+});
+
+const mapMaintenanceRecordFromApi = (raw: RawRecord): MaintenanceRecord => ({
+  id: toStringId(raw.id),
+  vehicleId: toStringId(raw.vehicle),
+  fecha: parseString(raw.fecha),
+  tipo: (parseString(raw.tipo) || 'otro') as MaintenanceRecord['tipo'],
+  descripcion: parseString(raw.descripcion),
+  costo: parseNumber(raw.costo),
+  km: toNullableNumber(raw.km),
+  proveedor: toNullableString(raw.proveedor),
+});
+
 const toProyectoPayload = (value: Partial<Proyecto>) => {
   const payload: RawRecord = {};
 
@@ -304,6 +521,51 @@ export const fetchViajes = async (): Promise<SolicitudViaje[]> => {
 export const fetchDispersiones = async (): Promise<Dispersion[]> => {
   const data = (await apiFetch('/dispersiones/')) as RawRecord[];
   return Array.isArray(data) ? data.map(mapDispersionFromApi) : [];
+};
+
+export const fetchFacturas = async (): Promise<Factura[]> => {
+  const data = (await apiFetch('/conciliacion/facturas/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapFacturaFromApi) : [];
+};
+
+export const fetchConsumos = async (): Promise<Consumo[]> => {
+  const data = (await apiFetch('/conciliacion/consumos/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapConsumoFromApi) : [];
+};
+
+export const fetchAlertasConciliacion = async (): Promise<AlertaConciliacion[]> => {
+  const data = (await apiFetch('/conciliacion/alertas/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapAlertaConciliacionFromApi) : [];
+};
+
+export const fetchAmexTickets = async (): Promise<TicketAMEX[]> => {
+  const data = (await apiFetch('/amex/tickets/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapTicketAmexFromApi) : [];
+};
+
+export const fetchFlotillaVehiculos = async (): Promise<Vehicle[]> => {
+  const data = (await apiFetch('/flotilla/vehiculos/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapVehicleFromApi) : [];
+};
+
+export const fetchFlotillaAsignaciones = async (): Promise<VehicleAssignment[]> => {
+  const data = (await apiFetch('/flotilla/asignaciones/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapVehicleAssignmentFromApi) : [];
+};
+
+export const fetchFlotillaAlertas = async (): Promise<VehicleAlert[]> => {
+  const data = (await apiFetch('/flotilla/alertas/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapVehicleAlertFromApi) : [];
+};
+
+export const fetchFlotillaCargasGasolina = async (): Promise<CargaGasolina[]> => {
+  const data = (await apiFetch('/flotilla/gasolina/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapCargaGasolinaFromApi) : [];
+};
+
+export const fetchFlotillaMantenimiento = async (): Promise<MaintenanceRecord[]> => {
+  const data = (await apiFetch('/flotilla/mantenimiento/')) as RawRecord[];
+  return Array.isArray(data) ? data.map(mapMaintenanceRecordFromApi) : [];
 };
 
 export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
@@ -431,6 +693,15 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
   const viaticos = await loadOptional(fetchViaticos, [] as Viatico[]);
   const viajes = await loadOptional(fetchViajes, [] as SolicitudViaje[]);
   const dispersiones = await loadOptional(fetchDispersiones, [] as Dispersion[]);
+  const facturas = await loadOptional(fetchFacturas, [] as Factura[]);
+  const consumos = await loadOptional(fetchConsumos, [] as Consumo[]);
+  const alertasConciliacion = await loadOptional(fetchAlertasConciliacion, [] as AlertaConciliacion[]);
+  const amexTickets = await loadOptional(fetchAmexTickets, [] as TicketAMEX[]);
+  const flotillaVehiculos = await loadOptional(fetchFlotillaVehiculos, [] as Vehicle[]);
+  const flotillaAsignaciones = await loadOptional(fetchFlotillaAsignaciones, [] as VehicleAssignment[]);
+  const flotillaAlertas = await loadOptional(fetchFlotillaAlertas, [] as VehicleAlert[]);
+  const flotillaCargasGasolina = await loadOptional(fetchFlotillaCargasGasolina, [] as CargaGasolina[]);
+  const flotillaMantenimiento = await loadOptional(fetchFlotillaMantenimiento, [] as MaintenanceRecord[]);
 
   writeStorageList('proyectos_data', proyectos);
   writeStorageList('proyectos_data', proyectos, { legacy: true });
@@ -446,6 +717,20 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
   writeStorageList('pm-portal:viajesPendientes', viajes.filter((item) => item.status === 'pendiente'));
 
   writeStorageList('dispersion:dispersiones', dispersiones);
+
+  writeStorageList('conciliacion:facturas', facturas);
+  writeStorageList('conciliacion:consumos', consumos);
+  writeStorageList('conciliacion:alertas', alertasConciliacion);
+  writeStorageList('conciliacion:amex', amexTickets);
+
+  writeStorageList('amex:tickets', amexTickets);
+
+  writeStorageList('flotilla:vehiculos', flotillaVehiculos);
+  writeStorageList('flotilla:alertas', flotillaAlertas);
+  writeStorageList('flotilla:cargasGasolina', flotillaCargasGasolina);
+  writeStorageList('flotilla:maintenanceHistory', flotillaMantenimiento);
+  writeStorageList('vehicle_assignments_data', flotillaAsignaciones, { legacy: true });
+  writeStorageList('usuario:vehicles', flotillaVehiculos);
 };
 
 export const getCachedProyectos = () => {

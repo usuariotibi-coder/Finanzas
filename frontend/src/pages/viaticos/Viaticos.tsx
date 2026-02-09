@@ -8,66 +8,6 @@ import GSActivitySelector from '../../components/common/GSActivitySelector';
 import { createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
-const mockViaticos: Viatico[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    gsActivityId: 1,
-    motivo: 'Reunión con clientes',
-    destino: 'Guadalajara, Jalisco',
-    destinoPais: 'Mexico',
-    tipoViatico: 'efectifintech',
-    fechaInicio: '2025-12-15',
-    fechaFin: '2025-12-17',
-    montoSolicitado: 15000,
-    montoAprobado: 14000,
-    montoDispersado: 14000,
-    montoGastado: 12500,
-    saldoRestante: 1500,
-    status: 'dispersado',
-    createdAt: '2025-12-10',
-    aprobadoPor: 'María González',
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    userName: 'Ana Martínez',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    gsActivityId: 13,
-    motivo: 'Capacitación técnica',
-    destino: 'Houston, TX',
-    destinoPais: 'USA',
-    tipoViatico: 'amex',
-    fechaInicio: '2025-12-20',
-    fechaFin: '2025-12-22',
-    montoSolicitado: 18000,
-    status: 'pendiente',
-    createdAt: '2025-12-11',
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    userName: 'Carlos López',
-    proyectoId: 'PRJ-003',
-    proyectoNombre: 'Proyecto GDL',
-    gsActivityId: 1,
-    motivo: 'Auditoría de sucursal',
-    destino: 'Puebla, Puebla',
-    destinoPais: 'Mexico',
-    tipoViatico: 'mixto',
-    fechaInicio: '2025-12-13',
-    fechaFin: '2025-12-15',
-    montoSolicitado: 12000,
-    montoAprobado: 12000,
-    status: 'aprobado',
-    createdAt: '2025-12-09',
-    aprobadoPor: 'María González',
-  },
-];
 
 const normalizeViaticoStatus = (status: string) => (status === 'completado' ? 'dispersado' : status);
 
@@ -113,10 +53,9 @@ const getViaticoStatusIcon = (status: string) => {
 
 type ViaticoFilter = 'todos' | 'pendiente' | 'aprobado' | 'dispersado';
 type StoredViaticoFilter = ViaticoFilter | 'completado';
-
 export default function Viaticos() {
   const { user } = useAuth();
-  const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('viaticos:list', mockViaticos);
+  const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('viaticos:list', []);
   const [viaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [showNewForm, setShowNewForm] = useLocalStorageState('viaticos:showNewForm', false);
   const [filter, setFilter] = useLocalStorageState<StoredViaticoFilter>('viaticos:filter', 'todos');

@@ -15,140 +15,6 @@ import {
   updateViaje,
   updateViatico,
 } from '../../utils/backendSync';
-
-// Mock data: Viáticos pendientes de aprobación del PM
-const MOCK_VIATICOS_PENDIENTES: Viatico[] = [
-  {
-    id: 'VIA-101',
-    userId: 'user2',
-    userName: 'Carlos Ramírez',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    motivo: 'Supervisión de instalaciones eléctricas',
-    destino: 'Guadalajara',
-    destinoPais: 'Mexico',
-    tipoViatico: 'efectifintech',
-    fechaInicio: '2025-12-20',
-    fechaFin: '2025-12-23',
-    montoSolicitado: 18000,
-    status: 'pendiente',
-    gsActivityId: 1,
-    createdAt: '2025-12-14T09:30:00Z',
-  },
-  {
-    id: 'VIA-102',
-    userId: 'user3',
-    userName: 'Ana Martínez',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    motivo: 'Reunión con equipo de ingeniería',
-    destino: 'Houston, TX',
-    destinoPais: 'USA',
-    tipoViatico: 'amex',
-    fechaInicio: '2025-12-25',
-    fechaFin: '2025-12-27',
-    montoSolicitado: 32000,
-    status: 'pendiente',
-    gsActivityId: 1,
-    createdAt: '2025-12-13T15:00:00Z',
-  },
-];
-
-// Mock data: Solicitudes de viaje pendientes
-const MOCK_VIAJES_PENDIENTES: SolicitudViaje[] = [
-  {
-    id: 'VJ-201',
-    userId: 'user4',
-    userName: 'Roberto López',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    destino: 'Monterrey',
-    fechaInicio: '2025-12-22',
-    fechaFin: '2025-12-24',
-    motivo: 'Visita a proveedor de equipos',
-    necesitaAvion: true,
-    necesitaCamion: false,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo GDL-MTY',
-    detallesHotel: '2 noches, hotel cercano a zona industrial',
-    status: 'pendiente',
-    costoEstimado: 15000,
-    createdAt: '2025-12-13T11:20:00Z',
-  },
-  {
-    id: 'VJ-202',
-    userId: 'user5',
-    userName: 'Laura Sánchez',
-    proyectoId: 'PRJ-003',
-    proyectoNombre: 'Proyecto GDL',
-    destino: 'Ciudad de México',
-    fechaInicio: '2025-12-28',
-    fechaFin: '2025-12-30',
-    motivo: 'Capacitación técnica',
-    necesitaAvion: true,
-    necesitaCamion: true,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo GDL-MEX',
-    detallesCamion: 'Transporte del aeropuerto al hotel y centro de capacitación',
-    detallesHotel: '2 noches, zona Polanco',
-    status: 'pendiente',
-    costoEstimado: 22000,
-    createdAt: '2025-12-12T16:45:00Z',
-  },
-];
-
-// Mock data: Proyectos del PM
-const MOCK_PROYECTOS_PM: Proyecto[] = [
-  {
-    id: 'PRJ-001',
-    codigo: 'PRJ-2025-001',
-    nombre: 'Obra Aeropuerto TLM',
-    cliente: 'Aeropuertos del Pacífico',
-    estado: 'activo',
-    presupuesto: 5000000,
-    gastado: 3250000,
-    fechaInicio: '2025-01-15',
-    fechaFinEstimada: '2025-12-31',
-    responsable: 'Francisco Aguilar',
-    departamento: 'Infraestructura',
-    descripcion: 'Modernización de sistemas eléctricos y de iluminación del aeropuerto',
-    createdAt: '2025-01-10T10:00:00Z',
-    updatedAt: '2025-12-01T14:30:00Z',
-  },
-  {
-    id: 'PRJ-002',
-    codigo: 'PRJ-2025-002',
-    nombre: 'Proyecto Houston',
-    cliente: 'Energy Corp USA',
-    estado: 'activo',
-    presupuesto: 8000000,
-    gastado: 2100000,
-    fechaInicio: '2025-03-01',
-    fechaFinEstimada: '2026-02-28',
-    responsable: 'Francisco Aguilar',
-    departamento: 'Internacional',
-    descripcion: 'Instalación de sistemas de energía renovable',
-    createdAt: '2025-02-20T09:00:00Z',
-    updatedAt: '2025-12-05T11:00:00Z',
-  },
-  {
-    id: 'PRJ-003',
-    codigo: 'PRJ-2025-003',
-    nombre: 'Proyecto GDL',
-    cliente: 'Industrial Solutions',
-    estado: 'activo',
-    presupuesto: 3500000,
-    gastado: 2800000,
-    fechaInicio: '2025-02-01',
-    fechaFinEstimada: '2025-12-15',
-    responsable: 'Francisco Aguilar',
-    departamento: 'Industrial',
-    descripcion: 'Automatización de procesos industriales',
-    createdAt: '2025-01-25T13:00:00Z',
-    updatedAt: '2025-12-10T16:00:00Z',
-  },
-];
-
 export default function PMPortal() {
   const { user } = useAuth();
   const [viaticosUsuario, setViaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -209,9 +75,9 @@ export default function PMPortal() {
         if (!isActive) {
           return;
         }
-        setProyectos((prev) => (prev.length > 0 ? prev : MOCK_PROYECTOS_PM));
-        setViaticosUsuario((prev) => (prev.length > 0 ? prev : MOCK_VIATICOS_PENDIENTES));
-        setViajesPendientes((prev) => (prev.length > 0 ? prev : MOCK_VIAJES_PENDIENTES));
+        setProyectos((prev) => prev);
+        setViaticosUsuario((prev) => prev);
+        setViajesPendientes((prev) => prev);
       }
     };
 

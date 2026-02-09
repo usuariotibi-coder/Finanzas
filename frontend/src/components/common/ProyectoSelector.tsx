@@ -16,75 +16,6 @@ interface ProyectoSelectorProps {
   inputClassName?: string;
 }
 
-// Mock data de proyectos - esto se reemplazará con data real del backend
-const MOCK_PROYECTOS: Proyecto[] = [
-  {
-    id: 'PRJ-001',
-    codigo: 'PRJ-2025-001',
-    nombre: 'Obra Aeropuerto TLM',
-    cliente: 'Aeropuertos del Sureste',
-    estado: 'activo',
-    presupuesto: 5000000,
-    gastado: 1250000,
-    fechaInicio: '2025-01-15',
-    fechaFinEstimada: '2025-06-30',
-    responsable: 'Francisco Aguilar',
-    departamento: 'Operaciones',
-    descripcion: 'Construcción y supervisión de obra en aeropuerto',
-    createdAt: '2025-01-10T10:00:00Z',
-    updatedAt: '2025-01-10T10:00:00Z'
-  },
-  {
-    id: 'PRJ-002',
-    codigo: 'PRJ-2025-002',
-    nombre: 'Proyecto Houston',
-    cliente: 'Energy Corp USA',
-    estado: 'activo',
-    presupuesto: 3500000,
-    gastado: 850000,
-    fechaInicio: '2025-02-01',
-    fechaFinEstimada: '2025-08-31',
-    responsable: 'María López',
-    departamento: 'Operaciones',
-    descripcion: 'Instalación de equipos en planta Houston',
-    createdAt: '2025-01-20T14:30:00Z',
-    updatedAt: '2025-01-20T14:30:00Z'
-  },
-  {
-    id: 'PRJ-003',
-    codigo: 'PRJ-2025-003',
-    nombre: 'Proyecto GDL',
-    cliente: 'Industrias del Pacífico',
-    estado: 'activo',
-    presupuesto: 2800000,
-    gastado: 420000,
-    fechaInicio: '2025-03-01',
-    fechaFinEstimada: '2025-07-15',
-    responsable: 'Carlos Gómez',
-    departamento: 'Operaciones',
-    descripcion: 'Mantenimiento industrial en Guadalajara',
-    createdAt: '2025-02-15T09:00:00Z',
-    updatedAt: '2025-02-15T09:00:00Z'
-  },
-  {
-    id: 'PRJ-004',
-    codigo: 'PRJ-2024-015',
-    nombre: 'Modernización Planta MTY',
-    cliente: 'Manufactura del Norte',
-    estado: 'en_pausa',
-    presupuesto: 4200000,
-    gastado: 2100000,
-    fechaInicio: '2024-09-01',
-    fechaFinEstimada: '2025-03-31',
-    responsable: 'Ana Martínez',
-    departamento: 'Operaciones',
-    descripcion: 'Modernización de línea de producción',
-    createdAt: '2024-08-20T11:00:00Z',
-    updatedAt: '2025-01-15T16:30:00Z'
-  }
-];
-
-// Guardar en localStorage para persistencia
 const STORAGE_KEY = 'proyectos_data';
 const NEW_PROJECT_LABEL = 'Nuevo Proyecto';
 
@@ -94,17 +25,17 @@ function getProyectos(): Proyecto[] {
     return cached;
   }
 
-  if (typeof window === 'undefined') {
-    return MOCK_PROYECTOS;
-  }
-
+  if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    try {
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? (parsed as Proyecto[]) : [];
+    } catch {
+      return [];
+    }
   }
-  // Inicializar con mock data
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_PROYECTOS));
-  return MOCK_PROYECTOS;
+  return [];
 }
 
 export default function ProyectoSelector({

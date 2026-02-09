@@ -1,24 +1,82 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { DashboardMetrics } from '../types';
+import useLocalStorageState from '../hooks/useLocalStorageState';
+import type { DashboardMetrics, Dispersion, Factura, Viatico } from '../types';
 import { fetchDashboardMetrics } from '../utils/backendSync';
 
-const mockMetrics: DashboardMetrics = {
-  viaticosActivos: 12,
-  viaticosAprobacionPendiente: 3,
-  totalDispersado: 456000,
-  totalRecuperar: 23400,
-  facturasPendientes: 8,
-  alertasConciliacion: 5,
-  vehiculosDisponibles: 4,
-  vehiculosAsignados: 8,
-  alertasMantenimiento: 2,
-  gastosAMEXPendientes: 6,
+const emptyMetrics: DashboardMetrics = {
+  viaticosActivos: 0,
+  viaticosAprobacionPendiente: 0,
+  totalDispersado: 0,
+  totalRecuperar: 0,
+  facturasPendientes: 0,
+  alertasConciliacion: 0,
+  vehiculosDisponibles: 0,
+  vehiculosAsignados: 0,
+  alertasMantenimiento: 0,
+  gastosAMEXPendientes: 0,
+};
+
+type ActivityColor = 'green' | 'blue' | 'red' | 'purple' | 'yellow';
+
+interface DashboardActivity {
+  id: string;
+  color: ActivityColor;
+  title: string;
+  description: string;
+  timestamp: number;
+}
+
+const parseDateToTimestamp = (value?: string) => {
+  if (!value) return 0;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+};
+
+const formatRelativeTime = (timestamp: number) => {
+  if (!timestamp) {
+    return 'Sin fecha';
+  }
+
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return 'Hace unos segundos';
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `Hace ${minutes} minuto${minutes === 1 ? '' : 's'}`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Hace ${hours} hora${hours === 1 ? '' : 's'}`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Hace ${days} dia${days === 1 ? '' : 's'}`;
+
+  return new Date(timestamp).toLocaleDateString('es-MX');
+};
+
+const viaticoMetaByStatus: Record<Viatico['status'], { title: string; color: ActivityColor }> = {
+  pendiente: { title: 'Viatico solicitado', color: 'blue' },
+  aprobado: { title: 'Viatico aprobado', color: 'green' },
+  rechazado: { title: 'Viatico rechazado', color: 'red' },
+  dispersado: { title: 'Viatico dispersado', color: 'purple' },
+  en_viaje: { title: 'Viatico en viaje', color: 'yellow' },
+  viaje_finalizado: { title: 'Viaje finalizado', color: 'yellow' },
+  en_recuperacion: { title: 'Viatico en recuperacion', color: 'yellow' },
+  completado: { title: 'Viatico completado', color: 'green' },
+};
+
+const facturaMetaByStatus: Record<Factura['status'], { title: string; color: ActivityColor }> = {
+  pendiente: { title: 'Factura pendiente', color: 'yellow' },
+  validada: { title: 'Factura validada', color: 'green' },
+  rechazada: { title: 'Factura rechazada', color: 'red' },
+  conciliada: { title: 'Factura conciliada', color: 'blue' },
 };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState<DashboardMetrics>(mockMetrics);
+  const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
+  const [viaticos] = useLocalStorageState<Viatico[]>('viaticos:list', []);
+  const [dispersiones] = useLocalStorageState<Dispersion[]>('dispersion:dispersiones', []);
+  const [facturas] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
 
   useEffect(() => {
     let active = true;
@@ -30,7 +88,7 @@ export default function Dashboard() {
           setMetrics(data);
         }
       } catch {
-        // Keep mock fallback if backend is unavailable.
+        // Keep zeroed metrics if backend is unavailable.
       }
     };
 
@@ -40,6 +98,43 @@ export default function Dashboard() {
       active = false;
     };
   }, []);
+
+  const recentActivity = useMemo<DashboardActivity[]>(() => {
+    const viaticosActivity = viaticos.map((viatico) => {
+      const meta = viaticoMetaByStatus[viatico.status] ?? viaticoMetaByStatus.pendiente;
+      return {
+        id: `viatico-${viatico.id}`,
+        color: meta.color,
+        title: meta.title,
+        description: `${viatico.userName || 'Usuario'} - ${viatico.destino || 'Sin destino'}`,
+        timestamp: parseDateToTimestamp(viatico.createdAt || viatico.fechaInicio),
+      };
+    });
+
+    const dispersionesActivity = dispersiones.map((dispersion) => ({
+      id: `dispersion-${dispersion.id}`,
+      color: 'blue' as const,
+      title: 'Dispersion realizada',
+      description: `$${dispersion.monto.toLocaleString()} - ${dispersion.dispersadoPor || 'Tesoreria'}`,
+      timestamp: parseDateToTimestamp(dispersion.fecha),
+    }));
+
+    const facturasActivity = facturas.map((factura) => {
+      const meta = facturaMetaByStatus[factura.status] ?? facturaMetaByStatus.pendiente;
+      return {
+        id: `factura-${factura.id}`,
+        color: meta.color,
+        title: meta.title,
+        description: `${factura.razonSocial || 'Sin razon social'} - ${factura.total.toLocaleString()}`,
+        timestamp: parseDateToTimestamp(factura.createdAt || factura.fecha),
+      };
+    });
+
+    return [...viaticosActivity, ...dispersionesActivity, ...facturasActivity]
+      .filter((item) => item.timestamp > 0)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 6);
+  }, [dispersiones, facturas, viaticos]);
 
   return (
     <div className="space-y-6">
@@ -194,41 +289,21 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h2>
           <div className="space-y-3">
-            <ActivityItem
-              icon="check"
-              color="green"
-              title="Vi\u00e1tico aprobado"
-              description="Juan P\u00e9rez - Viaje a Guadalajara"
-              time="Hace 10 minutos"
-            />
-            <ActivityItem
-              icon="money"
-              color="blue"
-              title="Dispersi\u00f3n realizada"
-              description="$12,500 - Mar\u00eda Gonz\u00e1lez"
-              time="Hace 1 hora"
-            />
-            <ActivityItem
-              icon="alert"
-              color="red"
-              title="Alerta de conciliaci\u00f3n"
-              description="Factura sin consumo asociado"
-              time="Hace 2 horas"
-            />
-            <ActivityItem
-              icon="car"
-              color="purple"
-              title="Veh\u00edculo asignado"
-              description="Toyota Corolla - ABC-123"
-              time="Hace 3 horas"
-            />
-            <ActivityItem
-              icon="document"
-              color="yellow"
-              title="Nueva factura cargada"
-              description="CFDI validado correctamente"
-              time="Hace 4 horas"
-            />
+            {recentActivity.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                No hay actividad reciente registrada en la base de datos.
+              </div>
+            ) : (
+              recentActivity.map((activity) => (
+                <ActivityItem
+                  key={activity.id}
+                  color={activity.color}
+                  title={activity.title}
+                  description={activity.description}
+                  time={formatRelativeTime(activity.timestamp)}
+                />
+              ))
+            )}
           </div>
         </div>
 
@@ -286,7 +361,6 @@ function MetricCard({ title, value, color, subtitle }: MetricCardProps) {
 }
 
 interface ActivityItemProps {
-  icon: string;
   color: string;
   title: string;
   description: string;

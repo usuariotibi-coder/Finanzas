@@ -12,245 +12,17 @@ import { clearAppStorage } from '../../utils/storage';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 
-// Mock data: viáticos del usuario actual
-const MOCK_VIATICOS: Viatico[] = [
-  {
-    id: 'VIA-001',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    motivo: 'Visita a obra en construcción para supervisión',
-    destino: 'Guadalajara',
-    destinoPais: 'Mexico',
-    tipoViatico: 'efectifintech',
-    fechaInicio: '2025-12-15',
-    fechaFin: '2025-12-18',
-    montoSolicitado: 15000,
-    montoAprobado: 15000,
-    montoDispersado: 15000,
-    montoGastado: 12350,
-    saldoRestante: 2650,
-    status: 'dispersado',
-    gsActivityId: 1,
-    createdAt: '2025-12-01T10:00:00Z',
-    aprobadoPor: 'Francisco Aguilar',
-    comentarios: 'Aprobado',
-  },
-  {
-    id: 'VIA-002',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    motivo: 'Reunión con cliente y supervisión de instalaciones',
-    destino: 'Houston, TX',
-    destinoPais: 'USA',
-    tipoViatico: 'amex',
-    fechaInicio: '2025-12-20',
-    fechaFin: '2025-12-23',
-    montoSolicitado: 28000,
-    montoAprobado: 28000,
-    status: 'aprobado',
-    gsActivityId: 1,
-    createdAt: '2025-12-03T14:30:00Z',
-    aprobadoPor: 'María López',
-    comentarios: 'Aprobado. Coordinarse con cliente.',
-  },
-  {
-    id: 'VIA-003',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-003',
-    proyectoNombre: 'Proyecto GDL',
-    motivo: 'Instalación de equipos y capacitación',
-    destino: 'Guadalajara',
-    destinoPais: 'Mexico',
-    tipoViatico: 'mixto',
-    fechaInicio: '2025-11-25',
-    fechaFin: '2025-11-28',
-    montoSolicitado: 12000,
-    montoAprobado: 12000,
-    montoDispersado: 12000,
-    montoGastado: 12000,
-    saldoRestante: 0,
-    status: 'completado',
-    gsActivityId: 1,
-    createdAt: '2025-11-15T09:00:00Z',
-    aprobadoPor: 'Carlos Gómez',
-    comentarios: 'Completado exitosamente',
-  },
-];
-
-// Mock data: vehículos disponibles
-const MOCK_VEHICLES: Vehicle[] = [
-  {
-    id: 'VEH-001',
-    brand: 'Toyota',
-    model: 'Hilux',
-    year: 2023,
-    plates: 'ABC-123-D',
-    serialNumber: '1HGBH41JXMN109186',
-    insurance: {
-      company: 'GNP',
-      policyNumber: 'POL-12345',
-      expirationDate: '2025-12-31',
-    },
-    maintenance: {
-      lastServiceDate: '2025-11-01',
-      lastServiceKm: 45000,
-      nextServiceDate: '2026-02-01',
-      nextServiceKm: 50000,
-    },
-    currentKm: 47500,
-    marca: 'Toyota',
-    modelo: 'Hilux',
-    anio: 2023,
-    placas: 'ABC-123-D',
-    numeroSerie: '1HGBH41JXMN109186',
-    color: 'Blanco',
-    seguro: {
-      compania: 'GNP',
-      poliza: 'POL-12345',
-      vigencia: '2025-12-31',
-    },
-    mantenimiento: {
-      ultimoServicio: '2025-11-01',
-      kmUltimoServicio: 45000,
-      proximoServicio: '2026-02-01',
-      kmProximoServicio: 50000,
-    },
-    kmActual: 47500,
-    status: 'disponible',
-    createdAt: '2023-01-15',
-  },
-  {
-    id: 'VEH-002',
-    brand: 'Nissan',
-    model: 'Versa',
-    year: 2022,
-    plates: 'XYZ-789-M',
-    serialNumber: '3N1AB7AP0EY123456',
-    insurance: {
-      company: 'Qualitas',
-      policyNumber: 'POL-67890',
-      expirationDate: '2025-10-15',
-    },
-    maintenance: {
-      lastServiceDate: '2025-10-15',
-      lastServiceKm: 32000,
-      nextServiceDate: '2026-01-15',
-      nextServiceKm: 37000,
-    },
-    currentKm: 33200,
-    marca: 'Nissan',
-    modelo: 'Versa',
-    anio: 2022,
-    placas: 'XYZ-789-M',
-    numeroSerie: '3N1AB7AP0EY123456',
-    color: 'Gris',
-    seguro: {
-      compania: 'Qualitas',
-      poliza: 'POL-67890',
-      vigencia: '2025-10-15',
-    },
-    mantenimiento: {
-      ultimoServicio: '2025-10-15',
-      kmUltimoServicio: 32000,
-      proximoServicio: '2026-01-15',
-      kmProximoServicio: 37000,
-    },
-    kmActual: 33200,
-    status: 'disponible',
-    createdAt: '2022-03-20',
-  },
-];
-
-// Mock data: asignaciones de vehículos del usuario
-const MOCK_VEHICLE_ASSIGNMENTS: VehicleAssignment[] = [
-  {
-    id: 'ASG-001',
-    vehicleId: 'VEH-001',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-001',
-    proyectoNombre: 'Obra Aeropuerto TLM',
-    fechaInicio: '2025-12-10',
-    motivo: 'Traslado a obra',
-    proposito: 'operaciones',
-    kmInicial: 45000,
-    status: 'activo',
-    createdAt: '2025-12-09',
-  },
-];
-
 const getVehicleAssignments = (): VehicleAssignment[] => {
   const stored = localStorage.getItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY);
   if (stored) {
     try {
       return JSON.parse(stored) as VehicleAssignment[];
     } catch {
-      // ignore parse errors and fall back to mock
+      // ignore parse errors and fall back to empty
     }
   }
-  localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(MOCK_VEHICLE_ASSIGNMENTS));
-  return MOCK_VEHICLE_ASSIGNMENTS;
+  return [];
 };
-
-// Mock data: solicitudes de viaje del usuario
-const MOCK_SOLICITUDES_VIAJE: SolicitudViaje[] = [
-  {
-    id: 'VJ-001',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-002',
-    proyectoNombre: 'Proyecto Houston',
-    destino: 'Houston, Texas, USA',
-    fechaInicio: '2025-12-20',
-    fechaFin: '2025-12-23',
-    motivo: 'Reunión con cliente y supervisión de instalaciones',
-    necesitaAvion: true,
-    necesitaCamion: false,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo desde Guadalajara, preferencia salida temprano',
-    detallesHotel: 'Hotel cerca del aeropuerto, 3 noches',
-    status: 'en_proceso',
-    statusAvion: 'gestionando',
-    statusHotel: 'confirmado',
-    createdAt: '2025-12-10T10:00:00Z',
-    atendidoPor: 'María González',
-    confirmaciones: {
-      hotel: [{ nombre: 'Hotel Hampton Inn', confirmacion: 'HTL789', costo: 1800 }],
-    },
-  },
-  {
-    id: 'VJ-003',
-    userId: 'user1',
-    userName: 'Juan Pérez',
-    proyectoId: 'PRJ-003',
-    proyectoNombre: 'Proyecto GDL',
-    destino: 'Ciudad de México',
-    fechaInicio: '2025-12-15',
-    fechaFin: '2025-12-16',
-    motivo: 'Capacitación técnica',
-    necesitaAvion: true,
-    necesitaCamion: false,
-    necesitaHotel: true,
-    detallesAvion: 'Vuelo redondo, salida tarde y regreso en la tarde',
-    detallesHotel: '1 noche, hotel cerca del centro de capacitación',
-    status: 'confirmado',
-    statusAvion: 'confirmado',
-    statusHotel: 'confirmado',
-    confirmaciones: {
-      avion: [{ aerolinea: 'Volaris', confirmacion: 'ABC123', costo: 3500 }],
-      hotel: [{ nombre: 'Hotel Fiesta Inn', confirmacion: 'HTL456', costo: 1200 }],
-    },
-    costoEstimado: 5000,
-    costoFinal: 4700,
-    createdAt: '2025-12-05T09:00:00Z',
-    atendidoPor: 'María González',
-  },
-];
 
 interface GastoDocumento {
   id: string;
@@ -263,13 +35,12 @@ interface GastoDocumento {
   ticketName?: string;
   fecha: string;
 }
-
 export default function UsuarioView() {
   const { user } = useAuth();
-  const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', MOCK_VIATICOS);
+  const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticoSeleccionado, setViaticoSeleccionado] = useLocalStorageState<string | null>('usuario:viaticoSeleccionado', null);
   const [filtro, setFiltro] = useLocalStorageState<'todos' | 'activos' | 'completados'>('usuario:filtro', 'activos');
-  const [solicitudesViaje, setSolicitudesViaje] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', MOCK_SOLICITUDES_VIAJE);
+  const [solicitudesViaje, setSolicitudesViaje] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
 
   // Estado para nuevo viático
   const [showModalNuevoViatico, setShowModalNuevoViatico] = useLocalStorageState('usuario:showModalNuevoViatico', false);
@@ -295,7 +66,7 @@ export default function UsuarioView() {
   const [ticketFile, setTicketFile] = useState<File | null>(null);
 
   // Estado para vehículos
-  const [vehicles] = useLocalStorageState<Vehicle[]>('usuario:vehicles', MOCK_VEHICLES);
+  const [vehicles] = useLocalStorageState<Vehicle[]>('usuario:vehicles', []);
   const [vehicleAssignments, setVehicleAssignments] = useState<VehicleAssignment[]>(getVehicleAssignments);
   const [showModalSolicitarVehiculo, setShowModalSolicitarVehiculo] = useLocalStorageState('usuario:showModalSolicitarVehiculo', false);
   const [showModalRecibirVehiculo, setShowModalRecibirVehiculo] = useLocalStorageState('usuario:showModalRecibirVehiculo', false);
