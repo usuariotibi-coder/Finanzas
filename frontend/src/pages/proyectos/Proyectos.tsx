@@ -238,7 +238,7 @@ export default function Proyectos() {
               <div className="space-y-1">
                 <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Proyectos</p>
                 <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Proyectos</h1>
-                <p className="text-[11px] text-slate-600">Gestiona todos los proyectos de la compania</p>
+                <p className="text-[11px] text-slate-600">Gestiona todos los proyectos de la compa\u00f1\u00eda</p>
               </div>
               <button
               onClick={() => abrirModal()}

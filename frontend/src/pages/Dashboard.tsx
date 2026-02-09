@@ -56,14 +56,14 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
               <MetricCard
-                title="Viaticos Activos"
+                title="Vi\u00e1ticos Activos"
                 value={metrics.viaticosActivos}
                 icon="money"
                 color="blue"
                 subtitle="en proceso"
               />
               <MetricCard
-                title="Aprobacion Pendiente"
+                title="Aprobaci\u00f3n Pendiente"
                 value={metrics.viaticosAprobacionPendiente}
                 icon="clock"
                 color="yellow"
@@ -90,7 +90,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">ConciliaciÃ³n</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Conciliaci\u00f3n</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
               <div className="flex items-center space-x-3">
@@ -100,7 +100,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Alertas de ConciliaciÃ³n</p>
+                  <p className="font-medium text-gray-900">Alertas de Conciliaci\u00f3n</p>
                   <p className="text-sm text-gray-600">{metrics.alertasConciliacion} discrepancias encontradas</p>
                 </div>
               </div>
@@ -150,7 +150,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">VehÃ­culos Disponibles</p>
+                  <p className="font-medium text-gray-900">Veh\u00edculos Disponibles</p>
                   <p className="text-sm text-gray-600">Listos para asignar</p>
                 </div>
               </div>
@@ -165,7 +165,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">VehÃ­culos Asignados</p>
+                  <p className="font-medium text-gray-900">Veh\u00edculos Asignados</p>
                   <p className="text-sm text-gray-600">En uso actualmente</p>
                 </div>
               </div>
@@ -181,7 +181,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Alertas de Mantenimiento</p>
-                  <p className="text-sm text-gray-600">Requieren atenciÃ³n</p>
+                  <p className="text-sm text-gray-600">Requieren atenci\u00f3n</p>
                 </div>
               </div>
               <span className="text-2xl font-bold text-orange-600">{metrics.alertasMantenimiento}</span>
@@ -197,28 +197,28 @@ export default function Dashboard() {
             <ActivityItem
               icon="check"
               color="green"
-              title="ViÃ¡tico aprobado"
-              description="Juan PÃ©rez - Viaje a Guadalajara"
+              title="Vi\u00e1tico aprobado"
+              description="Juan P\u00e9rez - Viaje a Guadalajara"
               time="Hace 10 minutos"
             />
             <ActivityItem
               icon="money"
               color="blue"
-              title="DispersiÃ³n realizada"
-              description="$12,500 - MarÃ­a GonzÃ¡lez"
+              title="Dispersi\u00f3n realizada"
+              description="$12,500 - Mar\u00eda Gonz\u00e1lez"
               time="Hace 1 hora"
             />
             <ActivityItem
               icon="alert"
               color="red"
-              title="Alerta de conciliaciÃ³n"
+              title="Alerta de conciliaci\u00f3n"
               description="Factura sin consumo asociado"
               time="Hace 2 horas"
             />
             <ActivityItem
               icon="car"
               color="purple"
-              title="VehÃ­culo asignado"
+              title="Veh\u00edculo asignado"
               description="Toyota Corolla - ABC-123"
               time="Hace 3 horas"
             />
@@ -232,16 +232,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones RÃ¡pidas</h2>
-        <div className="space-y-2">
-          <QuickActionButton icon="plus" label="Nueva Solicitud de ViÃ¡tico" onClick={() => navigate('/mi-portal')} />
-          <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
-          <QuickActionButton icon="send" label="Realizar DispersiÃ³n" onClick={() => navigate('/dispersion')} />
-          <QuickActionButton icon="car" label="Asignar VehÃ­culo" onClick={() => navigate('/flotilla')} />
-          <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones R\u00e1pidas</h2>
+          <div className="space-y-2">
+            <QuickActionButton icon="plus" label="Nueva Solicitud de Vi\u00e1tico" onClick={() => navigate('/mi-portal')} />
+            <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
+            <QuickActionButton icon="send" label="Realizar Dispersi\u00f3n" onClick={() => navigate('/dispersion')} />
+            <QuickActionButton icon="car" label="Asignar Veh\u00edculo" onClick={() => navigate('/flotilla')} />
+            <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
@@ -335,4 +335,3 @@ function QuickActionButton({ label, onClick }: QuickActionButtonProps) {
     </button>
   );
 }
-

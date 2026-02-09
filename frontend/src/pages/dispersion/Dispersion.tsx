@@ -209,7 +209,7 @@ export default function Dispersion() {
       setViaticosPendientes((prev) => prev.filter((viatico) => viatico.id !== updatedViatico.id));
       await syncCoreAppData({ userId: updatedViatico.userId });
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo guardar la dispersion.');
+      window.alert(error instanceof Error ? error.message : 'No se pudo guardar la dispersi\u00f3n.');
     }
   };
 
@@ -231,9 +231,9 @@ export default function Dispersion() {
           <div className="relative space-y-2">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
-                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Dispersion</p>
-                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Dispersion de Viaticos</h1>
-                <p className="text-[11px] text-slate-600">Gestion de dispersion de fondos aprobados.</p>
+                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Dispersi\u00f3n</p>
+                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Dispersi\u00f3n de Vi\u00e1ticos</h1>
+                <p className="text-[11px] text-slate-600">Gesti\u00f3n de dispersi\u00f3n de fondos aprobados.</p>
                 <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2 py-0.5">
                     Actualizado en tiempo real
@@ -280,8 +280,8 @@ export default function Dispersion() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Viaticos Pendientes de Dispersar</h2>
-          <p className="text-sm text-gray-600 mt-1">Viaticos aprobados listos para dispersion</p>
+          <h2 className="text-lg font-semibold text-gray-900">Vi\u00e1ticos Pendientes de Dispersar</h2>
+          <p className="text-sm text-gray-600 mt-1">Vi\u00e1ticos aprobados listos para dispersi\u00f3n</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -393,7 +393,7 @@ export default function Dispersion() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Historial de Dispersiones</h2>
-              <p className="text-sm text-gray-600 mt-1">Últimas dispersiones realizadas</p>
+              <p className="text-sm text-gray-600 mt-1">\u00daltimas dispersiones realizadas</p>
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <select

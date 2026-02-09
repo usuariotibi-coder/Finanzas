@@ -56,7 +56,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     if (viaticosBadge > 0) {
       items.push({
         id: 'viaticos',
-        title: 'Viaticos',
+        title: 'Vi\u00e1ticos',
         description: `Pendientes: ${viaticosBadge}`,
         count: viaticosBadge,
         path: '/viaticos',
@@ -65,7 +65,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     if (dispersionBadge > 0) {
       items.push({
         id: 'dispersion',
-        title: 'Dispersion',
+        title: 'Dispersi\u00f3n',
         description: `Pendientes: ${dispersionBadge}`,
         count: dispersionBadge,
         path: '/dispersion',
@@ -74,7 +74,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     if (recuperacionBadge > 0) {
       items.push({
         id: 'recuperacion',
-        title: 'Recuperacion',
+        title: 'Recuperaci\u00f3n',
         description: `Pendientes: ${recuperacionBadge}`,
         count: recuperacionBadge,
         path: '/recuperacion',
@@ -83,7 +83,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     if (conciliacionBadge > 0) {
       items.push({
         id: 'conciliacion',
-        title: 'Conciliacion',
+        title: 'Conciliaci\u00f3n',
         description: `Alertas: ${conciliacionBadge}`,
         count: conciliacionBadge,
         path: '/conciliacion',
@@ -246,7 +246,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </button>
 
           <h1 className="text-xl font-bold text-primary-900 tracking-tight">
-            Sistema de Gestion Financiera
+            Sistema de Gesti\u00f3n Financiera
           </h1>
         </div>
 
@@ -305,7 +305,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                       </div>
-                      Todo al dia.
+                      Todo al d\u00eda.
                       <div className="text-xs text-neutral-500 mt-1">No hay pendientes.</div>
                     </div>
                   ) : (

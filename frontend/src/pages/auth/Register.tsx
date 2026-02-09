@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
@@ -49,10 +49,10 @@ export default function Register() {
   const formatRegisterError = (message: string) => {
     const normalized = message.toLowerCase();
     if (normalized.includes('csrf') || normalized.includes('token missing')) {
-      return 'No se pudo validar la sesion. Recarga la pagina e intenta de nuevo.';
+      return 'No se pudo validar la sesi\u00f3n. Recarga la p\u00e1gina e intenta de nuevo.';
     }
     if (normalized.includes('ya esta registrado') || normalized.includes('already exists')) {
-      return 'Este correo ya esta registrado. Intenta iniciar sesion.';
+      return 'Este correo ya est\u00e1 registrado. Intenta iniciar sesi\u00f3n.';
     }
     return message;
   };
@@ -135,7 +135,7 @@ export default function Register() {
             <span aria-hidden="true" className="text-base leading-none">
               ←
             </span>
-            Volver a iniciar sesion
+            Volver a iniciar sesi\u00f3n
           </Link>
         </div>
         <div className="mb-8">
@@ -376,7 +376,7 @@ export default function Register() {
         <p className="text-sm text-neutral-600 mt-6 text-center">
           Ya tienes cuenta?{' '}
           <Link className="text-primary-600 font-semibold hover:underline" to="/login">
-            Iniciar sesion
+            Iniciar sesi\u00f3n
           </Link>
         </p>
       </div>

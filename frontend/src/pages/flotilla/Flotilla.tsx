@@ -565,7 +565,7 @@ export default function Flotilla() {
               <div className="space-y-1">
                 <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Flotilla</p>
                 <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Administracion de Flotilla</h1>
-                <p className="text-[11px] text-slate-600">Gestion de vehiculos empresariales.</p>
+                <p className="text-[11px] text-slate-600">Gesti\u00f3n de veh\u00edculos empresariales.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -1749,7 +1749,7 @@ function AssignmentModal({
                       >
                         <option value="">Seleccionar...</option>
                         <option value="Tarjeta de combustible">Tarjeta de combustible</option>
-                        <option value="Tarjeta de viaticos">Tarjeta de viaticos</option>
+                        <option value="Tarjeta de vi\u00e1ticos">Tarjeta de vi\u00e1ticos</option>
                         <option value="Efectivo">Efectivo</option>
                         <option value="Otro">Otro</option>
                       </select>

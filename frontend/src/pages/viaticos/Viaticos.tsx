@@ -166,9 +166,9 @@ export default function Viaticos() {
           <div className="relative space-y-2">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
-                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Viaticos</p>
-                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Solicitudes de Viaticos</h1>
-                <p className="text-[11px] text-slate-600">Gestion y aprobacion de solicitudes de viaticos.</p>
+                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Vi\u00e1ticos</p>
+                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Solicitudes de Vi\u00e1ticos</h1>
+                <p className="text-[11px] text-slate-600">Gesti\u00f3n y aprobaci\u00f3n de solicitudes de vi\u00e1ticos.</p>
                 <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2 py-0.5">
                     Fuente: Mi Portal
@@ -184,7 +184,7 @@ export default function Viaticos() {
                 </span>
                 <div>
                   <p className="font-semibold text-slate-900">Operacion diaria</p>
-                  <p>Aprueba y dispersa viaticos.</p>
+                  <p>Aprueba y dispersa vi\u00e1ticos.</p>
                 </div>
               </div>
             </div>

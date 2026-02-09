@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
@@ -37,7 +37,7 @@ export default function Login() {
       await login(email, password);
       navigate(redirectTarget, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesion.');
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesi\u00f3n.');
     } finally {
       setSubmitting(false);
     }
