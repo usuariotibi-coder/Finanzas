@@ -7,12 +7,57 @@
 
 const API_ROOT = resolveApiRoot();
 const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
+let csrfTokenCache = '';
 
 const getCookie = (name: string) => {
   const value = document.cookie
-    .split('; ')
+    .split(';')
+    .map((row) => row.trim())
     .find((row) => row.startsWith(`${name}=`));
   return value ? decodeURIComponent(value.split('=')[1]) : '';
+};
+
+const isSafeMethod = (method: string) => ['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method);
+
+const isCsrfError = (message: string | null) => {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return normalized.includes('csrf');
+};
+
+const extractCsrfTokenFromPayload = (payload: unknown) => {
+  if (!payload || typeof payload !== 'object') return '';
+  const raw = (payload as Record<string, unknown>).csrfToken;
+  return typeof raw === 'string' ? raw : '';
+};
+
+const ensureCsrfToken = async (forceRefresh = false) => {
+  if (!forceRefresh) {
+    const cookieToken = getCookie('csrftoken');
+    if (cookieToken) {
+      csrfTokenCache = cookieToken;
+      return cookieToken;
+    }
+    if (csrfTokenCache) {
+      return csrfTokenCache;
+    }
+  }
+
+  const response = await fetch(`${API_BASE}/auth/csrf/`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('No se pudo obtener CSRF token.');
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json') ? await response.json() : null;
+  const responseToken = extractCsrfTokenFromPayload(payload);
+  const cookieToken = getCookie('csrftoken');
+  csrfTokenCache = responseToken || cookieToken || csrfTokenCache;
+  return csrfTokenCache;
 };
 
 const extractErrorMessage = (data: unknown): string | null => {
@@ -37,18 +82,25 @@ const extractErrorMessage = (data: unknown): string | null => {
   return null;
 };
 
-export const apiFetch = async (path: string, options: RequestInit = {}) => {
+export const apiFetch = async (
+  path: string,
+  options: RequestInit = {},
+  allowCsrfRetry = true
+): Promise<unknown> => {
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
   const method = (options.method || 'GET').toUpperCase();
   const headers = new Headers(options.headers || {});
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
-  if (!isFormData && !headers.has('Content-Type')) {
+  if (!isFormData && options.body !== undefined && options.body !== null && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
-  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
-    const csrfToken = getCookie('csrftoken');
+  if (!isSafeMethod(method)) {
+    let csrfToken = getCookie('csrftoken') || csrfTokenCache;
+    if (!csrfToken) {
+      csrfToken = await ensureCsrfToken();
+    }
     if (csrfToken && !headers.has('X-CSRFToken')) {
       headers.set('X-CSRFToken', csrfToken);
     }
@@ -69,6 +121,10 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
 
   if (!response.ok) {
     const detail = extractErrorMessage(data);
+    if (allowCsrfRetry && !isSafeMethod(method) && response.status === 403 && isCsrfError(detail)) {
+      await ensureCsrfToken(true);
+      return apiFetch(path, options, false);
+    }
     throw new Error(detail || 'Error en la solicitud.');
   }
 
@@ -76,7 +132,7 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
 };
 
 export const api = {
-  csrf: () => apiFetch('/auth/csrf/'),
+  csrf: () => ensureCsrfToken(true),
   me: () => apiFetch('/auth/me/'),
   login: (email: string, password: string) =>
     apiFetch('/auth/login/', {
