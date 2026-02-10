@@ -377,7 +377,7 @@ export default function PMPortal() {
               <div className="space-y-1">
                 <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel PM</p>
                 <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Portal de Project Manager</h1>
-                <p className="text-[11px] text-slate-600">Gestiona proyectos, aprueba vi\u00e1ticos y viajes de tu equipo.</p>
+                <p className="text-[11px] text-slate-600">Gestiona proyectos, aprueba viáticos y viajes de tu equipo.</p>
               </div>
               <button
                 onClick={() => {
@@ -410,7 +410,7 @@ export default function PMPortal() {
               <div className="bg-white rounded-lg shadow p-4 border border-slate-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-600">Vi\u00e1ticos Pendientes</p>
+                    <p className="text-xs text-gray-600">Viáticos Pendientes</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{viaticosPendientes.length}</p>
                   </div>
                   <div className="bg-yellow-100 p-2 rounded-lg">

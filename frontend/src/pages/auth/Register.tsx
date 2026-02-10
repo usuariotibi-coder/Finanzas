@@ -49,10 +49,10 @@ export default function Register() {
   const formatRegisterError = (message: string) => {
     const normalized = message.toLowerCase();
     if (normalized.includes('csrf') || normalized.includes('token missing')) {
-      return 'No se pudo validar la sesi\u00f3n. Recarga la p\u00e1gina e intenta de nuevo.';
+      return 'No se pudo validar la sesión. Recarga la página e intenta de nuevo.';
     }
     if (normalized.includes('ya esta registrado') || normalized.includes('already exists')) {
-      return 'Este correo ya est\u00e1 registrado. Intenta iniciar sesi\u00f3n.';
+      return 'Este correo ya está registrado. Intenta iniciar sesión.';
     }
     return message;
   };
@@ -135,7 +135,7 @@ export default function Register() {
             <span aria-hidden="true" className="text-base leading-none">
               ←
             </span>
-            Volver a iniciar sesi\u00f3n
+            Volver a iniciar sesión
           </Link>
         </div>
         <div className="mb-8">
@@ -376,7 +376,7 @@ export default function Register() {
         <p className="text-sm text-neutral-600 mt-6 text-center">
           Ya tienes cuenta?{' '}
           <Link className="text-primary-600 font-semibold hover:underline" to="/login">
-            Iniciar sesi\u00f3n
+            Iniciar sesión
           </Link>
         </p>
       </div>

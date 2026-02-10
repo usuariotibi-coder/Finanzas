@@ -37,7 +37,7 @@ export default function Login() {
       await login(email, password);
       navigate(redirectTarget, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesi\u00f3n.');
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión.');
     } finally {
       setSubmitting(false);
     }

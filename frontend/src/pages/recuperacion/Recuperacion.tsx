@@ -151,7 +151,7 @@ export default function Recuperacion() {
       );
       await syncCoreAppData({ userId: persisted.userId });
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo confirmar la recuperaci\u00f3n.');
+      window.alert(error instanceof Error ? error.message : 'No se pudo confirmar la recuperación.');
     }
   };
 
@@ -240,7 +240,7 @@ export default function Recuperacion() {
       };
     }
     return {
-      label: 'En recuperaci\u00f3n',
+      label: 'En recuperación',
       className: 'bg-amber-100 text-amber-700',
       icon: (
         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,9 +259,9 @@ export default function Recuperacion() {
           <div className="relative space-y-2">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
-                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Recuperaci\u00f3n</p>
-                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Recuperaci\u00f3n de Saldos</h1>
-                <p className="text-[11px] text-slate-600">Gesti\u00f3n de recuperaci\u00f3n de fondos no utilizados.</p>
+                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Recuperación</p>
+                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Recuperación de Saldos</h1>
+                <p className="text-[11px] text-slate-600">Gestión de recuperación de fondos no utilizados.</p>
                 <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2 py-0.5">Saldos pendientes</span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2 py-0.5">Actualizacion manual</span>
@@ -407,7 +407,7 @@ export default function Recuperacion() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Vi\u00e1ticos con Saldo Pendiente</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Viáticos con Saldo Pendiente</h2>
           <p className="text-sm text-gray-600 mt-1">Viajes finalizados con fondos por recuperar</p>
         </div>
         <div className="overflow-x-auto">
@@ -774,7 +774,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            <p className="font-semibold text-slate-800">Confirmaci\u00f3n de recuperaci\u00f3n</p>
+            <p className="font-semibold text-slate-800">Confirmación de recuperación</p>
             <p className="mt-1">
               Se recuperara un total de <span className="font-semibold text-orange-600">${montoRecuperar.toLocaleString()}</span>.
             </p>
@@ -790,7 +790,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
               value={comentarios}
               onChange={(event) => setComentarios(event.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Notas o detalles de la recuperaci\u00f3n..."
+              placeholder="Notas o detalles de la recuperación..."
             />
           </div>
         </div>
@@ -810,7 +810,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Confirmar recuperaci\u00f3n
+            Confirmar recuperación
           </button>
           <button
             type="button"
@@ -846,7 +846,7 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
       >
         <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Informaci\u00f3n del Vi\u00e1tico</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Información del Viático</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -857,14 +857,14 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
 
         <div className="p-6 space-y-6">
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold text-gray-900 mb-3">Resumen del Vi\u00e1tico</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">Resumen del Viático</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-gray-600">Usuario:</p>
                 <p className="font-medium text-gray-900">{viatico.userName}</p>
               </div>
               <div>
-                <p className="text-gray-600">ID Vi\u00e1tico:</p>
+                <p className="text-gray-600">ID Viático:</p>
                 <p className="font-medium text-gray-900">{viatico.id}</p>
               </div>
               <div>

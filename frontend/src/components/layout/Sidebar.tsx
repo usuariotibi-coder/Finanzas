@@ -20,10 +20,10 @@ const menuItems: MenuItem[] = [
   { path: '/mi-portal', label: 'Mi Portal', icon: 'user' },
   { path: '/portal-pm', label: 'Portal PM', icon: 'pm' },
   { path: '/proyectos', label: 'Proyectos', icon: 'briefcase' },
-  { path: '/viaticos', label: 'Vi\u00e1ticos', icon: 'money' },
-  { path: '/dispersion', label: 'Dispersi\u00f3n', icon: 'send' },
-  { path: '/recuperacion', label: 'Recuperaci\u00f3n', icon: 'return' },
-  { path: '/conciliacion', label: 'Conciliaci\u00f3n', icon: 'check' },
+  { path: '/viaticos', label: 'Viáticos', icon: 'money' },
+  { path: '/dispersion', label: 'Dispersión', icon: 'send' },
+  { path: '/recuperacion', label: 'Recuperación', icon: 'return' },
+  { path: '/conciliacion', label: 'Conciliación', icon: 'check' },
   { path: '/amex', label: 'AMEX', icon: 'credit-card' },
   { path: '/flotilla', label: 'Flotilla', icon: 'car' },
   { path: '/viajes', label: 'Viajes', icon: 'airplane' },
@@ -208,7 +208,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-neutral-200 bg-white">
         <div className="flex items-center justify-between text-sm text-neutral-600">
-          <span>Versi\u00f3n 1.0.0</span>
+          <span>Versión 1.0.0</span>
           <button className="hover:text-accent-600 transition-colors">
             <svg
               className="w-5 h-5"

@@ -606,7 +606,7 @@ export default function UsuarioView() {
                   <div className="space-y-1">
                     <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Usuario</p>
                     <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mi Portal</h1>
-                    <p className="text-[11px] text-slate-600">Gestiona tus vi\u00e1ticos, veh\u00edculos, viajes y comprobantes.</p>
+                    <p className="text-[11px] text-slate-600">Gestiona tus viáticos, vehículos, viajes y comprobantes.</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5 w-full sm:w-auto sm:justify-end">
                   <button

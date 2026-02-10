@@ -48,20 +48,20 @@ const formatRelativeTime = (timestamp: number) => {
   if (hours < 24) return `Hace ${hours} hora${hours === 1 ? '' : 's'}`;
 
   const days = Math.floor(hours / 24);
-  if (days < 7) return `Hace ${days} dia${days === 1 ? '' : 's'}`;
+  if (days < 7) return `Hace ${days} día${days === 1 ? '' : 's'}`;
 
   return new Date(timestamp).toLocaleDateString('es-MX');
 };
 
 const viaticoMetaByStatus: Record<Viatico['status'], { title: string; color: ActivityColor }> = {
-  pendiente: { title: 'Viatico solicitado', color: 'blue' },
-  aprobado: { title: 'Viatico aprobado', color: 'green' },
-  rechazado: { title: 'Viatico rechazado', color: 'red' },
-  dispersado: { title: 'Viatico dispersado', color: 'purple' },
-  en_viaje: { title: 'Viatico en viaje', color: 'yellow' },
+  pendiente: { title: 'Viático solicitado', color: 'blue' },
+  aprobado: { title: 'Viático aprobado', color: 'green' },
+  rechazado: { title: 'Viático rechazado', color: 'red' },
+  dispersado: { title: 'Viático dispersado', color: 'purple' },
+  en_viaje: { title: 'Viático en viaje', color: 'yellow' },
   viaje_finalizado: { title: 'Viaje finalizado', color: 'yellow' },
-  en_recuperacion: { title: 'Viatico en recuperacion', color: 'yellow' },
-  completado: { title: 'Viatico completado', color: 'green' },
+  en_recuperacion: { title: 'Viático en recuperación', color: 'yellow' },
+  completado: { title: 'Viático completado', color: 'green' },
 };
 
 const facturaMetaByStatus: Record<Factura['status'], { title: string; color: ActivityColor }> = {
@@ -115,7 +115,7 @@ export default function Dashboard() {
       id: `dispersion-${dispersion.id}`,
       color: 'blue' as const,
       title: 'Dispersion realizada',
-      description: `$${dispersion.monto.toLocaleString()} - ${dispersion.dispersadoPor || 'Tesoreria'}`,
+      description: `$${dispersion.monto.toLocaleString()} - ${dispersion.dispersadoPor || 'Tesorería'}`,
       timestamp: parseDateToTimestamp(dispersion.fecha),
     }));
 
@@ -125,7 +125,7 @@ export default function Dashboard() {
         id: `factura-${factura.id}`,
         color: meta.color,
         title: meta.title,
-        description: `${factura.razonSocial || 'Sin razon social'} - ${factura.total.toLocaleString()}`,
+        description: `${factura.razonSocial || 'Sin razón social'} - ${factura.total.toLocaleString()}`,
         timestamp: parseDateToTimestamp(factura.createdAt || factura.fecha),
       };
     });
@@ -151,14 +151,14 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
               <MetricCard
-                title="Vi\u00e1ticos Activos"
+                title="Viáticos Activos"
                 value={metrics.viaticosActivos}
                 icon="money"
                 color="blue"
                 subtitle="en proceso"
               />
               <MetricCard
-                title="Aprobaci\u00f3n Pendiente"
+                title="Aprobación Pendiente"
                 value={metrics.viaticosAprobacionPendiente}
                 icon="clock"
                 color="yellow"
@@ -185,7 +185,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Conciliaci\u00f3n</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Conciliación</h2>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
               <div className="flex items-center space-x-3">
@@ -195,7 +195,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Alertas de Conciliaci\u00f3n</p>
+                  <p className="font-medium text-gray-900">Alertas de Conciliación</p>
                   <p className="text-sm text-gray-600">{metrics.alertasConciliacion} discrepancias encontradas</p>
                 </div>
               </div>
@@ -245,7 +245,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Veh\u00edculos Disponibles</p>
+                  <p className="font-medium text-gray-900">Vehículos Disponibles</p>
                   <p className="text-sm text-gray-600">Listos para asignar</p>
                 </div>
               </div>
@@ -260,7 +260,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Veh\u00edculos Asignados</p>
+                  <p className="font-medium text-gray-900">Vehículos Asignados</p>
                   <p className="text-sm text-gray-600">En uso actualmente</p>
                 </div>
               </div>
@@ -276,7 +276,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Alertas de Mantenimiento</p>
-                  <p className="text-sm text-gray-600">Requieren atenci\u00f3n</p>
+                  <p className="text-sm text-gray-600">Requieren atención</p>
                 </div>
               </div>
               <span className="text-2xl font-bold text-orange-600">{metrics.alertasMantenimiento}</span>
@@ -308,12 +308,12 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones R\u00e1pidas</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
           <div className="space-y-2">
-            <QuickActionButton icon="plus" label="Nueva Solicitud de Vi\u00e1tico" onClick={() => navigate('/mi-portal')} />
+            <QuickActionButton icon="plus" label="Nueva Solicitud de Viático" onClick={() => navigate('/mi-portal')} />
             <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
-            <QuickActionButton icon="send" label="Realizar Dispersi\u00f3n" onClick={() => navigate('/dispersion')} />
-            <QuickActionButton icon="car" label="Asignar Veh\u00edculo" onClick={() => navigate('/flotilla')} />
+            <QuickActionButton icon="send" label="Realizar Dispersión" onClick={() => navigate('/dispersion')} />
+            <QuickActionButton icon="car" label="Asignar Vehículo" onClick={() => navigate('/flotilla')} />
             <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
           </div>
         </div>
