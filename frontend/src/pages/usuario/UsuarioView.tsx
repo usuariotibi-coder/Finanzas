@@ -55,7 +55,7 @@ export default function UsuarioView() {
   const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticoSeleccionado, setViaticoSeleccionado] = useLocalStorageState<string | null>('usuario:viaticoSeleccionado', null);
-  const [filtro, setFiltro] = useLocalStorageState<'todos' | 'activos' | 'completados'>('usuario:filtro', 'activos');
+  const [filtro, setFiltro] = useState<'todos' | 'activos' | 'completados'>('activos');
   const [solicitudesViaje, setSolicitudesViaje] = useLocalStorageState<SolicitudViaje[]>('usuario:solicitudesViaje', []);
 
   // Estado para nuevo viático
@@ -259,12 +259,19 @@ export default function UsuarioView() {
   };
 
   // Filtrar viáticos
+  const isViaticoActivo = (status: Viatico['status']) =>
+    ['pendiente', 'aprobado', 'dispersado', 'en_viaje', 'viaje_finalizado', 'en_recuperacion'].includes(status);
+  const isViaticoCompletado = (status: Viatico['status']) =>
+    status === 'completado';
+  const totalViaticosActivos = viaticos.filter(v => isViaticoActivo(v.status)).length;
+  const totalViaticosCompletados = viaticos.filter(v => isViaticoCompletado(v.status)).length;
+
   const viaticosFiltrados = viaticos.filter(v => {
     if (filtro === 'activos') {
-      return ['aprobado', 'dispersado', 'en_viaje'].includes(v.status);
+      return isViaticoActivo(v.status);
     }
     if (filtro === 'completados') {
-      return v.status === 'completado';
+      return isViaticoCompletado(v.status);
     }
     return true;
   });
@@ -729,7 +736,7 @@ export default function UsuarioView() {
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Todos
+                  Todos ({viaticos.length})
                 </button>
                 <button
                   onClick={() => setFiltro('activos')}
@@ -739,7 +746,7 @@ export default function UsuarioView() {
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Activos
+                  Activos ({totalViaticosActivos})
                 </button>
                 <button
                   onClick={() => setFiltro('completados')}
@@ -749,7 +756,7 @@ export default function UsuarioView() {
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Completados
+                  Completados ({totalViaticosCompletados})
                 </button>
               </div>
               </div>
@@ -845,6 +852,15 @@ export default function UsuarioView() {
                 </svg>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay viáticos {filtro !== 'todos' ? filtro : ''}</h3>
                 <p className="text-gray-600">Intenta cambiar los filtros o solicita un nuevo viático</p>
+                {filtro === 'completados' && totalViaticosActivos > 0 && (
+                  <button
+                    onClick={() => setFiltro('activos')}
+                    className="mt-4 inline-flex items-center rounded-md border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 hover:bg-primary-100"
+                    type="button"
+                  >
+                    Ver Activos ({totalViaticosActivos})
+                  </button>
+                )}
               </div>
             )}
           </div>
