@@ -15,6 +15,11 @@ import {
   updateViaje,
   updateViatico,
 } from '../../utils/backendSync';
+import {
+  appendViaticoComment,
+  getPendingViaticoExtension,
+  removePendingViaticoExtension,
+} from '../../utils/viaticoExtensions';
 export default function PMPortal() {
   const { user } = useAuth();
   const [viaticosUsuario, setViaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -46,9 +51,17 @@ export default function PMPortal() {
 
   const viaticosPendientes = useMemo(() => {
     return viaticosUsuario
-      .filter((viatico) => viatico.status === 'pendiente')
-      .filter((viatico) => !viaticosResueltos.includes(viatico.id));
+      .filter((viatico) => {
+        const hasExtensionRequest = Boolean(getPendingViaticoExtension(viatico.comentarios));
+        const isSolicitudInicial = viatico.status === 'pendiente' && !viaticosResueltos.includes(viatico.id);
+        return hasExtensionRequest || isSolicitudInicial;
+      });
   }, [viaticosUsuario, viaticosResueltos]);
+
+  const extensionSeleccionada = useMemo(
+    () => (viaticoSeleccionado ? getPendingViaticoExtension(viaticoSeleccionado.comentarios) : null),
+    [viaticoSeleccionado]
+  );
 
   useEscapeKey(() => setShowModalViaticoDetalle(false), showModalViaticoDetalle);
   useEscapeKey(() => setShowModalViajeDetalle(false), showModalViajeDetalle);
@@ -175,6 +188,32 @@ export default function PMPortal() {
     }
 
     try {
+      const pendingExtension = getPendingViaticoExtension(selected.comentarios);
+      if (pendingExtension) {
+        const comentariosSinExtension = removePendingViaticoExtension(selected.comentarios);
+        const fechaResolucion = new Date().toLocaleString('es-MX');
+        const comentarioResolucion = appendViaticoComment(
+          comentariosSinExtension,
+          `Extension aprobada (${fechaResolucion}) por ${user?.full_name || 'Project Manager'}: ${new Date(pendingExtension.fechaFinActual).toLocaleDateString('es-MX')} -> ${new Date(pendingExtension.nuevaFechaFin).toLocaleDateString('es-MX')}.`
+        );
+
+        const updatedRecord = await updateViatico(viaticoId, {
+          fechaFin: pendingExtension.nuevaFechaFin,
+          comentarios: comentarioResolucion,
+          aprobadoPor: user?.full_name || 'Project Manager',
+        });
+
+        setViaticosUsuario((prev) => {
+          const map = new Map(prev.map((viatico) => [viatico.id, viatico]));
+          map.set(updatedRecord.id, { ...map.get(updatedRecord.id), ...updatedRecord });
+          return Array.from(map.values());
+        });
+        await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+        setShowModalViaticoDetalle(false);
+        setViaticoSeleccionado(null);
+        return;
+      }
+
       const updatedRecord = await updateViatico(viaticoId, {
         status: 'aprobado',
         montoAprobado: selected.montoAprobado ?? selected.montoSolicitado,
@@ -204,6 +243,31 @@ export default function PMPortal() {
     }
 
     try {
+      const pendingExtension = getPendingViaticoExtension(selected.comentarios);
+      if (pendingExtension) {
+        const comentariosSinExtension = removePendingViaticoExtension(selected.comentarios);
+        const fechaResolucion = new Date().toLocaleString('es-MX');
+        const comentarioResolucion = appendViaticoComment(
+          comentariosSinExtension,
+          `Extension rechazada (${fechaResolucion}) por ${user?.full_name || 'Project Manager'}: ${new Date(pendingExtension.fechaFinActual).toLocaleDateString('es-MX')} -> ${new Date(pendingExtension.nuevaFechaFin).toLocaleDateString('es-MX')}.`
+        );
+
+        const updatedRecord = await updateViatico(viaticoId, {
+          comentarios: comentarioResolucion,
+          aprobadoPor: user?.full_name || 'Project Manager',
+        });
+
+        setViaticosUsuario((prev) => {
+          const map = new Map(prev.map((viatico) => [viatico.id, viatico]));
+          map.set(updatedRecord.id, { ...map.get(updatedRecord.id), ...updatedRecord });
+          return Array.from(map.values());
+        });
+        await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+        setShowModalViaticoDetalle(false);
+        setViaticoSeleccionado(null);
+        return;
+      }
+
       const updatedRecord = await updateViatico(viaticoId, {
         status: 'rechazado',
         aprobadoPor: user?.full_name || 'Project Manager',
@@ -458,6 +522,8 @@ export default function PMPortal() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-start">
             {viaticosPendientes.map((viatico) => {
               const viaticoStatusIcon = getViaticoStatusIcon(viatico.status);
+              const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
+              const isExtensionRequest = Boolean(extensionPendiente);
 
               return (
                 <div key={viatico.id} className="bg-white rounded-lg shadow-sm p-3 sm:p-4 hover:shadow transition-shadow w-full max-w-[340px]">
@@ -469,8 +535,8 @@ export default function PMPortal() {
                       </h3>
                       <p className="text-xs text-gray-500">{viatico.id}</p>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
-                      Pendiente
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isExtensionRequest ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {isExtensionRequest ? 'Extension pendiente' : 'Pendiente'}
                     </span>
                   </div>
 
@@ -499,6 +565,11 @@ export default function PMPortal() {
                       {new Date(viatico.fechaInicio).toLocaleDateString('es-MX')} - {new Date(viatico.fechaFin).toLocaleDateString('es-MX')}
                     </span>
                   </div>
+                  {extensionPendiente && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
+                      Ext: {new Date(extensionPendiente.fechaFinActual).toLocaleDateString('es-MX')}{' -> '}{new Date(extensionPendiente.nuevaFechaFin).toLocaleDateString('es-MX')}
+                    </div>
+                  )}
                   <p className="text-xs text-gray-700 line-clamp-2">{viatico.motivo}</p>
                 </div>
 
@@ -719,7 +790,9 @@ export default function PMPortal() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Revisar Solicitud de Viático</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {extensionSeleccionada ? 'Revisar Solicitud de Extension' : 'Revisar Solicitud de Viático'}
+                </h2>
                 <button
                   onClick={() => setShowModalViaticoDetalle(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -775,16 +848,36 @@ export default function PMPortal() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-200 pt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Monto a Aprobar (opcional - dejar vacío para aprobar el monto solicitado)
-                </label>
-                <input
-                  type="number"
-                  placeholder={`${viaticoSeleccionado.montoSolicitado}`}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              {extensionSeleccionada && (
+                <div className="border border-amber-200 bg-amber-50 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-semibold text-amber-900">Detalle de extension solicitada</p>
+                  <p className="text-sm text-amber-900">
+                    Fecha fin actual: <span className="font-semibold">{new Date(extensionSeleccionada.fechaFinActual).toLocaleDateString('es-MX')}</span>
+                  </p>
+                  <p className="text-sm text-amber-900">
+                    Nueva fecha solicitada: <span className="font-semibold">{new Date(extensionSeleccionada.nuevaFechaFin).toLocaleDateString('es-MX')}</span>
+                  </p>
+                  <p className="text-sm text-amber-900">
+                    Alimentos capturados: D {extensionSeleccionada.desayunos} / C {extensionSeleccionada.comidas} / Ce {extensionSeleccionada.cenas}
+                  </p>
+                  <p className="text-sm text-amber-900">
+                    Monto capturado: <span className="font-semibold">${extensionSeleccionada.montoCapturado.toLocaleString()} MXN</span>
+                  </p>
+                </div>
+              )}
+
+              {!extensionSeleccionada && (
+                <div className="border-t border-gray-200 pt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Monto a Aprobar (opcional - dejar vacio para aprobar el monto solicitado)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder={`${viaticoSeleccionado.montoSolicitado}`}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -805,7 +898,7 @@ export default function PMPortal() {
                 }}
                 className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
               >
-                Rechazar
+                {extensionSeleccionada ? 'Rechazar extension' : 'Rechazar'}
               </button>
               <button
                 onClick={() => {
@@ -813,7 +906,7 @@ export default function PMPortal() {
                 }}
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
               >
-                Aprobar
+                {extensionSeleccionada ? 'Aprobar extension' : 'Aprobar'}
               </button>
             </div>
           </div>

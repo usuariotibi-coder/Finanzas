@@ -10,6 +10,10 @@ import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
 import { createViaje, createViatico, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
+import {
+  getPendingViaticoExtension,
+  withPendingViaticoExtension,
+} from '../../utils/viaticoExtensions';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
@@ -206,6 +210,9 @@ export default function UsuarioView() {
     alimentosExtension.desayunos * 150 +
     alimentosExtension.comidas * 200 +
     alimentosExtension.cenas * 250;
+  const extensionPendienteModal = viaticoParaExtender
+    ? getPendingViaticoExtension(viaticoParaExtender.comentarios)
+    : null;
   const actividadSeleccionada = formNuevoViatico.gsActivityId ? getActivityById(formNuevoViatico.gsActivityId) : undefined;
   const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
@@ -312,15 +319,28 @@ export default function UsuarioView() {
       return;
     }
 
+    if (getPendingViaticoExtension(viaticoParaExtender.comentarios)) {
+      showToast('Ya existe una extension pendiente de aprobacion para este viatico.', 'info');
+      return;
+    }
+
     const viaticoId = viaticoParaExtender.id;
     const fechaFinActual = viaticoParaExtender.fechaFin;
     const fechaFinNueva = nuevaFechaFin;
-    const fechaSolicitud = new Date().toLocaleDateString('es-MX');
-    const extensionDetalle = `Extension solicitada (${fechaSolicitud}): ${new Date(fechaFinActual).toLocaleDateString('es-MX')} -> ${new Date(fechaFinNueva).toLocaleDateString('es-MX')} | Alimentos D:${alimentosExtension.desayunos} C:${alimentosExtension.comidas} Ce:${alimentosExtension.cenas} | Monto capturado: $${totalAlimentosExtensionCapturados.toLocaleString()} MXN`;
-    const comentariosActuales = viaticoParaExtender.comentarios?.trim();
-    const comentariosConExtension = [comentariosActuales, extensionDetalle].filter(Boolean).join('\n');
+    const extensionRequest = {
+      requestId: `EXT-${Date.now()}`,
+      requestedAt: new Date().toISOString(),
+      requestedById: user ? String(user.id) : viaticoParaExtender.userId,
+      requestedByName: user?.full_name || viaticoParaExtender.userName,
+      fechaFinActual,
+      nuevaFechaFin: fechaFinNueva,
+      desayunos: alimentosExtension.desayunos,
+      comidas: alimentosExtension.comidas,
+      cenas: alimentosExtension.cenas,
+      montoCapturado: totalAlimentosExtensionCapturados,
+    };
+    const comentariosConExtension = withPendingViaticoExtension(viaticoParaExtender.comentarios, extensionRequest);
     const payloadExtension: Partial<Viatico> = {
-      fechaFin: fechaFinNueva,
       comentarios: comentariosConExtension,
     };
 
@@ -338,31 +358,25 @@ export default function UsuarioView() {
 
     try {
       const persisted = await updateViatico(viaticoId, payloadExtension);
-      const servidorAplicoExtension = persisted.fechaFin === fechaFinNueva;
       setViaticos((prev) =>
         prev.map((item) =>
           String(item.id) === String(viaticoId)
             ? {
                 ...item,
                 ...persisted,
-                ...(!servidorAplicoExtension ? payloadExtension : {}),
+                ...payloadExtension,
               }
             : item
         )
       );
-
-      if (servidorAplicoExtension) {
-        await syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) });
-        showToast('Extension guardada y reflejada en tu viatico.', 'success');
-      } else {
-        showToast('El servidor no confirmo el cambio, pero se guardo localmente.', 'info');
-      }
+      await syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) });
+      showToast('Solicitud de extension enviada al PM para aprobacion.', 'success');
       resetExtensionState();
     } catch (error) {
       showToast(
         error instanceof Error
-          ? `${error.message}. Se guardo localmente.`
-          : 'No se pudo sincronizar con servidor. Se guardo localmente.',
+          ? `${error.message}. Se guardo localmente y quedo pendiente para PM.`
+          : 'No se pudo sincronizar con servidor. Se guardo localmente y quedo pendiente para PM.',
         'info'
       );
       resetExtensionState();
@@ -938,6 +952,7 @@ export default function UsuarioView() {
                 const estadoInfo = getEstadoInfo(viatico.status);
                 const procesoViatico = getProcesoViatico(viatico.status);
                 const accionBoton = getAccionBoton(viatico);
+                const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
                 const proyecto = proyectos.find(p => p.id === viatico.proyectoId);
                 const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
 
@@ -970,6 +985,11 @@ export default function UsuarioView() {
                             style={{ width: `${procesoViatico.avance}%` }}
                           />
                         </div>
+                        {extensionPendiente && (
+                          <p className="mt-1 text-[11px] text-amber-700">
+                            Extension pendiente PM: {new Date(extensionPendiente.nuevaFechaFin).toLocaleDateString('es-MX')}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -984,7 +1004,7 @@ export default function UsuarioView() {
                           </button>
                         )}
 
-                        {(viatico.status === 'dispersado' || viatico.status === 'en_viaje') && (
+                        {(viatico.status === 'dispersado' || viatico.status === 'en_viaje') && !extensionPendiente && (
                           <button
                             onClick={() => {
                               setViaticoParaExtender(viatico);
@@ -1001,6 +1021,12 @@ export default function UsuarioView() {
                           >
                             🔄 <span>Extender Viaje</span>
                           </button>
+                        )}
+
+                        {extensionPendiente && (
+                          <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                            ⏳ <span>Esperando aprobacion PM</span>
+                          </span>
                         )}
 
                         {viatico.saldoRestante && viatico.saldoRestante > 0 && (
@@ -2510,7 +2536,7 @@ export default function UsuarioView() {
               {/* Nota informativa */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> La extensión se guardará y se reflejará en tu viático.
+                  <strong>Nota:</strong> La extension se envia a aprobacion del PM. La fecha fin cambia solo cuando PM aprueba.
                 </p>
               </div>
             </div>
@@ -2524,10 +2550,10 @@ export default function UsuarioView() {
               </button>
               <button
                 onClick={handleSolicitarExtension}
-                disabled={isSavingExtension || !nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
+                disabled={isSavingExtension || Boolean(extensionPendienteModal) || !nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
                 className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                {isSavingExtension ? 'Guardando...' : 'Solicitar Extensión'}
+                {isSavingExtension ? 'Guardando...' : extensionPendienteModal ? 'Pendiente de aprobacion PM' : 'Solicitar Extension'}
               </button>
             </div>
           </div>
