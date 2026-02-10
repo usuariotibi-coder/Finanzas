@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
@@ -65,6 +65,15 @@ interface GastoDocumento {
   ticketName?: string;
   fecha: string;
 }
+
+type ToastType = 'success' | 'error' | 'info';
+
+interface ToastMessage {
+  id: number;
+  text: string;
+  type: ToastType;
+}
+
 export default function UsuarioView() {
   const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -110,6 +119,8 @@ export default function UsuarioView() {
   const [showDevolverErrors, setShowDevolverErrors] = useState(false);
   const [showGastoDocumentoErrors, setShowGastoDocumentoErrors] = useState(false);
   const [showSubirDocumentosErrors, setShowSubirDocumentosErrors] = useState(false);
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
 
   const saveVehicleAssignments = (assignments: VehicleAssignment[]) => {
     setVehicleAssignments(assignments);
@@ -281,6 +292,26 @@ export default function UsuarioView() {
     });
   };
 
+  const showToast = (text: string, type: ToastType = 'success') => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = null;
+    }
+
+    const id = Date.now();
+    setToast({ id, text, type });
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast((current) => (current?.id === id ? null : current));
+      toastTimeoutRef.current = null;
+    }, 3500);
+  };
+
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+  }, []);
+
   useEscapeKey(() => setShowModalNuevoViatico(false), showModalNuevoViatico);
   useEscapeKey(() => setShowModalSolicitarVehiculo(false), showModalSolicitarVehiculo);
   useEscapeKey(() => setShowModalRecibirVehiculo(false), showModalRecibirVehiculo);
@@ -447,7 +478,7 @@ export default function UsuarioView() {
 
     // Aquí iría la lógica para subir al backend
     console.log('Subiendo gastos:', gastos);
-    alert(`${gastos.length} gasto(s) subido(s) exitosamente`);
+    showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
 
     // Limpiar y volver a la lista
     setGastos([]);
@@ -505,7 +536,7 @@ export default function UsuarioView() {
       });
       setShowNuevoViaticoErrors(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo crear el viatico.');
+      showToast(error instanceof Error ? error.message : 'No se pudo crear el viatico.', 'error');
     }
   };
 
@@ -543,7 +574,7 @@ export default function UsuarioView() {
     };
 
     saveVehicleAssignments([...vehicleAssignments, nuevaSolicitud]);
-    alert('Solicitud de vehículo enviada. El administrador asignará un coche disponible.');
+    showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
 
     setShowModalSolicitarVehiculo(false);
     setFormSolicitudVehiculo({
@@ -601,7 +632,7 @@ export default function UsuarioView() {
 
       setSolicitudesViaje((prev) => [...prev, nuevaSolicitud]);
       await syncCoreAppData({ userId: currentUserId || undefined });
-      alert('Solicitud de viaje enviada. El administrador te contactará para coordinar los servicios.');
+      showToast('Solicitud de viaje enviada. El administrador te contactara para coordinar los servicios.', 'success');
 
       setShowModalSolicitarViaje(false);
       setFormSolicitudViaje({
@@ -620,7 +651,7 @@ export default function UsuarioView() {
       });
       setShowSolicitarViajeErrors(false);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo crear la solicitud de viaje.');
+      showToast(error instanceof Error ? error.message : 'No se pudo crear la solicitud de viaje.', 'error');
     }
   };
 
@@ -646,7 +677,7 @@ export default function UsuarioView() {
     });
 
     saveVehicleAssignments(updatedAssignments);
-    alert('Vehículo recibido correctamente');
+    showToast('Vehiculo recibido correctamente', 'success');
     setShowModalRecibirVehiculo(false);
     setAssignmentSeleccionado(null);
     setKmInicial(0);
@@ -696,6 +727,36 @@ export default function UsuarioView() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+      {toast && (
+        <div className="fixed right-4 top-4 z-[90] w-[calc(100%-2rem)] max-w-sm">
+          <div
+            className={`rounded-xl border shadow-lg backdrop-blur-sm ${
+              toast.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                : toast.type === 'error'
+                ? 'border-rose-200 bg-rose-50 text-rose-900'
+                : 'border-sky-200 bg-sky-50 text-sky-900'
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex items-start gap-3 p-3.5">
+              <span className="mt-0.5 text-base">
+                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '!' : 'i'}
+              </span>
+              <p className="flex-1 text-sm font-medium leading-5">{toast.text}</p>
+              <button
+                onClick={() => setToast(null)}
+                className="text-base leading-none opacity-70 transition hover:opacity-100"
+                aria-label="Cerrar notificacion"
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {!viaticoSeleccionado ? (
         <>
           <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
@@ -2414,7 +2475,7 @@ export default function UsuarioView() {
                     cenasCapturadas: alimentosExtension.cenas,
                     montoCapturado: totalAlimentosExtensionCapturados,
                   });
-                  alert('Solicitud de extensión enviada para aprobación');
+                  showToast('Solicitud de extension enviada para aprobacion', 'success');
                   resetExtensionState();
                 }}
                 disabled={!nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
