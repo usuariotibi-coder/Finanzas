@@ -125,7 +125,7 @@ export default function Proyectos() {
     ? {
       codigo: !formData.codigo?.trim() ? 'Ingresa el codigo.' : '',
       nombre: !formData.nombre?.trim() ? 'Ingresa el nombre del proyecto.' : '',
-      cliente: !formData.cliente?.trim() ? 'Ingresa el cliente.' : '',
+      cliente: !formData.cliente?.trim() ? 'Ingresa el cliente o descripcion.' : '',
       responsable: !formData.responsable?.trim() ? 'Ingresa el responsable.' : '',
     }
     : {};
@@ -665,39 +665,24 @@ export default function Proyectos() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cliente <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.cliente}
-                        onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
-                          formErrors.cliente
-                            ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
-                            : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
-                        }`}
-                        placeholder="Nombre del cliente"
-                      />
-                      {formErrors.cliente && (
-                        <p className="mt-1 text-xs text-rose-600">{formErrors.cliente}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Departamento
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.departamento}
-                        onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Ej: Operaciones"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cliente / Descripción <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cliente}
+                      onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
+                        formErrors.cliente
+                          ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
+                          : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
+                      }`}
+                      placeholder="Cliente o descripción breve del proyecto"
+                    />
+                    {formErrors.cliente && (
+                      <p className="mt-1 text-xs text-rose-600">{formErrors.cliente}</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -772,19 +757,6 @@ export default function Proyectos() {
                     {formErrors.responsable && (
                       <p className="mt-1 text-xs text-rose-600">{formErrors.responsable}</p>
                     )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción
-                    </label>
-                    <textarea
-                      value={formData.descripcion}
-                      onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Descripción breve del proyecto"
-                    ></textarea>
                   </div>
 
                   <div>

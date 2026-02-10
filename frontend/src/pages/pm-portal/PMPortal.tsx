@@ -106,11 +106,9 @@ export default function PMPortal() {
   const proyectoErrors = showProyectoErrors
     ? {
       codigo: !nuevoProyecto.codigo.trim() ? 'Ingresa el job.' : '',
-      cliente: !nuevoProyecto.cliente.trim() ? 'Ingresa el cliente.' : '',
+      cliente: !nuevoProyecto.cliente.trim() ? 'Ingresa el cliente o descripcion.' : '',
       responsable: !nuevoProyecto.responsable.trim() ? 'Ingresa el responsable.' : '',
       nombre: !nuevoProyecto.nombre.trim() ? 'Ingresa el nombre del proyecto.' : '',
-      descripcion: !nuevoProyecto.descripcion.trim() ? 'Ingresa la descripcion.' : '',
-      departamento: !nuevoProyecto.departamento.trim() ? 'Selecciona el departamento.' : '',
       presupuesto: presupuestoInvalid ? 'Ingresa un presupuesto valido.' : '',
       fechaInicio: !nuevoProyecto.fechaInicio.trim() ? 'Selecciona la fecha de inicio.' : '',
       fechaFinEstimada: !nuevoProyecto.fechaFinEstimada.trim() ? 'Selecciona la fecha de fin.' : '',
@@ -130,8 +128,6 @@ export default function PMPortal() {
       nuevoProyecto.nombre,
       nuevoProyecto.cliente,
       nuevoProyecto.responsable,
-      nuevoProyecto.descripcion,
-      nuevoProyecto.departamento,
       nuevoProyecto.presupuesto,
       nuevoProyecto.fechaInicio,
       nuevoProyecto.fechaFinEstimada,
@@ -153,8 +149,8 @@ export default function PMPortal() {
         fechaInicio: nuevoProyecto.fechaInicio,
         fechaFinEstimada: nuevoProyecto.fechaFinEstimada,
         responsable: nuevoProyecto.responsable.trim(),
-        departamento: nuevoProyecto.departamento,
-        descripcion: nuevoProyecto.descripcion.trim(),
+        departamento: user?.department?.trim() || 'operaciones',
+        descripcion: nuevoProyecto.cliente.trim(),
         notas: nuevoProyecto.notas.trim() || undefined,
       });
 
@@ -995,11 +991,11 @@ export default function PMPortal() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cliente *
+                    Cliente / Descripción *
                   </label>
                   <input
                     type="text"
-                    placeholder="Nombre del cliente"
+                    placeholder="Cliente o descripción breve del proyecto"
                     value={nuevoProyecto.cliente}
                     onChange={(e) => setNuevoProyecto((prev) => ({ ...prev, cliente: e.target.value }))}
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
@@ -1053,49 +1049,7 @@ export default function PMPortal() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción *
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Descripción detallada del proyecto..."
-                  value={nuevoProyecto.descripcion}
-                  onChange={(e) => setNuevoProyecto((prev) => ({ ...prev, descripcion: e.target.value }))}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    proyectoErrors.descripcion
-                      ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
-                      : 'border-gray-300 focus:ring-primary-500'
-                  }`}
-                />
-                {proyectoErrors.descripcion && (
-                  <p className="mt-1 text-xs text-rose-600">{proyectoErrors.descripcion}</p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Departamento *
-                  </label>
-                  <select
-                    value={nuevoProyecto.departamento}
-                    onChange={(e) => setNuevoProyecto((prev) => ({ ...prev, departamento: e.target.value }))}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                      proyectoErrors.departamento
-                        ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
-                        : 'border-gray-300 focus:ring-primary-500'
-                    }`}>
-                    <option value="">Seleccionar...</option>
-                    <option value="Infraestructura">Infraestructura</option>
-                    <option value="Internacional">Internacional</option>
-                    <option value="Industrial">Industrial</option>
-                    <option value="Comercial">Comercial</option>
-                  </select>
-                  {proyectoErrors.departamento && (
-                    <p className="mt-1 text-xs text-rose-600">{proyectoErrors.departamento}</p>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Presupuesto *
@@ -1274,7 +1228,7 @@ export default function PMPortal() {
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs text-gray-500">Cliente</p>
+                  <p className="text-xs text-gray-500">Cliente / Descripción</p>
                   {isEditingProyecto ? (
                     <input
                       value={proyectoDetalle.cliente}
