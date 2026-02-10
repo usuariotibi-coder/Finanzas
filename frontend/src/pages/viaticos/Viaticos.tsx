@@ -5,6 +5,8 @@ import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { AuthUser, Viatico } from '../../types';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
+import { GS_ACTIVITY_OTHER_ID } from '../../data/gsActivities';
+import type { GSActivity } from '../../data/gsActivities';
 import { createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
@@ -381,6 +383,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const isOtherActivitySelected = selectedActivityId === GS_ACTIVITY_OTHER_ID;
   const montoValue = Number(formData.montoSolicitado);
   const montoInvalid = !formData.montoSolicitado || Number.isNaN(montoValue) || montoValue <= 0;
   const computedErrors = {
@@ -399,8 +402,12 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
     setSelectedProyectoId(proyectoId);
   };
 
-  const handleActivityChange = (activityId: number) => {
+  const handleActivityChange = (activityId: number, activity: GSActivity) => {
     setSelectedActivityId(activityId);
+    setFormData((prev) => ({
+      ...prev,
+      motivo: activity.id === GS_ACTIVITY_OTHER_ID ? '' : activity.label,
+    }));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -497,8 +504,11 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
                     ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                     : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
                 }`}
-                placeholder="Ej: Reunión con clientes"
+                placeholder={isOtherActivitySelected ? 'Escribe otro motivo...' : 'Se llena según el tipo de actividad'}
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Selecciona "Otro" para capturar un motivo personalizado.
+              </p>
               {errors.motivo && (
                 <p className="mt-1 text-xs text-rose-600">{errors.motivo}</p>
               )}

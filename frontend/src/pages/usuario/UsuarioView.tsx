@@ -6,6 +6,7 @@ import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
+import { GS_ACTIVITY_OTHER_ID } from '../../data/gsActivities';
 import { createViaje, createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
@@ -148,6 +149,7 @@ export default function UsuarioView() {
     formNuevoViatico.desayunos * 150 +
     formNuevoViatico.comidas * 200 +
     formNuevoViatico.cenas * 250;
+  const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
   const isFormValid = Boolean(
     formNuevoViatico.proyectoId &&
       formNuevoViatico.gsActivityId !== null &&
@@ -1336,7 +1338,12 @@ export default function UsuarioView() {
               {/* GS Activity */}
               <GSActivitySelector
                 value={formNuevoViatico.gsActivityId}
-                onChange={(activityId) => setFormNuevoViatico({ ...formNuevoViatico, gsActivityId: activityId })}
+                onChange={(activityId, activity) =>
+                  setFormNuevoViatico((prev) => ({
+                    ...prev,
+                    gsActivityId: activityId,
+                    motivo: activityId === GS_ACTIVITY_OTHER_ID ? '' : activity.label,
+                  }))}
                 filterByCategory="travel"
                 label="Tipo de Actividad"
                 inputClassName={nuevoViaticoErrors.gsActivityId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
@@ -1359,8 +1366,11 @@ export default function UsuarioView() {
                       ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                       : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                   }`}
-                  placeholder="Ej: Reunión con cliente, supervisión..."
+                  placeholder={isOtroMotivo ? 'Escribe otro motivo...' : 'Se llena según el tipo de actividad'}
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Selecciona "Otro" para capturar un motivo personalizado.
+                </p>
                 {nuevoViaticoErrors.motivo && (
                   <p className="mt-1 text-xs text-rose-600">{nuevoViaticoErrors.motivo}</p>
                 )}
