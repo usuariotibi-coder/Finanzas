@@ -282,6 +282,20 @@ export default function UsuarioView() {
     return configs[status] || configs.pendiente;
   };
 
+  const getProcesoViatico = (status: Viatico['status']) => {
+    const procesos: Record<Viatico['status'], { texto: string; avance: number; barra: string }> = {
+      pendiente: { texto: '1/6 Solicitud enviada', avance: 16, barra: 'bg-amber-500' },
+      aprobado: { texto: '2/6 Aprobado por PM', avance: 33, barra: 'bg-blue-500' },
+      dispersado: { texto: '3/6 Dispersado', avance: 50, barra: 'bg-sky-500' },
+      en_viaje: { texto: '4/6 En viaje', avance: 66, barra: 'bg-indigo-500' },
+      viaje_finalizado: { texto: '5/6 Cierre de viaje', avance: 83, barra: 'bg-violet-500' },
+      en_recuperacion: { texto: '5/6 En recuperación', avance: 83, barra: 'bg-orange-500' },
+      completado: { texto: '6/6 Completado', avance: 100, barra: 'bg-emerald-600' },
+      rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
+    };
+    return procesos[status] ?? procesos.pendiente;
+  };
+
   const getAccionBoton = (viatico: Viatico) => {
     if (viatico.status === 'dispersado' || viatico.status === 'viaje_finalizado') {
       const facturasCompletas = (viatico.montoGastado || 0) >= (viatico.montoDispersado || 0) * 0.9;
@@ -309,6 +323,17 @@ export default function UsuarioView() {
     return icons[status] ?? '🚗';
   };
 
+  const getProcesoVehiculo = (status: VehicleAssignment['status']) => {
+    const procesos: Record<VehicleAssignment['status'], { texto: string; avance: number; barra: string }> = {
+      solicitado: { texto: '1/4 Solicitud enviada', avance: 25, barra: 'bg-amber-500' },
+      asignado: { texto: '2/4 Vehículo asignado', avance: 50, barra: 'bg-blue-500' },
+      activo: { texto: '3/4 En uso', avance: 75, barra: 'bg-indigo-500' },
+      completado: { texto: '4/4 Vehículo devuelto', avance: 100, barra: 'bg-emerald-600' },
+      rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
+    };
+    return procesos[status] ?? procesos.solicitado;
+  };
+
   const getViajeStatusIcon = (status: SolicitudViaje['status']) => {
     const icons = {
       pendiente: '⏳',
@@ -319,6 +344,18 @@ export default function UsuarioView() {
       completado: '🏁',
     };
     return icons[status] || '🧭';
+  };
+
+  const getProcesoViaje = (status: SolicitudViaje['status']) => {
+    const procesos: Record<SolicitudViaje['status'], { texto: string; avance: number; barra: string }> = {
+      pendiente: { texto: '1/4 Solicitud enviada', avance: 25, barra: 'bg-amber-500' },
+      en_proceso: { texto: '2/4 Gestión de servicios', avance: 50, barra: 'bg-blue-500' },
+      confirmado: { texto: '3/4 Confirmado', avance: 75, barra: 'bg-indigo-500' },
+      completado: { texto: '4/4 Completado', avance: 100, barra: 'bg-emerald-600' },
+      cancelado: { texto: 'Proceso cerrado: Cancelado', avance: 100, barra: 'bg-rose-500' },
+      rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
+    };
+    return procesos[status] ?? procesos.pendiente;
   };
 
   const handleAccionClick = (viatico: Viatico, accion: string) => {
@@ -724,6 +761,7 @@ export default function UsuarioView() {
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
+                const procesoViatico = getProcesoViatico(viatico.status);
                 const accionBoton = getAccionBoton(viatico);
                 const proyecto = proyectos.find(p => p.id === viatico.proyectoId);
                 const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
@@ -745,6 +783,18 @@ export default function UsuarioView() {
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
                           {estadoInfo.label}
                         </span>
+                      </div>
+
+                      <div>
+                        <p className="text-[11px] text-gray-600">
+                          Proceso actual: <span className="font-semibold text-gray-900">{procesoViatico.texto}</span>
+                        </p>
+                        <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                          <div
+                            className={`h-1.5 rounded-full ${procesoViatico.barra}`}
+                            style={{ width: `${procesoViatico.avance}%` }}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -809,6 +859,7 @@ export default function UsuarioView() {
                   const proyecto = proyectos.find(p => p.id === assignment.proyectoId);
                   const proyectoLabel = formatProyectoLabel(proyecto?.nombre || assignment.proyectoNombre, assignment.proyectoId);
                   const vehiculoStatusIcon = getVehiculoStatusIcon(assignment.status);
+                  const procesoVehiculo = getProcesoVehiculo(assignment.status);
 
                   return (
                     <div key={assignment.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
@@ -841,6 +892,18 @@ export default function UsuarioView() {
                               🏁 Completado
                             </span>
                           )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-[11px] text-gray-600">
+                            Proceso actual: <span className="font-semibold text-gray-900">{procesoVehiculo.texto}</span>
+                          </p>
+                          <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                            <div
+                              className={`h-1.5 rounded-full ${procesoVehiculo.barra}`}
+                              style={{ width: `${procesoVehiculo.avance}%` }}
+                            />
                           </div>
                         </div>
 
@@ -927,6 +990,7 @@ export default function UsuarioView() {
                   const confirmacionesHotel = solicitud.confirmaciones?.hotel ?? [];
                   const tieneConfirmaciones = confirmacionesAvion.length > 0 || confirmacionesCamion.length > 0 || confirmacionesHotel.length > 0;
                   const viajeStatusIcon = getViajeStatusIcon(solicitud.status);
+                  const procesoViaje = getProcesoViaje(solicitud.status);
 
                   return (
                     <div key={solicitud.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
@@ -950,6 +1014,19 @@ export default function UsuarioView() {
                              solicitud.status === 'cancelado' ? '⛔ Cancelado' : '🏁 Completado'}
                           </span>
                         </div>
+
+                        <div>
+                          <p className="text-[11px] text-gray-600">
+                            Proceso actual: <span className="font-semibold text-gray-900">{procesoViaje.texto}</span>
+                          </p>
+                          <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                            <div
+                              className={`h-1.5 rounded-full ${procesoViaje.barra}`}
+                              style={{ width: `${procesoViaje.avance}%` }}
+                            />
+                          </div>
+                        </div>
+
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
                           <span><span className="font-medium">Proyecto:</span> {proyectoLabel}</span>
                           <span><span className="font-medium">Motivo:</span> {solicitud.motivo}</span>
