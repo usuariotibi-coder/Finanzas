@@ -28,6 +28,20 @@ const calcularDiasViaje = (fechaInicio: string, fechaFin: string) => {
   return Math.floor((fin.getTime() - inicio.getTime()) / MS_POR_DIA) + 1;
 };
 
+const calcularDiasExtension = (fechaFinActual: string, nuevaFechaFin: string) => {
+  if (!fechaFinActual || !nuevaFechaFin) {
+    return 0;
+  }
+
+  const finActual = new Date(`${fechaFinActual}T00:00:00`);
+  const finNuevo = new Date(`${nuevaFechaFin}T00:00:00`);
+  if (Number.isNaN(finActual.getTime()) || Number.isNaN(finNuevo.getTime()) || finNuevo <= finActual) {
+    return 0;
+  }
+
+  return Math.floor((finNuevo.getTime() - finActual.getTime()) / MS_POR_DIA);
+};
+
 const getVehicleAssignments = (): VehicleAssignment[] => {
   const stored = localStorage.getItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY);
   if (stored) {
@@ -166,6 +180,10 @@ export default function UsuarioView() {
     formNuevoViatico.cenas * 250;
   const diasViajeSugeridos = calcularDiasViaje(formNuevoViatico.fechaInicio, formNuevoViatico.fechaFin);
   const placeholderAlimentos = diasViajeSugeridos > 0 ? String(diasViajeSugeridos) : '0';
+  const diasExtensionSugeridos = viaticoParaExtender
+    ? calcularDiasExtension(viaticoParaExtender.fechaFin, nuevaFechaFin)
+    : 0;
+  const totalAlimentosExtensionSugeridos = diasExtensionSugeridos * (150 + 200 + 250);
   const actividadSeleccionada = formNuevoViatico.gsActivityId ? getActivityById(formNuevoViatico.gsActivityId) : undefined;
   const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
@@ -2279,6 +2297,39 @@ export default function UsuarioView() {
                 />
               </div>
 
+              {/* Sugerencia de alimentos por días de extensión */}
+              <div className={`rounded-lg border p-3 ${diasExtensionSugeridos > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                <p className="text-sm font-semibold text-gray-900">Sugerencia por extensión</p>
+                {diasExtensionSugeridos > 0 ? (
+                  <>
+                    <p className="mt-1 text-xs text-gray-600">
+                      Días adicionales: <span className="font-semibold text-gray-900">{diasExtensionSugeridos}</span>
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center">
+                        <p className="text-[11px] text-gray-500">Desayunos</p>
+                        <p className="text-sm font-semibold text-gray-900">{diasExtensionSugeridos}</p>
+                      </div>
+                      <div className="rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center">
+                        <p className="text-[11px] text-gray-500">Comidas</p>
+                        <p className="text-sm font-semibold text-gray-900">{diasExtensionSugeridos}</p>
+                      </div>
+                      <div className="rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center">
+                        <p className="text-[11px] text-gray-500">Cenas</p>
+                        <p className="text-sm font-semibold text-gray-900">{diasExtensionSugeridos}</p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[11px] text-gray-600">
+                      Monto sugerido adicional: <span className="font-semibold text-gray-900">${totalAlimentosExtensionSugeridos.toLocaleString()} MXN</span>
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Selecciona una fecha mayor a la fecha fin actual para calcular desayunos, comidas y cenas adicionales.
+                  </p>
+                )}
+              </div>
+
               {/* Nota informativa */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
@@ -2304,6 +2355,10 @@ export default function UsuarioView() {
                     viaticoId: viaticoParaExtender.id,
                     fechaFinActual: viaticoParaExtender.fechaFin,
                     nuevaFechaFin: nuevaFechaFin,
+                    diasExtensionSugeridos,
+                    desayunosSugeridos: diasExtensionSugeridos,
+                    comidasSugeridas: diasExtensionSugeridos,
+                    cenasSugeridas: diasExtensionSugeridos,
                   });
                   alert('Solicitud de extensión enviada para aprobación');
                   setShowModalExtenderViaje(false);
