@@ -124,7 +124,6 @@ export default function Proyectos() {
   const formErrors = showFormErrors
     ? {
       codigo: !formData.codigo?.trim() ? 'Ingresa el codigo.' : '',
-      nombre: !formData.nombre?.trim() ? 'Ingresa el nombre del proyecto.' : '',
       cliente: !formData.cliente?.trim() ? 'Ingresa el cliente o descripcion.' : '',
       responsable: !formData.responsable?.trim() ? 'Ingresa el responsable.' : '',
     }
@@ -168,17 +167,26 @@ export default function Proyectos() {
   useEscapeKey(cerrarModal, isModalOpen);
 
   const guardarProyecto = async () => {
-    if (!formData.codigo?.trim() || !formData.nombre?.trim() || !formData.cliente?.trim() || !formData.responsable?.trim()) {
+    const clienteDescripcion = formData.cliente?.trim() || '';
+    if (!formData.codigo?.trim() || !clienteDescripcion || !formData.responsable?.trim()) {
       setShowFormErrors(true);
       return;
     }
 
     try {
       if (modoEdicion && proyectoSeleccionado) {
-        const actualizado = await updateProyecto(proyectoSeleccionado.id, formData);
+        const actualizado = await updateProyecto(proyectoSeleccionado.id, {
+          ...formData,
+          nombre: clienteDescripcion,
+          descripcion: clienteDescripcion,
+        });
         setProyectos((prev) => prev.map((proyecto) => (proyecto.id === actualizado.id ? actualizado : proyecto)));
       } else {
-        const nuevoProyecto = await createProyecto(formData);
+        const nuevoProyecto = await createProyecto({
+          ...formData,
+          nombre: clienteDescripcion,
+          descripcion: clienteDescripcion,
+        });
         setProyectos((prev) => [...prev, nuevoProyecto]);
       }
 
@@ -643,26 +651,6 @@ export default function Proyectos() {
                         <option value="cancelado">Cancelado</option>
                       </select>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre del Proyecto <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.nombre}
-                      onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 ${
-                        formErrors.nombre
-                          ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
-                          : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
-                      }`}
-                      placeholder="Ej: Obra Aeropuerto TLM"
-                    />
-                    {formErrors.nombre && (
-                      <p className="mt-1 text-xs text-rose-600">{formErrors.nombre}</p>
-                    )}
                   </div>
 
                   <div>

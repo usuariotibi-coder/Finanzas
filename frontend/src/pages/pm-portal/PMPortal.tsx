@@ -108,7 +108,6 @@ export default function PMPortal() {
       codigo: !nuevoProyecto.codigo.trim() ? 'Ingresa el job.' : '',
       cliente: !nuevoProyecto.cliente.trim() ? 'Ingresa el cliente o descripcion.' : '',
       responsable: !nuevoProyecto.responsable.trim() ? 'Ingresa el responsable.' : '',
-      nombre: !nuevoProyecto.nombre.trim() ? 'Ingresa el nombre del proyecto.' : '',
       presupuesto: presupuestoInvalid ? 'Ingresa un presupuesto valido.' : '',
       fechaInicio: !nuevoProyecto.fechaInicio.trim() ? 'Selecciona la fecha de inicio.' : '',
       fechaFinEstimada: !nuevoProyecto.fechaFinEstimada.trim() ? 'Selecciona la fecha de fin.' : '',
@@ -123,9 +122,9 @@ export default function PMPortal() {
   };
 
   const handleCrearProyecto = async () => {
+    const nombreProyecto = nuevoProyecto.cliente.trim();
     const requiredFields = [
       nuevoProyecto.codigo,
-      nuevoProyecto.nombre,
       nuevoProyecto.cliente,
       nuevoProyecto.responsable,
       nuevoProyecto.presupuesto,
@@ -141,7 +140,7 @@ export default function PMPortal() {
     try {
       const nuevo = await createProyecto({
         codigo: nuevoProyecto.codigo.trim(),
-        nombre: nuevoProyecto.nombre.trim(),
+        nombre: nombreProyecto,
         cliente: nuevoProyecto.cliente.trim(),
         estado: 'activo',
         presupuesto: presupuestoValue,
@@ -298,8 +297,11 @@ export default function PMPortal() {
     }
 
     try {
+      const clienteDescripcion = proyectoForm.cliente.trim();
       const updatedProyecto = await updateProyecto(proyectoForm.id, {
         ...proyectoForm,
+        nombre: clienteDescripcion || proyectoForm.nombre,
+        descripcion: clienteDescripcion,
         updatedAt: new Date().toISOString(),
       });
       setProyectos((prev) => prev.map((item) => (item.id === updatedProyecto.id ? updatedProyecto : item)));
@@ -780,11 +782,7 @@ export default function PMPortal() {
                 <input
                   type="number"
                   placeholder={`${viaticoSeleccionado.montoSolicitado}`}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    proyectoErrors.nombre
-                      ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
-                      : 'border-gray-300 focus:ring-primary-500'
-                  }`}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
 
@@ -1029,26 +1027,6 @@ export default function PMPortal() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre del Proyecto *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Modernización de Infraestructura"
-                  value={nuevoProyecto.nombre}
-                  onChange={(e) => setNuevoProyecto((prev) => ({ ...prev, nombre: e.target.value }))}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    proyectoErrors.nombre
-                      ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
-                      : 'border-gray-300 focus:ring-primary-500'
-                  }`}
-                />
-                {proyectoErrors.nombre && (
-                  <p className="mt-1 text-xs text-rose-600">{proyectoErrors.nombre}</p>
-                )}
-              </div>
-
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1172,22 +1150,17 @@ export default function PMPortal() {
                 <div>
                   {isEditingProyecto ? (
                     <>
-                      <input
-                        value={proyectoDetalle.nombre}
-                        onChange={(e) => updateProyectoForm({ nombre: e.target.value })}
-                        className="w-full text-lg font-semibold text-gray-900 border border-gray-200 rounded-md px-2 py-1"
-                        placeholder="Nombre del proyecto"
-                      />
+                      <p className="text-xs text-gray-500">Código</p>
                       <input
                         value={proyectoDetalle.codigo}
                         onChange={(e) => updateProyectoForm({ codigo: e.target.value })}
-                        className="mt-2 w-full text-xs text-gray-600 border border-gray-200 rounded-md px-2 py-1"
+                        className="mt-1 w-full text-xs text-gray-600 border border-gray-200 rounded-md px-2 py-1"
                         placeholder="Codigo del proyecto"
                       />
                     </>
                   ) : (
                     <>
-                      <h2 className="text-lg font-semibold text-gray-900">{proyectoDetalle.nombre}</h2>
+                      <h2 className="text-lg font-semibold text-gray-900">{proyectoDetalle.cliente}</h2>
                       <p className="text-xs text-gray-600">{proyectoDetalle.codigo}</p>
                     </>
                   )}
