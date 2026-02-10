@@ -11,6 +11,7 @@ import { createViaje, createViatico, syncCoreAppData, updateViatico } from '../.
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 import {
+  getLatestViaticoExtensionResolution,
   getPendingViaticoExtension,
   withPendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
@@ -441,7 +442,11 @@ export default function UsuarioView() {
     return configs[status] || configs.pendiente;
   };
 
-  const getProcesoViatico = (status: Viatico['status']) => {
+  const getProcesoViatico = (viatico: Viatico) => {
+    if (viatico.status === 'aprobado' && (viatico.montoDispersado || 0) > 0) {
+      return { texto: '2/6 Extension aprobada - pendiente dispersion adicional', avance: 33, barra: 'bg-blue-500' };
+    }
+
     const procesos: Record<Viatico['status'], { texto: string; avance: number; barra: string }> = {
       pendiente: { texto: '1/6 Solicitud enviada', avance: 16, barra: 'bg-amber-500' },
       aprobado: { texto: '2/6 Aprobado por PM', avance: 33, barra: 'bg-blue-500' },
@@ -452,7 +457,7 @@ export default function UsuarioView() {
       completado: { texto: '6/6 Completado', avance: 100, barra: 'bg-emerald-600' },
       rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
     };
-    return procesos[status] ?? procesos.pendiente;
+    return procesos[viatico.status] ?? procesos.pendiente;
   };
 
   const getAccionBoton = (viatico: Viatico) => {
@@ -950,9 +955,13 @@ export default function UsuarioView() {
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
-                const procesoViatico = getProcesoViatico(viatico.status);
+                const procesoViatico = getProcesoViatico(viatico);
                 const accionBoton = getAccionBoton(viatico);
                 const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
+                const extensionResuelta = !extensionPendiente
+                  ? getLatestViaticoExtensionResolution(viatico.comentarios)
+                  : null;
+                const requiereDispersionAdicional = viatico.status === 'aprobado' && (viatico.montoDispersado || 0) > 0;
                 const proyecto = proyectos.find(p => p.id === viatico.proyectoId);
                 const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
 
@@ -988,6 +997,16 @@ export default function UsuarioView() {
                         {extensionPendiente && (
                           <p className="mt-1 text-[11px] text-amber-700">
                             Extension pendiente PM: {new Date(extensionPendiente.nuevaFechaFin).toLocaleDateString('es-MX')}
+                          </p>
+                        )}
+                        {!extensionPendiente && extensionResuelta && (
+                          <p className={`mt-1 text-[11px] ${extensionResuelta.status === 'aprobada' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {extensionResuelta.status === 'aprobada' ? 'Extension aprobada PM' : 'Extension rechazada PM'}: {extensionResuelta.resolvedAt}
+                          </p>
+                        )}
+                        {requiereDispersionAdicional && (
+                          <p className="mt-1 text-[11px] text-blue-700">
+                            Pendiente de dispersion adicional por extension aprobada.
                           </p>
                         )}
                       </div>

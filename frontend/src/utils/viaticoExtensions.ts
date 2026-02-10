@@ -11,6 +11,11 @@ export interface ViaticoExtensionRequest {
   montoCapturado: number;
 }
 
+export interface ViaticoExtensionResolution {
+  status: 'aprobada' | 'rechazada';
+  resolvedAt: string;
+}
+
 const EXT_REQ_START = '[[EXT_REQ]]';
 const EXT_REQ_END = '[[/EXT_REQ]]';
 
@@ -95,4 +100,27 @@ export const appendViaticoComment = (comentarios: string | undefined, note: stri
     return clean;
   }
   return clean ? `${clean}\n${nextNote}` : nextNote;
+};
+
+export const getLatestViaticoExtensionResolution = (
+  comentarios?: string
+): ViaticoExtensionResolution | null => {
+  if (!comentarios) {
+    return null;
+  }
+
+  const pattern = /Extension (aprobada|rechazada) \(([^)]+)\)/g;
+  let match: RegExpExecArray | null;
+  let latest: ViaticoExtensionResolution | null = null;
+
+  match = pattern.exec(comentarios);
+  while (match) {
+    latest = {
+      status: match[1] === 'aprobada' ? 'aprobada' : 'rechazada',
+      resolvedAt: match[2],
+    };
+    match = pattern.exec(comentarios);
+  }
+
+  return latest;
 };

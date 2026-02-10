@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useAuth from '../../hooks/useAuth';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
@@ -20,6 +20,15 @@ import {
   getPendingViaticoExtension,
   removePendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
+
+type PortalToastType = 'success' | 'error' | 'info';
+
+interface PortalToast {
+  id: number;
+  text: string;
+  type: PortalToastType;
+}
+
 export default function PMPortal() {
   const { user } = useAuth();
   const [viaticosUsuario, setViaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -48,6 +57,8 @@ export default function PMPortal() {
     notas: '',
   });
   const [showProyectoErrors, setShowProyectoErrors] = useState(false);
+  const toastTimeoutRef = useRef<number | null>(null);
+  const [toast, setToast] = useState<PortalToast | null>(null);
 
   const viaticosPendientes = useMemo(() => {
     return viaticosUsuario
@@ -62,6 +73,20 @@ export default function PMPortal() {
     () => (viaticoSeleccionado ? getPendingViaticoExtension(viaticoSeleccionado.comentarios) : null),
     [viaticoSeleccionado]
   );
+
+  const showToast = (text: string, type: PortalToastType = 'info') => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = null;
+    }
+
+    const id = Date.now();
+    setToast({ id, text, type });
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast((current) => (current?.id === id ? null : current));
+      toastTimeoutRef.current = null;
+    }, 4000);
+  };
 
   useEscapeKey(() => setShowModalViaticoDetalle(false), showModalViaticoDetalle);
   useEscapeKey(() => setShowModalViajeDetalle(false), showModalViajeDetalle);
@@ -99,6 +124,13 @@ export default function PMPortal() {
       isActive = false;
     };
   }, [setProyectos, setViaticosUsuario, setViajesPendientes]);
+
+  useEffect(() => () => {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = null;
+    }
+  }, []);
 
   const resetNuevoProyecto = () => {
     setNuevoProyecto({
@@ -175,8 +207,9 @@ export default function PMPortal() {
       setShowModalCrearProyecto(false);
       resetNuevoProyecto();
       setShowProyectoErrors(false);
+      showToast('Proyecto creado correctamente.', 'success');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo crear el proyecto.');
+      showToast(error instanceof Error ? error.message : 'No se pudo crear el proyecto.', 'error');
     }
   };
 
@@ -192,15 +225,27 @@ export default function PMPortal() {
       if (pendingExtension) {
         const comentariosSinExtension = removePendingViaticoExtension(selected.comentarios);
         const fechaResolucion = new Date().toLocaleString('es-MX');
+        const montoBase = selected.montoAprobado ?? selected.montoSolicitado;
+        const montoExtra = Math.max(0, pendingExtension.montoCapturado || 0);
+        const requiereDispersionAdicional = montoExtra > 0;
         const comentarioResolucion = appendViaticoComment(
           comentariosSinExtension,
-          `Extension aprobada (${fechaResolucion}) por ${user?.full_name || 'Project Manager'}: ${new Date(pendingExtension.fechaFinActual).toLocaleDateString('es-MX')} -> ${new Date(pendingExtension.nuevaFechaFin).toLocaleDateString('es-MX')}.`
+          `Extension aprobada (${fechaResolucion}) por ${user?.full_name || 'Project Manager'}: ${new Date(pendingExtension.fechaFinActual).toLocaleDateString('es-MX')} -> ${new Date(pendingExtension.nuevaFechaFin).toLocaleDateString('es-MX')}.${requiereDispersionAdicional ? ` Monto adicional aprobado: $${montoExtra.toLocaleString()} MXN.` : ''}`
         );
 
-        const updatedRecord = await updateViatico(viaticoId, {
+        const payloadActualizacion: Partial<Viatico> = {
           fechaFin: pendingExtension.nuevaFechaFin,
           comentarios: comentarioResolucion,
           aprobadoPor: user?.full_name || 'Project Manager',
+        };
+
+        if (requiereDispersionAdicional) {
+          payloadActualizacion.status = 'aprobado';
+          payloadActualizacion.montoAprobado = montoBase + montoExtra;
+        }
+
+        const updatedRecord = await updateViatico(viaticoId, {
+          ...payloadActualizacion,
         });
 
         setViaticosUsuario((prev) => {
@@ -211,6 +256,12 @@ export default function PMPortal() {
         await syncCoreAppData({ userId: user ? String(user.id) : undefined });
         setShowModalViaticoDetalle(false);
         setViaticoSeleccionado(null);
+        showToast(
+          requiereDispersionAdicional
+            ? 'Extension aprobada. Se envio a dispersion para el monto adicional.'
+            : 'Extension aprobada y aplicada al viatico.',
+          'success'
+        );
         return;
       }
 
@@ -229,8 +280,9 @@ export default function PMPortal() {
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       setShowModalViaticoDetalle(false);
       setViaticoSeleccionado(null);
+      showToast('Viatico aprobado correctamente.', 'success');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo aprobar el viatico.');
+      showToast(error instanceof Error ? error.message : 'No se pudo aprobar el viatico.', 'error');
     }
   };
 
@@ -265,6 +317,7 @@ export default function PMPortal() {
         await syncCoreAppData({ userId: user ? String(user.id) : undefined });
         setShowModalViaticoDetalle(false);
         setViaticoSeleccionado(null);
+        showToast('Extension rechazada. El viatico mantiene su estado actual.', 'info');
         return;
       }
 
@@ -282,8 +335,9 @@ export default function PMPortal() {
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       setShowModalViaticoDetalle(false);
       setViaticoSeleccionado(null);
+      showToast('Viatico rechazado.', 'info');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo rechazar el viatico.');
+      showToast(error instanceof Error ? error.message : 'No se pudo rechazar el viatico.', 'error');
     }
   };
 
@@ -313,8 +367,9 @@ export default function PMPortal() {
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       setShowModalViajeDetalle(false);
       setViajeSeleccionado(null);
+      showToast('Viaje aprobado y enviado a gestion.', 'success');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo aprobar el viaje.');
+      showToast(error instanceof Error ? error.message : 'No se pudo aprobar el viaje.', 'error');
     }
   };
 
@@ -332,8 +387,9 @@ export default function PMPortal() {
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       setShowModalViajeDetalle(false);
       setViajeSeleccionado(null);
+      showToast('Viaje rechazado.', 'info');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo rechazar el viaje.');
+      showToast(error instanceof Error ? error.message : 'No se pudo rechazar el viaje.', 'error');
     }
   };
 
@@ -350,8 +406,9 @@ export default function PMPortal() {
       setIsEditingProyecto(false);
       setProyectoForm(null);
       setProyectoSeleccionado(null);
+      showToast('Proyecto eliminado correctamente.', 'success');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo eliminar el proyecto.');
+      showToast(error instanceof Error ? error.message : 'No se pudo eliminar el proyecto.', 'error');
     }
   };
 
@@ -372,8 +429,9 @@ export default function PMPortal() {
       setProyectoSeleccionado(updatedProyecto);
       setIsEditingProyecto(false);
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      showToast('Proyecto actualizado correctamente.', 'success');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.');
+      showToast(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.', 'error');
     }
   };
 
@@ -429,6 +487,32 @@ export default function PMPortal() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+      {toast && (
+        <div className="fixed right-4 top-20 z-[80] w-full max-w-sm">
+          <div
+            className={`rounded-lg border px-4 py-3 shadow-lg ${
+              toast.type === 'success'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : toast.type === 'error'
+                  ? 'border-rose-200 bg-rose-50 text-rose-800'
+                  : 'border-sky-200 bg-sky-50 text-sky-800'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-medium leading-5">{toast.text}</p>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="text-xs font-semibold opacity-70 hover:opacity-100"
+                aria-label="Cerrar notificacion"
+              >
+                x
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
@@ -862,6 +946,11 @@ export default function PMPortal() {
                   </p>
                   <p className="text-sm text-amber-900">
                     Monto capturado: <span className="font-semibold">${extensionSeleccionada.montoCapturado.toLocaleString()} MXN</span>
+                  </p>
+                  <p className="text-xs text-amber-800">
+                    {extensionSeleccionada.montoCapturado > 0
+                      ? 'Si apruebas, este monto adicional pasara al flujo de dispersion.'
+                      : 'Si apruebas, solo se actualizara la fecha fin del viaje.'}
                   </p>
                 </div>
               )}

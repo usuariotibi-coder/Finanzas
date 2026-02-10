@@ -496,7 +496,14 @@ const loadOptional = async <T,>(loader: () => Promise<T>, fallback: T): Promise<
 };
 
 const deriveDispersionPendientes = (viaticos: Viatico[]) =>
-  viaticos.filter((item) => item.status === 'aprobado');
+  viaticos.filter((item) => {
+    if (item.status !== 'aprobado') {
+      return false;
+    }
+    const montoAprobado = item.montoAprobado ?? item.montoSolicitado;
+    const montoDispersado = item.montoDispersado ?? 0;
+    return montoAprobado > montoDispersado;
+  });
 
 const deriveRecuperacionPendientes = (viaticos: Viatico[]) =>
   viaticos.filter((item) =>

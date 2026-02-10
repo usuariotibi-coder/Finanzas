@@ -114,16 +114,21 @@ export default function Dispersion() {
     }
 
     const montoAprobado = selectedViatico.montoAprobado ?? selectedViatico.montoSolicitado;
-    const montoDispersado = payload.montoDispersado && payload.montoDispersado > 0
+    const montoDispersadoPrevio = selectedViatico.montoDispersado ?? 0;
+    const montoPendiente = Math.max(montoAprobado - montoDispersadoPrevio, 0);
+    const montoDispersadoActual = payload.montoDispersado && payload.montoDispersado > 0
       ? payload.montoDispersado
-      : montoAprobado;
+      : montoPendiente > 0
+        ? montoPendiente
+        : montoAprobado;
+    const montoDispersadoTotal = Number((montoDispersadoPrevio + montoDispersadoActual).toFixed(2));
     const montoUSD = payload.moneda === 'USD' && payload.tipoCambioUSD
-      ? Number((montoDispersado / payload.tipoCambioUSD).toFixed(2))
+      ? Number((montoDispersadoActual / payload.tipoCambioUSD).toFixed(2))
       : payload.montoUSD;
     try {
       const createdDispersion = await createDispersion({
         viaticoId: selectedViatico.id,
-        monto: montoDispersado,
+        monto: montoDispersadoActual,
         metodoPago: payload.metodoPago,
         moneda: payload.moneda ?? 'MXN',
         tipoCambio: payload.tipoCambioUSD,
@@ -136,7 +141,7 @@ export default function Dispersion() {
       const updatedViatico = await updateViatico(selectedViatico.id, {
         status: payload.status,
         montoAprobado: selectedViatico.montoAprobado ?? selectedViatico.montoSolicitado,
-        montoDispersado,
+        montoDispersado: montoDispersadoTotal,
         comentarios: payload.notas || selectedViatico.comentarios,
       });
 
@@ -557,8 +562,10 @@ function ConfirmacionDispersionModal({
   const esExtranjero = esDestinoExtranjero(viatico);
   const [aplicaTipoCambio, setAplicaTipoCambio] = useState(esExtranjero);
   const montoAprobado = viatico.montoAprobado ?? viatico.montoSolicitado;
+  const montoDispersadoPrevio = viatico.montoDispersado ?? 0;
+  const montoPendiente = Math.max(montoAprobado - montoDispersadoPrevio, 0);
   const safeTipoCambio = tipoCambioUSD > 0 ? tipoCambioUSD : 1;
-  const [montoDispersado, setMontoDispersado] = useState<number>(montoAprobado);
+  const [montoDispersado, setMontoDispersado] = useState<number>(montoPendiente > 0 ? montoPendiente : montoAprobado);
   const montoUSD = aplicaTipoCambio ? montoAprobado / safeTipoCambio : null;
   const montoDispersadoUSD = aplicaTipoCambio ? montoDispersado / safeTipoCambio : null;
   const tipoCambioLabel = tipoCambioUpdatedAt
@@ -671,6 +678,11 @@ function ConfirmacionDispersionModal({
                 <p className="text-xs text-gray-500 mt-1">
                   Total aprobado: MXN ${montoAprobado.toLocaleString()}
                 </p>
+                {montoDispersadoPrevio > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ya dispersado: MXN ${montoDispersadoPrevio.toLocaleString()} | Pendiente: MXN ${montoPendiente.toLocaleString()}
+                  </p>
+                )}
                 {aplicaTipoCambio && (
                   <p className="text-xs text-blue-700 mt-1">
                     Equivalente USD: ${formatUsd(montoDispersadoUSD || 0)}

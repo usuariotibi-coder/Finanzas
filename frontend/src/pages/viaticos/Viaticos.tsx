@@ -20,19 +20,19 @@ const getDerivedViaticoStatus = (viatico: Viatico) => {
     return 'rechazado';
   }
 
-  if (typeof viatico.montoDispersado === 'number' && viatico.montoDispersado > 0) {
-    return 'dispersado';
+  if (baseStatus === 'aprobado') {
+    return 'aprobado';
   }
 
   if (baseStatus === 'dispersado') {
     return 'dispersado';
   }
 
-  if (typeof viatico.montoAprobado === 'number' && viatico.montoAprobado > 0) {
-    return 'aprobado';
+  if (typeof viatico.montoDispersado === 'number' && viatico.montoDispersado > 0) {
+    return 'dispersado';
   }
 
-  if (baseStatus === 'aprobado') {
+  if (typeof viatico.montoAprobado === 'number' && viatico.montoAprobado > 0) {
     return 'aprobado';
   }
 
