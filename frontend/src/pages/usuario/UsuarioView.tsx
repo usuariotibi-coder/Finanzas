@@ -12,6 +12,21 @@ import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
+const MS_POR_DIA = 1000 * 60 * 60 * 24;
+
+const calcularDiasViaje = (fechaInicio: string, fechaFin: string) => {
+  if (!fechaInicio || !fechaFin) {
+    return 0;
+  }
+
+  const inicio = new Date(`${fechaInicio}T00:00:00`);
+  const fin = new Date(`${fechaFin}T00:00:00`);
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || fin < inicio) {
+    return 0;
+  }
+
+  return Math.floor((fin.getTime() - inicio.getTime()) / MS_POR_DIA) + 1;
+};
 
 const getVehicleAssignments = (): VehicleAssignment[] => {
   const stored = localStorage.getItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY);
@@ -149,6 +164,8 @@ export default function UsuarioView() {
     formNuevoViatico.desayunos * 150 +
     formNuevoViatico.comidas * 200 +
     formNuevoViatico.cenas * 250;
+  const diasViajeSugeridos = calcularDiasViaje(formNuevoViatico.fechaInicio, formNuevoViatico.fechaFin);
+  const placeholderAlimentos = diasViajeSugeridos > 0 ? String(diasViajeSugeridos) : '0';
   const actividadSeleccionada = formNuevoViatico.gsActivityId ? getActivityById(formNuevoViatico.gsActivityId) : undefined;
   const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
@@ -1512,7 +1529,7 @@ export default function UsuarioView() {
                           ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                           : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                       }`}
-                      placeholder="0"
+                      placeholder={placeholderAlimentos}
                       min="0"
                 />
               </div>
@@ -1527,7 +1544,7 @@ export default function UsuarioView() {
                           ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                           : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                       }`}
-                      placeholder="0"
+                      placeholder={placeholderAlimentos}
                       min="0"
                     />
                   </div>
@@ -1542,7 +1559,7 @@ export default function UsuarioView() {
                           ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                           : 'border-gray-300 focus:ring-primary-500 focus:border-primary-500'
                       }`}
-                      placeholder="0"
+                      placeholder={placeholderAlimentos}
                       min="0"
                     />
                   </div>
