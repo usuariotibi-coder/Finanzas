@@ -49,7 +49,7 @@ export const GS_ACTIVITIES: GSActivity[] = [
     account: "5450",
     code: "N/A",
     category: "travel",
-    proyectoRequerido: true
+    proyectoRequerido: false
   },
   {
     id: 6,
@@ -57,7 +57,7 @@ export const GS_ACTIVITIES: GSActivity[] = [
     account: "5450",
     code: "N/A",
     category: "travel",
-    proyectoRequerido: true
+    proyectoRequerido: false
   },
   {
     id: 7,

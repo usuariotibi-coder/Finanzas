@@ -69,9 +69,6 @@ export default function GSActivitySelector({
             <span className="text-sm font-medium text-gray-900">
               {selectedActivity.label}
             </span>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded bg-blue-100 text-blue-700">
-              {selectedActivity.account}
-            </span>
             {selectedActivity.proyectoRequerido && (
               <span className="px-2 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-700">
                 Requiere Proyecto
@@ -135,16 +132,13 @@ export default function GSActivitySelector({
                           )}
                         </div>
 
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-700">
-                            Cuenta: {activity.account}
-                          </span>
-                          {activity.code !== 'N/A' && (
+                        {activity.code !== 'N/A' && (
+                          <div className="flex items-center space-x-2">
                             <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-50 text-gray-600">
                               Código: {activity.code}
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {activity.proyectoRequerido && (
                           <div className="mt-1">

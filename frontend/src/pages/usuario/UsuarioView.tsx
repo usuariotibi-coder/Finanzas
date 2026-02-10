@@ -6,7 +6,7 @@ import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
-import { GS_ACTIVITY_OTHER_ID } from '../../data/gsActivities';
+import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
 import { createViaje, createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
@@ -149,9 +149,11 @@ export default function UsuarioView() {
     formNuevoViatico.desayunos * 150 +
     formNuevoViatico.comidas * 200 +
     formNuevoViatico.cenas * 250;
+  const actividadSeleccionada = formNuevoViatico.gsActivityId ? getActivityById(formNuevoViatico.gsActivityId) : undefined;
+  const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
   const isFormValid = Boolean(
-    formNuevoViatico.proyectoId &&
+    (!proyectoRequeridoViatico || formNuevoViatico.proyectoId) &&
       formNuevoViatico.gsActivityId !== null &&
       formNuevoViatico.motivo.trim() &&
       formNuevoViatico.origen.trim() &&
@@ -166,7 +168,7 @@ export default function UsuarioView() {
   const kmInicialAsignado = assignmentSeleccionadoRecord?.kmInicial ?? 0;
   const nuevoViaticoErrors = showNuevoViaticoErrors
     ? {
-      proyectoId: !formNuevoViatico.proyectoId ? 'Selecciona un proyecto.' : '',
+      proyectoId: proyectoRequeridoViatico && !formNuevoViatico.proyectoId ? 'Selecciona un proyecto.' : '',
       gsActivityId: formNuevoViatico.gsActivityId === null ? 'Selecciona el tipo de actividad.' : '',
       motivo: !formNuevoViatico.motivo.trim() ? 'Ingresa el motivo.' : '',
       origen: !formNuevoViatico.origen.trim() ? 'Ingresa el origen.' : '',
@@ -372,7 +374,7 @@ export default function UsuarioView() {
     try {
       const nuevoViatico = await createViatico({
         userId: currentUserId || undefined,
-        proyectoId: formNuevoViatico.proyectoId,
+        proyectoId: formNuevoViatico.proyectoId || undefined,
         gsActivityId: formNuevoViatico.gsActivityId || undefined,
         motivo: formNuevoViatico.motivo,
         origen: formNuevoViatico.origen,
@@ -1326,8 +1328,7 @@ export default function UsuarioView() {
               <ProyectoSelector
                 value={formNuevoViatico.proyectoId}
                 onChange={(proyectoId) => setFormNuevoViatico({ ...formNuevoViatico, proyectoId })}
-                required={true}
-                showCreateOption={true}
+                required={proyectoRequeridoViatico}
                 label="Proyecto"
                 inputClassName={nuevoViaticoErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
               />

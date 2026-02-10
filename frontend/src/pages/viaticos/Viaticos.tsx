@@ -5,7 +5,7 @@ import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { AuthUser, Viatico } from '../../types';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
-import { GS_ACTIVITY_OTHER_ID } from '../../data/gsActivities';
+import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
 import type { GSActivity } from '../../data/gsActivities';
 import { createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
@@ -383,11 +383,13 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const selectedActivity = selectedActivityId ? getActivityById(selectedActivityId) : undefined;
+  const proyectoRequerido = selectedActivity?.proyectoRequerido ?? true;
   const isOtherActivitySelected = selectedActivityId === GS_ACTIVITY_OTHER_ID;
   const montoValue = Number(formData.montoSolicitado);
   const montoInvalid = !formData.montoSolicitado || Number.isNaN(montoValue) || montoValue <= 0;
   const computedErrors = {
-    proyectoId: !selectedProyectoId ? 'Selecciona el proyecto.' : '',
+    proyectoId: proyectoRequerido && !selectedProyectoId ? 'Selecciona el proyecto.' : '',
     actividadId: selectedActivityId === null ? 'Selecciona el tipo de actividad.' : '',
     motivo: !formData.motivo.trim() ? 'Describe el motivo del viaje.' : '',
     destino: !formData.destino.trim() ? 'Indica el destino.' : '',
@@ -466,7 +468,8 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
             <ProyectoSelector
               value={selectedProyectoId}
               onChange={handleProyectoChange}
-              required={true}
+              required={proyectoRequerido}
+              showCreateOption={false}
               label="Proyecto"
               inputClassName={errors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
             />
