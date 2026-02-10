@@ -7,7 +7,7 @@ import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
 import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
-import { createViaje, createViatico, syncCoreAppData } from '../../utils/backendSync';
+import { createViaje, createViatico, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 
@@ -119,6 +119,7 @@ export default function UsuarioView() {
   const [showDevolverErrors, setShowDevolverErrors] = useState(false);
   const [showGastoDocumentoErrors, setShowGastoDocumentoErrors] = useState(false);
   const [showSubirDocumentosErrors, setShowSubirDocumentosErrors] = useState(false);
+  const [isSavingExtension, setIsSavingExtension] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
 
@@ -304,6 +305,54 @@ export default function UsuarioView() {
       setToast((current) => (current?.id === id ? null : current));
       toastTimeoutRef.current = null;
     }, 3500);
+  };
+
+  const handleSolicitarExtension = async () => {
+    if (!viaticoParaExtender || !nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin || isSavingExtension) {
+      return;
+    }
+
+    const viaticoId = viaticoParaExtender.id;
+    const fechaFinActual = viaticoParaExtender.fechaFin;
+    const fechaFinNueva = nuevaFechaFin;
+    const fechaSolicitud = new Date().toLocaleDateString('es-MX');
+    const extensionDetalle = `Extension solicitada (${fechaSolicitud}): ${new Date(fechaFinActual).toLocaleDateString('es-MX')} -> ${new Date(fechaFinNueva).toLocaleDateString('es-MX')} | Alimentos D:${alimentosExtension.desayunos} C:${alimentosExtension.comidas} Ce:${alimentosExtension.cenas} | Monto capturado: $${totalAlimentosExtensionCapturados.toLocaleString()} MXN`;
+    const comentariosActuales = viaticoParaExtender.comentarios?.trim();
+    const comentariosConExtension = [comentariosActuales, extensionDetalle].filter(Boolean).join('\n');
+    const payloadExtension: Partial<Viatico> = {
+      fechaFin: fechaFinNueva,
+      comentarios: comentariosConExtension,
+    };
+
+    setIsSavingExtension(true);
+
+    try {
+      const persisted = await updateViatico(viaticoId, payloadExtension);
+      setViaticos((prev) => prev.map((item) => (item.id === viaticoId ? persisted : item)));
+      await syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) });
+      showToast('Extension guardada y reflejada en tu viatico.', 'success');
+      resetExtensionState();
+    } catch (error) {
+      setViaticos((prev) =>
+        prev.map((item) =>
+          item.id === viaticoId
+            ? {
+                ...item,
+                ...payloadExtension,
+              }
+            : item
+        )
+      );
+      showToast(
+        error instanceof Error
+          ? `${error.message}. Se guardo localmente.`
+          : 'No se pudo sincronizar con servidor. Se guardo localmente.',
+        'info'
+      );
+      resetExtensionState();
+    } finally {
+      setIsSavingExtension(false);
+    }
   };
 
   useEffect(() => () => {
@@ -2448,7 +2497,7 @@ export default function UsuarioView() {
               {/* Nota informativa */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  <strong>Nota:</strong> La extensión del viaje será enviada para aprobación del Project Manager.
+                  <strong>Nota:</strong> La extensión se guardará y se reflejará en tu viático.
                 </p>
               </div>
             </div>
@@ -2461,27 +2510,11 @@ export default function UsuarioView() {
                 Cancelar
               </button>
               <button
-                onClick={() => {
-                  console.log('Extender viaje:', {
-                    viaticoId: viaticoParaExtender.id,
-                    fechaFinActual: viaticoParaExtender.fechaFin,
-                    nuevaFechaFin: nuevaFechaFin,
-                    diasExtensionSugeridos,
-                    desayunosSugeridos: diasExtensionSugeridos,
-                    comidasSugeridas: diasExtensionSugeridos,
-                    cenasSugeridas: diasExtensionSugeridos,
-                    desayunosCapturados: alimentosExtension.desayunos,
-                    comidasCapturadas: alimentosExtension.comidas,
-                    cenasCapturadas: alimentosExtension.cenas,
-                    montoCapturado: totalAlimentosExtensionCapturados,
-                  });
-                  showToast('Solicitud de extension enviada para aprobacion', 'success');
-                  resetExtensionState();
-                }}
-                disabled={!nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
+                onClick={handleSolicitarExtension}
+                disabled={isSavingExtension || !nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
                 className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Solicitar Extensión
+                {isSavingExtension ? 'Guardando...' : 'Solicitar Extensión'}
               </button>
             </div>
           </div>
