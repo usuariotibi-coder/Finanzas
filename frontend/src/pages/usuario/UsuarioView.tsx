@@ -325,24 +325,40 @@ export default function UsuarioView() {
     };
 
     setIsSavingExtension(true);
+    setViaticos((prev) =>
+      prev.map((item) =>
+        String(item.id) === String(viaticoId)
+          ? {
+              ...item,
+              ...payloadExtension,
+            }
+          : item
+      )
+    );
 
     try {
       const persisted = await updateViatico(viaticoId, payloadExtension);
-      setViaticos((prev) => prev.map((item) => (item.id === viaticoId ? persisted : item)));
-      await syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) });
-      showToast('Extension guardada y reflejada en tu viatico.', 'success');
-      resetExtensionState();
-    } catch (error) {
+      const servidorAplicoExtension = persisted.fechaFin === fechaFinNueva;
       setViaticos((prev) =>
         prev.map((item) =>
-          item.id === viaticoId
+          String(item.id) === String(viaticoId)
             ? {
                 ...item,
-                ...payloadExtension,
+                ...persisted,
+                ...(!servidorAplicoExtension ? payloadExtension : {}),
               }
             : item
         )
       );
+
+      if (servidorAplicoExtension) {
+        await syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) });
+        showToast('Extension guardada y reflejada en tu viatico.', 'success');
+      } else {
+        showToast('El servidor no confirmo el cambio, pero se guardo localmente.', 'info');
+      }
+      resetExtensionState();
+    } catch (error) {
       showToast(
         error instanceof Error
           ? `${error.message}. Se guardo localmente.`
@@ -372,7 +388,11 @@ export default function UsuarioView() {
   const openDatePicker = (event: { currentTarget: HTMLInputElement }) => {
     const input = event.currentTarget;
     if (typeof input.showPicker === 'function') {
-      input.showPicker();
+      try {
+        input.showPicker();
+      } catch {
+        // Ignore browsers/contexts that require a stricter user gesture.
+      }
     }
   };
 
@@ -1724,7 +1744,6 @@ export default function UsuarioView() {
                     type="date"
                     value={formNuevoViatico.fechaInicio}
                     onChange={(e) => setFormNuevoViatico({ ...formNuevoViatico, fechaInicio: e.target.value })}
-                    onFocus={openDatePicker}
                     onClick={openDatePicker}
                     className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
                       nuevoViaticoErrors.fechaInicio
@@ -1744,7 +1763,6 @@ export default function UsuarioView() {
                     type="date"
                     value={formNuevoViatico.fechaFin}
                     onChange={(e) => setFormNuevoViatico({ ...formNuevoViatico, fechaFin: e.target.value })}
-                    onFocus={openDatePicker}
                     onClick={openDatePicker}
                     className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
                       nuevoViaticoErrors.fechaFin
@@ -1950,7 +1968,6 @@ export default function UsuarioView() {
                     type="date"
                     value={formSolicitudVehiculo.fechaInicio}
                     onChange={(e) => setFormSolicitudVehiculo({ ...formSolicitudVehiculo, fechaInicio: e.target.value })}
-                    onFocus={openDatePicker}
                     onClick={openDatePicker}
                     className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
                       solicitarVehiculoErrors.fechaInicio
@@ -1970,7 +1987,6 @@ export default function UsuarioView() {
                     type="date"
                     value={formSolicitudVehiculo.fechaFin}
                     onChange={(e) => setFormSolicitudVehiculo({ ...formSolicitudVehiculo, fechaFin: e.target.value })}
-                    onFocus={openDatePicker}
                     onClick={openDatePicker}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 />
@@ -2125,7 +2141,6 @@ export default function UsuarioView() {
                       type="date"
                       value={formSolicitudViaje.fechaInicio}
                       onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, fechaInicio: e.target.value })}
-                      onFocus={openDatePicker}
                       onClick={openDatePicker}
                       className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
                         solicitarViajeErrors.fechaInicio
@@ -2145,7 +2160,6 @@ export default function UsuarioView() {
                       type="date"
                       value={formSolicitudViaje.fechaFin}
                       onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, fechaFin: e.target.value })}
-                      onFocus={openDatePicker}
                       onClick={openDatePicker}
                       className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
                         solicitarViajeErrors.fechaFin
@@ -2421,7 +2435,6 @@ export default function UsuarioView() {
                   type="date"
                   value={nuevaFechaFin}
                   onChange={(e) => setNuevaFechaFin(e.target.value)}
-                  onFocus={openDatePicker}
                   onClick={openDatePicker}
                   min={viaticoParaExtender.fechaFin}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
