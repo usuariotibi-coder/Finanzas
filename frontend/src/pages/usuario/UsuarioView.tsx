@@ -149,6 +149,11 @@ export default function UsuarioView() {
   const [showModalExtenderViaje, setShowModalExtenderViaje] = useLocalStorageState('usuario:showModalExtenderViaje', false);
   const [viaticoParaExtender, setViaticoParaExtender] = useLocalStorageState<Viatico | null>('usuario:viaticoParaExtender', null);
   const [nuevaFechaFin, setNuevaFechaFin] = useLocalStorageState('usuario:nuevaFechaFin', '');
+  const [alimentosExtension, setAlimentosExtension] = useState({
+    desayunos: 0,
+    comidas: 0,
+    cenas: 0,
+  });
 
   const [checklistRecepcion, setChecklistRecepcion] = useLocalStorageState<VehicleConditionChecklist>('usuario:checklistRecepcion', {
     exterior: { carroceria: 'bueno', pintura: 'bueno', llantas: 'bueno', cristales: 'bueno', espejos: 'bueno' },
@@ -183,7 +188,12 @@ export default function UsuarioView() {
   const diasExtensionSugeridos = viaticoParaExtender
     ? calcularDiasExtension(viaticoParaExtender.fechaFin, nuevaFechaFin)
     : 0;
+  const placeholderAlimentosExtension = diasExtensionSugeridos > 0 ? String(diasExtensionSugeridos) : '0';
   const totalAlimentosExtensionSugeridos = diasExtensionSugeridos * (150 + 200 + 250);
+  const totalAlimentosExtensionCapturados =
+    alimentosExtension.desayunos * 150 +
+    alimentosExtension.comidas * 200 +
+    alimentosExtension.cenas * 250;
   const actividadSeleccionada = formNuevoViatico.gsActivityId ? getActivityById(formNuevoViatico.gsActivityId) : undefined;
   const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
@@ -260,13 +270,23 @@ export default function UsuarioView() {
   const subirDocumentosError = showSubirDocumentosErrors && gastos.length === 0
     ? 'Agrega al menos un gasto.'
     : '';
+  const resetExtensionState = () => {
+    setShowModalExtenderViaje(false);
+    setViaticoParaExtender(null);
+    setNuevaFechaFin('');
+    setAlimentosExtension({
+      desayunos: 0,
+      comidas: 0,
+      cenas: 0,
+    });
+  };
 
   useEscapeKey(() => setShowModalNuevoViatico(false), showModalNuevoViatico);
   useEscapeKey(() => setShowModalSolicitarVehiculo(false), showModalSolicitarVehiculo);
   useEscapeKey(() => setShowModalRecibirVehiculo(false), showModalRecibirVehiculo);
   useEscapeKey(() => setShowModalDevolverVehiculo(false), showModalDevolverVehiculo);
   useEscapeKey(() => setShowModalSolicitarViaje(false), showModalSolicitarViaje);
-  useEscapeKey(() => setShowModalExtenderViaje(false), showModalExtenderViaje);
+  useEscapeKey(resetExtensionState, showModalExtenderViaje);
   useEscapeKey(() => setShowVehicleReturnSuccess(false), showVehicleReturnSuccess);
 
   const openDatePicker = (event: { currentTarget: HTMLInputElement }) => {
@@ -839,6 +859,11 @@ export default function UsuarioView() {
                             onClick={() => {
                               setViaticoParaExtender(viatico);
                               setNuevaFechaFin(viatico.fechaFin);
+                              setAlimentosExtension({
+                                desayunos: 0,
+                                comidas: 0,
+                                cenas: 0,
+                              });
                               setShowModalExtenderViaje(true);
                             }}
                             className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -2258,11 +2283,7 @@ export default function UsuarioView() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">🔄 Extender Viaje</h2>
                 <button
-                  onClick={() => {
-                    setShowModalExtenderViaje(false);
-                    setViaticoParaExtender(null);
-                    setNuevaFechaFin('');
-                  }}
+                  onClick={resetExtensionState}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2306,21 +2327,54 @@ export default function UsuarioView() {
                       Días adicionales: <span className="font-semibold text-gray-900">{diasExtensionSugeridos}</span>
                     </p>
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <div className="rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center">
-                        <p className="text-[11px] text-gray-500">Desayunos</p>
-                        <p className="text-sm font-semibold text-gray-900">{diasExtensionSugeridos}</p>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Desayunos ($150)</label>
+                        <input
+                          type="number"
+                          value={alimentosExtension.desayunos === 0 ? '' : alimentosExtension.desayunos}
+                          onChange={(e) => setAlimentosExtension({
+                            ...alimentosExtension,
+                            desayunos: e.target.value === '' ? 0 : Number(e.target.value),
+                          })}
+                          className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center text-sm font-semibold text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+                          placeholder={placeholderAlimentosExtension}
+                          min="0"
+                        />
                       </div>
-                      <div className="rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center">
-                        <p className="text-[11px] text-gray-500">Comidas</p>
-                        <p className="text-sm font-semibold text-gray-900">{diasExtensionSugeridos}</p>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Comidas ($200)</label>
+                        <input
+                          type="number"
+                          value={alimentosExtension.comidas === 0 ? '' : alimentosExtension.comidas}
+                          onChange={(e) => setAlimentosExtension({
+                            ...alimentosExtension,
+                            comidas: e.target.value === '' ? 0 : Number(e.target.value),
+                          })}
+                          className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center text-sm font-semibold text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+                          placeholder={placeholderAlimentosExtension}
+                          min="0"
+                        />
                       </div>
-                      <div className="rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center">
-                        <p className="text-[11px] text-gray-500">Cenas</p>
-                        <p className="text-sm font-semibold text-gray-900">{diasExtensionSugeridos}</p>
+                      <div>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Cenas ($250)</label>
+                        <input
+                          type="number"
+                          value={alimentosExtension.cenas === 0 ? '' : alimentosExtension.cenas}
+                          onChange={(e) => setAlimentosExtension({
+                            ...alimentosExtension,
+                            cenas: e.target.value === '' ? 0 : Number(e.target.value),
+                          })}
+                          className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-2 text-center text-sm font-semibold text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+                          placeholder={placeholderAlimentosExtension}
+                          min="0"
+                        />
                       </div>
                     </div>
                     <p className="mt-2 text-[11px] text-gray-600">
                       Monto sugerido adicional: <span className="font-semibold text-gray-900">${totalAlimentosExtensionSugeridos.toLocaleString()} MXN</span>
+                    </p>
+                    <p className="mt-1 text-[11px] text-gray-600">
+                      Monto capturado: <span className="font-semibold text-gray-900">${totalAlimentosExtensionCapturados.toLocaleString()} MXN</span>
                     </p>
                   </>
                 ) : (
@@ -2340,11 +2394,7 @@ export default function UsuarioView() {
 
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
               <button
-                onClick={() => {
-                  setShowModalExtenderViaje(false);
-                  setViaticoParaExtender(null);
-                  setNuevaFechaFin('');
-                }}
+                onClick={resetExtensionState}
                 className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
               >
                 Cancelar
@@ -2359,11 +2409,13 @@ export default function UsuarioView() {
                     desayunosSugeridos: diasExtensionSugeridos,
                     comidasSugeridas: diasExtensionSugeridos,
                     cenasSugeridas: diasExtensionSugeridos,
+                    desayunosCapturados: alimentosExtension.desayunos,
+                    comidasCapturadas: alimentosExtension.comidas,
+                    cenasCapturadas: alimentosExtension.cenas,
+                    montoCapturado: totalAlimentosExtensionCapturados,
                   });
                   alert('Solicitud de extensión enviada para aprobación');
-                  setShowModalExtenderViaje(false);
-                  setViaticoParaExtender(null);
-                  setNuevaFechaFin('');
+                  resetExtensionState();
                 }}
                 disabled={!nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
                 className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
