@@ -717,7 +717,7 @@ export default function PMPortal() {
       {showModalViaticoDetalle && viaticoSeleccionado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+            <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Revisar Solicitud de Viático</h2>
                 <button
@@ -824,7 +824,7 @@ export default function PMPortal() {
       {showModalViajeDetalle && viajeSeleccionado && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+            <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Revisar Solicitud de Viaje</h2>
                 <button
@@ -948,7 +948,7 @@ export default function PMPortal() {
       {showModalCrearProyecto && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
+            <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Crear Nuevo Proyecto</h2>
                 <button
@@ -1145,7 +1145,7 @@ export default function PMPortal() {
 
               return (
             <>
-              <div className="p-5 border-b border-gray-200">
+              <div className="sticky top-0 z-10 p-5 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   {isEditingProyecto ? (
