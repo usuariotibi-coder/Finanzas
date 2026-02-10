@@ -6,6 +6,7 @@ import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, Viatico } from '../../types';
 import { canAccessPath } from '../../utils/access';
+import { getPendingViaticoExtension } from '../../utils/viaticoExtensions';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -25,6 +26,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [viaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
+  const [viaticosResueltos] = useLocalStorageState<string[]>('pm-portal:viaticosResueltos', []);
   const [viajesPendientesPm] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', []);
   const [viaticosAdmin] = useLocalStorageState<Viatico[]>('viaticos:list', []);
   const [dispersionPendientes] = useLocalStorageState<Viatico[]>('dispersion:viaticosPendientes', []);
@@ -33,8 +35,12 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const [amexTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
   const [viajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
 
-  const portalPmBadge =
-    viaticosUsuario.filter((viatico) => viatico.status === 'pendiente').length + viajesPendientesPm.length;
+  const portalPmViaticosPendientes = viaticosUsuario.filter((viatico) => {
+    const hasExtensionRequest = Boolean(getPendingViaticoExtension(viatico.comentarios));
+    const isSolicitudInicial = viatico.status === 'pendiente' && !viaticosResueltos.includes(String(viatico.id));
+    return hasExtensionRequest || isSolicitudInicial;
+  }).length;
+  const portalPmBadge = portalPmViaticosPendientes + viajesPendientesPm.length;
   const viaticosBadge = viaticosAdmin.filter((viatico) => viatico.status === 'pendiente').length;
   const dispersionBadge = dispersionPendientes.length;
   const recuperacionBadge = recuperacionPendientes.length;
