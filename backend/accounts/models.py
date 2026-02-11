@@ -16,6 +16,7 @@ class Department(models.TextChoices):
 
 class Role(models.TextChoices):
     ADMIN = 'admin', 'Administrador'
+    FINANCE = 'finance', 'Finanzas'
     PM = 'pm', 'Operaciones'
     STAFF = 'staff', 'Colaborador'
 
@@ -34,7 +35,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('department', Department.FINANZAS)
+        extra_fields.setdefault('department', Department.BUSINESS_INTELLIGENCE)
         extra_fields.setdefault('position', 'Administrador')
         user = self.create_user(email, password, **extra_fields)
         user.role = Role.ADMIN
@@ -61,8 +62,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['full_name', 'department', 'position']
 
     def resolve_role(self) -> str:
-        if self.department == Department.FINANZAS:
+        if self.department == Department.BUSINESS_INTELLIGENCE:
             return Role.ADMIN
+        if self.department == Department.FINANZAS:
+            return Role.FINANCE
         if self.department == Department.OPERACIONES:
             return Role.PM
         return Role.STAFF

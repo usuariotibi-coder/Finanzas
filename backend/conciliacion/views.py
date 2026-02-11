@@ -1,7 +1,7 @@
 ﻿from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from accounts.permissions import IsAdminOrPMOrReadOnly
+from accounts.permissions import IsAdminOrPMOrFinanceOrReadOnly
 from .models import AlertaConciliacion, Conciliacion, Consumo, Factura
 from .serializers import (
     AlertaConciliacionSerializer,
@@ -14,13 +14,13 @@ from .serializers import (
 class FacturaViewSet(viewsets.ModelViewSet):
     queryset = Factura.objects.select_related('user', 'viatico').order_by('-created_at')
     serializer_class = FacturaSerializer
-    permission_classes = [IsAdminOrPMOrReadOnly]
+    permission_classes = [IsAdminOrPMOrFinanceOrReadOnly]
 
 
 class ConsumoViewSet(viewsets.ModelViewSet):
     queryset = Consumo.objects.select_related('user', 'viatico', 'factura').order_by('-created_at')
     serializer_class = ConsumoSerializer
-    permission_classes = [IsAdminOrPMOrReadOnly]
+    permission_classes = [IsAdminOrPMOrFinanceOrReadOnly]
 
 
 class ConciliacionViewSet(viewsets.ModelViewSet):

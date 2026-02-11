@@ -26,6 +26,9 @@ class AuthFlowTests(APITestCase):
         )
         self.assertEqual(no_csrf_response.status_code, status.HTTP_200_OK)
 
+    def test_finanzas_department_resolves_to_finance_role(self):
+        self.assertEqual(self.user.role, 'finance')
+
     def test_csrf_login_me_logout_flow(self):
         csrf_response = self.client.get('/api/auth/csrf/')
         self.assertEqual(csrf_response.status_code, status.HTTP_200_OK)
@@ -64,7 +67,7 @@ class AdminRegisterTests(APITestCase):
         self.admin_user = User.objects.create_user(
             email='admin@na.scio-automation.com',
             full_name='Admin User',
-            department='finanzas',
+            department='business_intelligence',
             position='Administrador',
             password='SecurePass123',
         )
@@ -129,7 +132,7 @@ class AdminUserManagementTests(APITestCase):
         self.admin_user = User.objects.create_user(
             email='admin.users@na.scio-automation.com',
             full_name='Admin Users',
-            department='finanzas',
+            department='business_intelligence',
             position='Administrador',
             password='SecurePass123',
         )

@@ -34,6 +34,7 @@ export const departmentOptions = [
 
 export const roleLabels: Record<UserRole, string> = {
   admin: 'Administrador',
+  finance: 'Finanzas',
   pm: 'Operaciones',
   staff: 'Colaborador',
 };

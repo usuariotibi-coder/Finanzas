@@ -1,19 +1,19 @@
 ﻿import type { UserRole } from '../types';
 
 const ACCESS_MAP: Record<string, UserRole[]> = {
-  '/': ['admin', 'pm', 'staff'],
+  '/': ['admin', 'finance', 'pm', 'staff'],
   '/mi-portal': ['admin', 'pm', 'staff'],
   '/admin/usuarios': ['admin'],
   '/portal-pm': ['admin', 'pm'],
   '/proyectos': ['admin', 'pm'],
-  '/viaticos': ['admin', 'pm', 'staff'],
-  '/conciliacion': ['admin', 'pm', 'staff'],
-  '/dispersion': ['admin'],
-  '/recuperacion': ['admin'],
-  '/amex': ['admin'],
-  '/flotilla': ['admin'],
-  '/viajes': ['admin'],
-  '/reportes': ['admin'],
+  '/viaticos': ['admin', 'finance', 'pm', 'staff'],
+  '/conciliacion': ['admin', 'finance', 'pm', 'staff'],
+  '/dispersion': ['admin', 'finance'],
+  '/recuperacion': ['admin', 'finance'],
+  '/amex': ['admin', 'finance'],
+  '/flotilla': ['admin', 'finance'],
+  '/viajes': ['admin', 'finance'],
+  '/reportes': ['admin', 'finance'],
 };
 
 export const canAccessPath = (role: UserRole | undefined, path?: string | null) => {

@@ -2,7 +2,7 @@
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import Role
-from accounts.permissions import IsAdminOrReadOnly
+from accounts.permissions import IsAdminOrFinanceOrReadOnly
 from .models import (
     CargaGasolina,
     MaintenanceRecord,
@@ -24,7 +24,7 @@ from .serializers import (
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
     serializer_class = VehicleSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAdminOrFinanceOrReadOnly]
 
 
 class VehicleAssignmentViewSet(viewsets.ModelViewSet):
@@ -34,14 +34,14 @@ class VehicleAssignmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = VehicleAssignment.objects.select_related('vehicle', 'user', 'proyecto', 'viatico').order_by('-created_at')
-        if user.role in (Role.ADMIN, Role.PM):
+        if user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             return queryset
         return queryset.filter(user=user)
 
     def perform_create(self, serializer):
         request_user = self.request.user
         payload_user = serializer.validated_data.get('user')
-        if request_user.role in (Role.ADMIN, Role.PM):
+        if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             serializer.save(user=payload_user or request_user)
         else:
             serializer.save(user=request_user)
@@ -50,13 +50,13 @@ class VehicleAssignmentViewSet(viewsets.ModelViewSet):
 class VehicleAlertViewSet(viewsets.ModelViewSet):
     queryset = VehicleAlert.objects.select_related('vehicle').order_by('-created_at')
     serializer_class = VehicleAlertSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAdminOrFinanceOrReadOnly]
 
 
 class VehicleExpenseViewSet(viewsets.ModelViewSet):
     queryset = VehicleExpense.objects.select_related('vehicle', 'assignment').order_by('-created_at')
     serializer_class = VehicleExpenseSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAdminOrFinanceOrReadOnly]
 
 
 class CargaGasolinaViewSet(viewsets.ModelViewSet):
@@ -66,14 +66,14 @@ class CargaGasolinaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         queryset = CargaGasolina.objects.select_related('vehicle', 'assignment', 'user').order_by('-created_at')
-        if user.role in (Role.ADMIN, Role.PM):
+        if user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             return queryset
         return queryset.filter(user=user)
 
     def perform_create(self, serializer):
         request_user = self.request.user
         payload_user = serializer.validated_data.get('user')
-        if request_user.role in (Role.ADMIN, Role.PM):
+        if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             serializer.save(user=payload_user or request_user)
         else:
             serializer.save(user=request_user)
@@ -82,4 +82,4 @@ class CargaGasolinaViewSet(viewsets.ModelViewSet):
 class MaintenanceRecordViewSet(viewsets.ModelViewSet):
     queryset = MaintenanceRecord.objects.select_related('vehicle').order_by('-created_at')
     serializer_class = MaintenanceRecordSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsAdminOrFinanceOrReadOnly]

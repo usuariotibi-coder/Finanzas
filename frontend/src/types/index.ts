@@ -1,5 +1,5 @@
 // Tipos de Usuario y Roles (backend)
-export type UserRole = 'admin' | 'pm' | 'staff';
+export type UserRole = 'admin' | 'finance' | 'pm' | 'staff';
 
 export interface AuthUser {
   id: number;

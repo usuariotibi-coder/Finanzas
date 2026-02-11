@@ -55,7 +55,7 @@ function App() {
           <Route
             path="/dispersion"
             element={
-              <RequireRole allowed={['admin']}>
+              <RequireRole allowed={['admin', 'finance']}>
                 <Dispersion />
               </RequireRole>
             }
@@ -63,7 +63,7 @@ function App() {
           <Route
             path="/recuperacion"
             element={
-              <RequireRole allowed={['admin']}>
+              <RequireRole allowed={['admin', 'finance']}>
                 <Recuperacion />
               </RequireRole>
             }
@@ -72,7 +72,7 @@ function App() {
           <Route
             path="/amex"
             element={
-              <RequireRole allowed={['admin']}>
+              <RequireRole allowed={['admin', 'finance']}>
                 <Amex />
               </RequireRole>
             }
@@ -80,7 +80,7 @@ function App() {
           <Route
             path="/flotilla"
             element={
-              <RequireRole allowed={['admin']}>
+              <RequireRole allowed={['admin', 'finance']}>
                 <Flotilla />
               </RequireRole>
             }
@@ -88,7 +88,7 @@ function App() {
           <Route
             path="/viajes"
             element={
-              <RequireRole allowed={['admin']}>
+              <RequireRole allowed={['admin', 'finance']}>
                 <Viajes />
               </RequireRole>
             }
@@ -96,7 +96,7 @@ function App() {
           <Route
             path="/reportes"
             element={
-              <RequireRole allowed={['admin']}>
+              <RequireRole allowed={['admin', 'finance']}>
                 <Reportes />
               </RequireRole>
             }
