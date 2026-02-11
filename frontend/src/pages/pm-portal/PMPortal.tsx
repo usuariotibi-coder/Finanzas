@@ -486,7 +486,7 @@ export default function PMPortal() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5">
       {toast && (
         <div className="fixed right-4 top-20 z-[80] w-full max-w-sm">
           <div
@@ -599,9 +599,10 @@ export default function PMPortal() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
       {/* Viáticos Pendientes de Aprobación */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Viáticos Pendientes de Aprobación</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Viáticos Pendientes de Aprobación</h2>
         {viaticosPendientes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-start">
             {viaticosPendientes.map((viatico) => {
@@ -678,7 +679,7 @@ export default function PMPortal() {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -690,7 +691,7 @@ export default function PMPortal() {
 
       {/* Viajes Pendientes */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Solicitudes de Viaje Pendientes</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Solicitudes de Viaje Pendientes</h2>
         {viajesPendientes.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 justify-items-start">
             {viajesPendientes.map((viaje) => {
@@ -768,7 +769,7 @@ export default function PMPortal() {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -778,6 +779,7 @@ export default function PMPortal() {
         )}
       </div>
 
+      </div>
       {/* Mis Proyectos */}
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">Mis Proyectos</h2>
