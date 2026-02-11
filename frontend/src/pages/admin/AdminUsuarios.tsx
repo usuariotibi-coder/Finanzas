@@ -450,7 +450,7 @@ export default function AdminUsuarios() {
                         </p>
                         <p className="text-xs text-slate-600">{item.email}</p>
                         <p className="mt-1 text-xs text-slate-600">
-                          {departmentLabelMap[item.department] || item.department} · {roleLabels[item.role]}
+                          {departmentLabelMap[item.department] || item.department} Â· {roleLabels[item.role]}
                         </p>
                         <p className="text-xs text-slate-500">{item.position}</p>
                       </div>
