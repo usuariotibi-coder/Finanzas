@@ -486,7 +486,7 @@ export default function PMPortal() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-7">
+    <div className="h-full min-h-0 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto flex flex-col gap-4">
       {toast && (
         <div className="fixed right-4 top-20 z-[80] w-full max-w-sm">
           <div
@@ -514,7 +514,7 @@ export default function PMPortal() {
       )}
 
       {/* Header */}
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-1">
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-4 sm:p-5 shadow-sm">
           <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-indigo-200/40 blur-3xl" />
           <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-sky-200/40 blur-3xl" />
@@ -599,12 +599,12 @@ export default function PMPortal() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start min-h-0">
       {/* Viáticos Pendientes de Aprobación */}
-      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-5 shadow-sm space-y-4">
+      <div className="xl:col-span-4 rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-5 shadow-sm space-y-4 flex flex-col min-h-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Viáticos Pendientes de Aprobación</h2>
         {viaticosPendientes.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
+          <div className="space-y-3 xl:max-h-[calc(100vh-19rem)] xl:overflow-y-auto xl:pr-1">
             {viaticosPendientes.map((viatico) => {
               const viaticoStatusIcon = getViaticoStatusIcon(viatico.status);
               const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
@@ -690,10 +690,10 @@ export default function PMPortal() {
       </div>
 
       {/* Viajes Pendientes */}
-      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-5 shadow-sm space-y-4">
+      <div className="xl:col-span-4 rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-5 shadow-sm space-y-4 flex flex-col min-h-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Solicitudes de Viaje Pendientes</h2>
         {viajesPendientes.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
+          <div className="space-y-3 xl:max-h-[calc(100vh-19rem)] xl:overflow-y-auto xl:pr-1">
             {viajesPendientes.map((viaje) => {
               const viajeStatusIcon = getViajeStatusIcon(viaje.status);
 
@@ -779,11 +779,10 @@ export default function PMPortal() {
         )}
       </div>
 
-      </div>
       {/* Mis Proyectos */}
-      <div className="space-y-4">
+      <div className="xl:col-span-4 rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-5 shadow-sm space-y-4 flex flex-col min-h-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Mis Proyectos</h2>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+        <div className="space-y-3 xl:max-h-[calc(100vh-19rem)] xl:overflow-y-auto xl:pr-1">
           {proyectos.map((proyecto) => {
             const porcentajeGastado = parseFloat(calcularPorcentajeGastado(proyecto.gastado, proyecto.presupuesto));
             const proyectoEstadoIcon = getProyectoEstadoIcon(proyecto.estado);
@@ -868,6 +867,7 @@ export default function PMPortal() {
             );
           })}
         </div>
+      </div>
       </div>
 
       {/* Modal: Detalle de Viático */}
