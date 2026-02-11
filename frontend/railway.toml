@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "npx serve -s dist -l $PORT"
+startCommand = "npx serve -s dist -l tcp://0.0.0.0:$PORT"
 
 [build.env]
 NPM_CONFIG_PRODUCTION = "false"
