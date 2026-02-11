@@ -215,7 +215,8 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-primary-600 hover:text-primary-800"
+                onMouseDown={(event) => event.preventDefault()}
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full p-1 text-primary-600 hover:text-primary-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-200"
                 aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
               >
                 <span className="sr-only">{showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}</span>
@@ -319,7 +320,8 @@ export default function Register() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-primary-600 hover:text-primary-800"
+                onMouseDown={(event) => event.preventDefault()}
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full p-1 text-primary-600 hover:text-primary-800 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-200"
                 aria-label={showConfirmPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
               >
                 <span className="sr-only">{showConfirmPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}</span>
