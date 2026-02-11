@@ -53,9 +53,9 @@ export default function Layout({ children }: LayoutProps) {
       <div className="mt-16 flex h-[calc(100vh-4rem)] overflow-hidden">
         <Sidebar isOpen={sidebarOpen} />
 
-        <main className={`flex-1 min-h-0 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} overflow-hidden`}>
-          <div className="h-full overflow-y-auto">
-            <div className="box-border min-h-full p-4 sm:p-6">
+        <main className={`flex-1 min-w-0 min-h-0 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} overflow-hidden`}>
+          <div className="h-full min-h-0 overflow-y-auto">
+            <div className="box-border h-full min-h-0 p-4 sm:p-6">
               {children}
             </div>
           </div>
