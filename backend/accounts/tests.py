@@ -57,3 +57,68 @@ class AuthFlowTests(APITestCase):
             HTTP_X_CSRFTOKEN=logout_token,
         )
         self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
+
+
+class AdminRegisterTests(APITestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email='admin@na.scio-automation.com',
+            full_name='Admin User',
+            department='finanzas',
+            position='Administrador',
+            password='SecurePass123',
+        )
+        self.pm_user = User.objects.create_user(
+            email='pm@na.scio-automation.com',
+            full_name='PM User',
+            department='operaciones',
+            position='Project Manager',
+            password='SecurePass123',
+        )
+
+    def test_admin_can_register_user_without_switching_session(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            'email': 'nuevo.staff@na.scio-automation.com',
+            'full_name': 'Nuevo Staff',
+            'department': 'ensamble',
+            'position': 'Tecnico',
+            'password': 'SecurePass123',
+        }
+
+        response = self.client.post('/api/auth/admin/register/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = User.objects.get(email=payload['email'])
+        self.assertEqual(created.full_name, payload['full_name'])
+        self.assertEqual(created.department, payload['department'])
+        self.assertEqual(created.role, 'staff')
+
+    def test_non_admin_cannot_register_users(self):
+        self.client.force_authenticate(user=self.pm_user)
+        payload = {
+            'email': 'otro.staff@na.scio-automation.com',
+            'full_name': 'Otro Staff',
+            'department': 'ensamble',
+            'position': 'Tecnico',
+            'password': 'SecurePass123',
+        }
+
+        response = self.client.post('/api/auth/admin/register/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_cannot_register_duplicate_email(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            'email': self.pm_user.email,
+            'full_name': 'Duplicado',
+            'department': 'operaciones',
+            'position': 'PM',
+            'password': 'SecurePass123',
+        }
+
+        response = self.client.post('/api/auth/admin/register/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)

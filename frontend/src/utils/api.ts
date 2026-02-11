@@ -144,5 +144,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  adminRegister: (payload: {
+    email: string;
+    full_name: string;
+    department: string;
+    position: string;
+    password: string;
+  }) =>
+    apiFetch('/auth/admin/register/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   logout: () => apiFetch('/auth/logout/', { method: 'POST' }),
 };

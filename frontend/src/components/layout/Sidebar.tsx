@@ -19,6 +19,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: 'home' },
   { path: '/mi-portal', label: 'Mi Portal', icon: 'user' },
+  { path: '/admin/usuarios', label: 'Usuarios', icon: 'users' },
   { path: '/portal-pm', label: 'Portal PM', icon: 'pm' },
   { path: '/proyectos', label: 'Proyectos', icon: 'briefcase' },
   { path: '/viaticos', label: 'Viáticos', icon: 'money' },
@@ -46,6 +47,14 @@ const icons: Record<string, React.JSX.Element> = {
       strokeLinejoin="round"
       strokeWidth={2}
       d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
+  ),
+  users: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M17 20h5v-1a4 4 0 00-5-3.87M17 20H7m10 0v-1c0-.65-.14-1.28-.4-1.84M7 20H2v-1a4 4 0 015-3.87M7 20v-1c0-.65.14-1.28.4-1.84m0 0a5 5 0 019.2 0M14 7a3 3 0 11-6 0 3 3 0 016 0m6 1a2 2 0 11-4 0 2 2 0 014 0M8 8a2 2 0 11-4 0 2 2 0 014 0"
     />
   ),
   money: (

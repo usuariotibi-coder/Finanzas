@@ -15,6 +15,7 @@ import Viajes from './pages/viajes/Viajes';
 import Reportes from './pages/reportes/Reportes';
 import UsuarioView from './pages/usuario/UsuarioView';
 import PMPortal from './pages/pm-portal/PMPortal';
+import AdminUsuarios from './pages/admin/AdminUsuarios';
 
 function App() {
   return (
@@ -26,6 +27,14 @@ function App() {
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/mi-portal" element={<UsuarioView />} />
+          <Route
+            path="/admin/usuarios"
+            element={
+              <RequireRole allowed={['admin']}>
+                <AdminUsuarios />
+              </RequireRole>
+            }
+          />
           <Route
             path="/portal-pm"
             element={
