@@ -54,8 +54,10 @@ export default function Layout({ children }: LayoutProps) {
         <Sidebar isOpen={sidebarOpen} />
 
         <main className={`flex-1 min-h-0 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'} overflow-hidden`}>
-          <div className="h-full overflow-y-auto p-4 sm:p-6">
-            {children}
+          <div className="h-full overflow-y-auto">
+            <div className="box-border min-h-full p-4 sm:p-6">
+              {children}
+            </div>
           </div>
         </main>
       </div>
