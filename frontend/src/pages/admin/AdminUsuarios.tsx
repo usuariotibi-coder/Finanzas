@@ -240,234 +240,229 @@ export default function AdminUsuarios() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-4 shadow-sm sm:p-6">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Administracion</p>
-        <h1 className="mt-1 text-xl font-semibold text-slate-900">Alta y edicion de usuarios</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Solo administradores pueden crear y editar cuentas. El rol se asigna automaticamente por departamento.
-        </p>
-      </div>
+    <div className="h-[calc(100vh-5rem)] overflow-hidden">
+      <div className="flex h-full flex-col gap-3">
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Administracion</p>
+              <h1 className="text-lg font-semibold text-slate-900">Alta y edicion de usuarios</h1>
+            </div>
+            <p className="text-xs text-slate-600">Rol por departamento · BI = Admin · Finanzas = Finanzas</p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <h2 className="text-lg font-semibold text-slate-900">Registrar nuevo usuario</h2>
-          <p className="mt-1 text-sm text-slate-600">Campos obligatorios para crear una cuenta activa.</p>
-
-          <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700">Nombre completo</label>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  placeholder="Nombre y apellido"
-                />
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_350px]">
+          <section className="min-h-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <form className="flex h-full flex-col" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Nombre completo</label>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    placeholder="Nombre y apellido"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Correo</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    placeholder={`usuario@${ALLOWED_EMAIL_DOMAIN}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Departamento</label>
+                  <select
+                    value={department}
+                    onChange={(event) => setDepartment(event.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  >
+                    {departmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Puesto</label>
+                  <input
+                    type="text"
+                    required
+                    value={position}
+                    onChange={(event) => setPosition(event.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                    placeholder="Ejemplo: Analista"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Contrasena</label>
+                  <div className="mt-1.5 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      className="w-full rounded-l-lg px-3 py-2 text-sm outline-none"
+                      placeholder="Minimo 8 caracteres"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                    >
+                      {showPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Confirmar contrasena</label>
+                  <div className="mt-1.5 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      className="w-full rounded-l-lg px-3 py-2 text-sm outline-none"
+                      placeholder="Repite la contrasena"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                    >
+                      {showConfirmPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700">Correo</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  placeholder={`usuario@${ALLOWED_EMAIL_DOMAIN}`}
-                />
-                <p className="mt-2 text-xs text-slate-500">
-                  Dominio permitido: <span className="font-semibold text-primary-700">@{ALLOWED_EMAIL_DOMAIN}</span>
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Departamento</label>
-                <select
-                  value={department}
-                  onChange={(event) => setDepartment(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                >
-                  {departmentOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold text-slate-700">Seguridad de contrasena</p>
+                  {password.length > 0 && (
+                    <span className={`text-xs font-semibold ${currentStrength.text}`}>{currentStrength.label}</span>
+                  )}
+                </div>
+                <div className="mt-2 h-1.5 rounded-full bg-white shadow-inner">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${currentStrength.color}`}
+                    style={{ width: `${(strengthScore / 5) * 100}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                  {passwordChecks.map((check) => (
+                    <span
+                      key={check.label}
+                      className={check.ok ? 'font-medium text-emerald-700' : 'text-slate-500'}
+                    >
+                      {check.ok ? '• ' : '○ '}
+                      {check.label}
+                    </span>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Puesto</label>
-                <input
-                  type="text"
-                  required
-                  value={position}
-                  onChange={(event) => setPosition(event.target.value)}
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  placeholder="Ejemplo: Analista"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Contrasena</label>
-                <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="w-full rounded-l-lg px-4 py-2.5 text-sm outline-none"
-                    placeholder="Minimo 8 caracteres"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="rounded-r-lg px-3 text-xs font-semibold text-primary-700 hover:bg-primary-50"
-                  >
-                    {showPassword ? 'Ocultar' : 'Mostrar'}
-                  </button>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Confirmar contrasena</label>
-                <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    required
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="w-full rounded-l-lg px-4 py-2.5 text-sm outline-none"
-                    placeholder="Repite la contrasena"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    className="rounded-r-lg px-3 text-xs font-semibold text-primary-700 hover:bg-primary-50"
-                  >
-                    {showConfirmPassword ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
+              <div className="mt-2 text-[11px] text-slate-600">
+                Dominio permitido: <span className="font-semibold text-primary-700">@{ALLOWED_EMAIL_DOMAIN}</span>
               </div>
-            </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Seguridad de contrasena</p>
-                {password.length > 0 && (
-                  <span className={`text-sm font-semibold ${currentStrength.text}`}>{currentStrength.label}</span>
+              <div className="mt-2 space-y-2">
+                {error && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                    {success}
+                  </div>
                 )}
               </div>
-              <div className="mt-3 h-2 rounded-full bg-white shadow-inner">
-                <div
-                  className={`h-2 rounded-full transition-all ${currentStrength.color}`}
-                  style={{ width: `${(strengthScore / 5) * 100}%` }}
-                />
+
+              <div className="mt-auto flex flex-col gap-2 pt-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Limpiar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-lg bg-primary-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {submitting ? 'Registrando...' : 'Registrar usuario'}
+                </button>
               </div>
-              <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
-                {passwordChecks.map((check) => (
-                  <div key={check.label} className="flex items-center gap-2">
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full border ${
-                        check.ok ? 'border-emerald-400 bg-emerald-400' : 'border-slate-300'
-                      }`}
-                    />
-                    <span className={check.ok ? 'text-emerald-700' : 'text-slate-500'}>{check.label}</span>
-                  </div>
-                ))}
+            </form>
+          </section>
+
+          <aside className="min-h-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Usuarios registrados</h2>
+                <p className="text-xs text-slate-600">Editar nombre, correo, departamento y puesto.</p>
               </div>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                {users.length}
+              </span>
             </div>
 
-            {error && (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {error}
+            {usersLoading ? (
+              <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-center text-sm text-slate-500">
+                Cargando usuarios...
               </div>
-            )}
-
-            {success && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                {success}
+            ) : usersError ? (
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {usersError}
               </div>
-            )}
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Limpiar
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {submitting ? 'Registrando...' : 'Registrar usuario'}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Usuarios registrados</h2>
-              <p className="mt-1 text-sm text-slate-600">Puedes editar nombre, correo, departamento y puesto.</p>
-            </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-              {users.length}
-            </span>
-          </div>
-
-          {usersLoading ? (
-            <div className="mt-6 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              Cargando usuarios...
-            </div>
-          ) : usersError ? (
-            <div className="mt-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              {usersError}
-            </div>
-          ) : users.length === 0 ? (
-            <div className="mt-6 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              No hay usuarios registrados.
-            </div>
-          ) : (
-            <ul className="mt-4 max-h-[640px] space-y-3 overflow-y-auto pr-1">
-              {users.map((item) => {
-                const isCurrentUser = currentUser?.id === item.id;
-                return (
-                  <li key={item.id} className="rounded-lg border border-slate-200 px-3 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {item.full_name}
-                          {isCurrentUser ? ' (tu usuario)' : ''}
-                        </p>
-                        <p className="text-xs text-slate-600">{item.email}</p>
-                        <p className="mt-1 text-xs text-slate-600">
-                          {departmentLabelMap[item.department] || item.department} · {roleLabels[item.role]}
-                        </p>
-                        <p className="text-xs text-slate-500">{item.position}</p>
+            ) : users.length === 0 ? (
+              <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-center text-sm text-slate-500">
+                No hay usuarios registrados.
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-2 overflow-y-auto pr-1 xl:max-h-[calc(100vh-16.6rem)]">
+                {users.map((item) => {
+                  const isCurrentUser = currentUser?.id === item.id;
+                  return (
+                    <li key={item.id} className="rounded-lg border border-slate-200 px-3 py-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900">
+                            {item.full_name}
+                            {isCurrentUser ? ' (tu usuario)' : ''}
+                          </p>
+                          <p className="truncate text-[11px] text-slate-600">{item.email}</p>
+                          <p className="mt-0.5 text-[11px] text-slate-600">
+                            {departmentLabelMap[item.department] || item.department} · {roleLabels[item.role]}
+                          </p>
+                          <p className="truncate text-[11px] text-slate-500">{item.position}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(item)}
+                          className="shrink-0 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        >
+                          Editar
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(item)}
-                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                      >
-                        Editar
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </aside>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </aside>
+        </div>
       </div>
 
       {editingUser && (
