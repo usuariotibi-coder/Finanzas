@@ -5,12 +5,14 @@ from django.db import models
 class Department(models.TextChoices):
     FINANZAS = 'finanzas', 'Finanzas'
     OPERACIONES = 'operaciones', 'Operaciones'
+    BUSINESS_INTELLIGENCE = 'business_intelligence', 'Business Intelligence'
     DISENO_MECANICO = 'diseno_mecanico', 'Diseno Mecanico'
     HARDWARE_DESIGN = 'hardware_design', 'Hardware Design'
     ENSAMBLE = 'ensamble', 'Ensamble'
     PROGRAMACION_PLC = 'programacion_plc', 'Programacion PLC'
     MANUFACTURA = 'manufactura', 'Manufactura'
     OTRO = 'otro', 'Otro'
+
 
 class Role(models.TextChoices):
     ADMIN = 'admin', 'Administrador'

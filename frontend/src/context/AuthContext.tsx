@@ -23,6 +23,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export const departmentOptions = [
   { value: 'finanzas', label: 'Finanzas' },
   { value: 'operaciones', label: 'Operaciones' },
+  { value: 'business_intelligence', label: 'Business Intelligence' },
   { value: 'diseno_mecanico', label: 'Diseno Mecanico' },
   { value: 'hardware_design', label: 'Hardware Design' },
   { value: 'ensamble', label: 'Ensamble' },

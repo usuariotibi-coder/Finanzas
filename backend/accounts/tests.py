@@ -122,3 +122,79 @@ class AdminRegisterTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
+
+
+class AdminUserManagementTests(APITestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email='admin.users@na.scio-automation.com',
+            full_name='Admin Users',
+            department='finanzas',
+            position='Administrador',
+            password='SecurePass123',
+        )
+        self.pm_user = User.objects.create_user(
+            email='pm.users@na.scio-automation.com',
+            full_name='PM Users',
+            department='operaciones',
+            position='Project Manager',
+            password='SecurePass123',
+        )
+        self.staff_user = User.objects.create_user(
+            email='staff.users@na.scio-automation.com',
+            full_name='Staff Users',
+            department='ensamble',
+            position='Tecnico',
+            password='SecurePass123',
+        )
+
+    def test_admin_can_list_users(self):
+        self.client.force_authenticate(user=self.admin_user)
+
+        response = self.client.get('/api/auth/admin/users/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+
+    def test_non_admin_cannot_list_users(self):
+        self.client.force_authenticate(user=self.pm_user)
+
+        response = self.client.get('/api/auth/admin/users/')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_update_user(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            'full_name': 'Staff Actualizado',
+            'email': 'staff.actualizado@na.scio-automation.com',
+            'department': 'operaciones',
+            'position': 'Manager BI',
+        }
+
+        response = self.client.patch(
+            f'/api/auth/admin/users/{self.staff_user.id}/',
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.staff_user.refresh_from_db()
+        self.assertEqual(self.staff_user.full_name, payload['full_name'])
+        self.assertEqual(self.staff_user.email, payload['email'])
+        self.assertEqual(self.staff_user.department, payload['department'])
+        self.assertEqual(self.staff_user.position, payload['position'])
+        self.assertEqual(self.staff_user.role, 'pm')
+
+    def test_admin_cannot_update_to_duplicate_email(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {'email': self.pm_user.email}
+
+        response = self.client.patch(
+            f'/api/auth/admin/users/{self.staff_user.id}/',
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)

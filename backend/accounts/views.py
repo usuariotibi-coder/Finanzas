@@ -1,11 +1,15 @@
-﻿from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .permissions import IsAdmin
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import AdminUserUpdateSerializer, RegisterSerializer, UserSerializer
+
+
+User = get_user_model()
 
 
 class CSRFTokenView(APIView):
@@ -34,6 +38,25 @@ class AdminRegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class AdminUserListView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        users = User.objects.order_by('full_name', 'email')
+        return Response(UserSerializer(users, many=True).data)
+
+
+class AdminUserDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def patch(self, request, user_id: int):
+        user = get_object_or_404(User, pk=user_id)
+        serializer = AdminUserUpdateSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(user).data)
 
 
 class LoginView(APIView):
