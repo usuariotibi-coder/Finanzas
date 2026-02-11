@@ -240,7 +240,7 @@ export default function AdminUsuarios() {
   };
 
   return (
-    <div className="h-[calc(100vh-5rem)] overflow-hidden">
+    <div className="h-full overflow-hidden">
       <div className="flex h-full flex-col gap-3">
         <div className="rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 px-4 py-3 shadow-sm">
           <div className="flex items-center justify-between gap-3">
@@ -407,7 +407,7 @@ export default function AdminUsuarios() {
             </form>
           </section>
 
-          <aside className="min-h-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <aside className="flex min-h-0 h-full flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Usuarios registrados</h2>
@@ -431,7 +431,7 @@ export default function AdminUsuarios() {
                 No hay usuarios registrados.
               </div>
             ) : (
-              <ul className="mt-3 space-y-2 overflow-y-auto pr-1 xl:max-h-[calc(100vh-16.6rem)]">
+              <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
                 {users.map((item) => {
                   const isCurrentUser = currentUser?.id === item.id;
                   return (
