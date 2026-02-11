@@ -171,29 +171,53 @@ REST_FRAMEWORK = {
 
 CORS_ALLOW_CREDENTIALS = True
 
-frontend_url = os.environ.get('FRONTEND_URL')
+def parse_csv_env(name: str, default: str) -> list[str]:
+    return [item.strip() for item in os.environ.get(name, default).split(',') if item.strip()]
+
+
+def normalize_origin(origin: str | None) -> str:
+    value = (origin or '').strip()
+    if not value:
+        return ''
+    if '://' not in value:
+        value = f'https://{value}'
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return ''
+    return f'{parsed.scheme.lower()}://{parsed.netloc.lower()}'
+
+
+frontend_url = normalize_origin(os.environ.get('FRONTEND_URL'))
 cors_origins = [
-    origin.strip()
-    for origin in os.environ.get(
+    normalize_origin(origin)
+    for origin in parse_csv_env(
         'CORS_ALLOWED_ORIGINS',
         'http://localhost:5173,http://127.0.0.1:5173',
-    ).split(',')
-    if origin.strip()
+    )
 ]
 csrf_origins = [
-    origin.strip()
-    for origin in os.environ.get(
+    normalize_origin(origin)
+    for origin in parse_csv_env(
         'CSRF_TRUSTED_ORIGINS',
         'http://localhost:5173,http://127.0.0.1:5173',
-    ).split(',')
-    if origin.strip()
+    )
 ]
 if frontend_url:
     cors_origins.append(frontend_url)
-    csrf_origins.append(frontend_url)
 
-CORS_ALLOWED_ORIGINS = list(dict.fromkeys(cors_origins))
-CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_origins))
+# Keep CSRF and CORS origins aligned for session-based auth from browser apps.
+csrf_origins.extend(cors_origins)
+
+# Railway frontend domains change per project/environment; allow wildcard for CSRF/CORS.
+railway_wildcard_origin = 'https://*.up.railway.app'
+csrf_origins.append(railway_wildcard_origin)
+
+CORS_ALLOWED_ORIGINS = [origin for origin in dict.fromkeys(cors_origins) if origin]
+CSRF_TRUSTED_ORIGINS = [origin for origin in dict.fromkeys(csrf_origins) if origin]
+CORS_ALLOWED_ORIGIN_REGEXES = parse_csv_env(
+    'CORS_ALLOWED_ORIGIN_REGEXES',
+    r'^https://.*\.up\.railway\.app$',
+)
 
 IS_PRODUCTION = (not DEBUG) or bool(railway_public or railway_private or railway_env)
 COOKIE_SAMESITE = os.environ.get('DJANGO_COOKIE_SAMESITE', 'None' if IS_PRODUCTION else 'Lax')
