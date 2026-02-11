@@ -814,7 +814,7 @@ export default function UsuarioView() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5">
       {toast && (
         <div className="fixed right-4 top-4 z-[90] w-[calc(100%-2rem)] max-w-sm">
           <div
@@ -1059,7 +1059,7 @@ export default function UsuarioView() {
                 );
               })
             ) : (
-              <div className="bg-white rounded-lg shadow p-12 text-center w-full lg:col-span-2">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full lg:col-span-2">
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -1083,10 +1083,11 @@ export default function UsuarioView() {
             )}
           </div>
 
-          {/* Sección de Vehículos Asignados */}
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Mis Vehículos</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+            {/* Sección de Vehículos Asignados */}
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Vehículos</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {vehicleAssignments.length > 0 ? (
                 vehicleAssignments.map((assignment) => {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
@@ -1200,7 +1201,7 @@ export default function UsuarioView() {
                   );
                 })
             ) : (
-              <div className="bg-white rounded-lg shadow p-12 text-center w-full lg:col-span-2">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full lg:col-span-2">
                   <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
                   </svg>
@@ -1211,10 +1212,10 @@ export default function UsuarioView() {
             </div>
           </div>
 
-          {/* Sección de Solicitudes de Viaje */}
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Mis Solicitudes de Viaje</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {/* Sección de Solicitudes de Viaje */}
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Solicitudes de Viaje</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {solicitudesViaje.length > 0 ? (
                 solicitudesViaje.map((solicitud) => {
                   const proyecto = proyectos.find(p => p.id === solicitud.proyectoId);
@@ -1350,7 +1351,7 @@ export default function UsuarioView() {
                   );
                 })
             ) : (
-              <div className="bg-white rounded-lg shadow p-12 text-center w-full lg:col-span-2">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full lg:col-span-2">
                   <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -1359,6 +1360,7 @@ export default function UsuarioView() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </>
       ) : (
