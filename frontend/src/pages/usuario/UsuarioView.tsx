@@ -814,7 +814,7 @@ export default function UsuarioView() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-5">
+    <div className="h-full min-h-0 w-full px-2 sm:px-3 lg:px-4 py-2 space-y-4">
       {toast && (
         <div className="fixed right-4 top-4 z-[90] w-[calc(100%-2rem)] max-w-sm">
           <div
@@ -847,7 +847,7 @@ export default function UsuarioView() {
       )}
       {!viaticoSeleccionado ? (
         <>
-          <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
+          <div className="sticky top-0 z-30 -mx-2 sm:-mx-3 lg:-mx-4 px-2 sm:px-3 lg:px-4 pt-1 pb-2">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
               <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl" />
               <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-indigo-200/40 blur-3xl" />
