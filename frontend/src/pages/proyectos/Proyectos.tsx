@@ -10,9 +10,10 @@ import {
   syncCoreAppData,
   updateProyecto,
 } from '../../utils/backendSync';
+import { getProyectoUsoPorcentaje, sanitizeProyectoMontos, toSafeMonto } from '../../utils/proyectoMetrics';
 
 export default function Proyectos() {
-  const [proyectos, setProyectos] = useState<Proyecto[]>(getProyectos());
+  const [proyectos, setProyectos] = useState<Proyecto[]>(() => getProyectos().map(sanitizeProyectoMontos));
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useLocalStorageState('proyectos:searchTerm', '');
   const [filtroEstado, setFiltroEstado] = useLocalStorageState<ProyectoEstado | 'todos'>('proyectos:filtroEstado', 'todos');
@@ -45,7 +46,7 @@ export default function Proyectos() {
       try {
         const data = await fetchProyectos();
         if (active) {
-          setProyectos(data);
+          setProyectos(data.map(sanitizeProyectoMontos));
         }
       } catch {
         // Keep local cached data if backend request fails.
@@ -111,14 +112,14 @@ export default function Proyectos() {
   // Métricas
   const metricas = useMemo(() => {
     const activos = proyectos.filter(p => p.estado === 'activo').length;
-    const presupuestoTotal = proyectos.reduce((sum, p) => sum + p.presupuesto, 0);
-    const gastadoTotal = proyectos.reduce((sum, p) => sum + p.gastado, 0);
+    const presupuestoTotal = proyectos.reduce((sum, p) => sum + toSafeMonto(p.presupuesto), 0);
+    const gastadoTotal = proyectos.reduce((sum, p) => sum + toSafeMonto(p.gastado), 0);
 
     return {
       proyectosActivos: activos,
       presupuestoTotal,
       gastadoTotal,
-      porcentajeUso: presupuestoTotal > 0 ? (gastadoTotal / presupuestoTotal) * 100 : 0
+      porcentajeUso: getProyectoUsoPorcentaje(gastadoTotal, presupuestoTotal),
     };
   }, [proyectos]);
   const formErrors = showFormErrors
@@ -180,14 +181,18 @@ export default function Proyectos() {
           nombre: clienteDescripcion,
           descripcion: clienteDescripcion,
         });
-        setProyectos((prev) => prev.map((proyecto) => (proyecto.id === actualizado.id ? actualizado : proyecto)));
+        setProyectos((prev) =>
+          prev.map((proyecto) =>
+            proyecto.id === actualizado.id ? sanitizeProyectoMontos(actualizado) : proyecto
+          )
+        );
       } else {
         const nuevoProyecto = await createProyecto({
           ...formData,
           nombre: clienteDescripcion,
           descripcion: clienteDescripcion,
         });
-        setProyectos((prev) => [...prev, nuevoProyecto]);
+        setProyectos((prev) => [...prev, sanitizeProyectoMontos(nuevoProyecto)]);
       }
 
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
@@ -461,7 +466,7 @@ export default function Proyectos() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {proyectosFiltrados.map((proyecto) => {
-                    const porcentajeUso = (proyecto.gastado / proyecto.presupuesto) * 100;
+                    const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                     return (
                       <tr key={proyecto.id} className="hover:bg-gray-50">
@@ -523,7 +528,7 @@ export default function Proyectos() {
             {/* Vista Móvil - Cards */}
             <div className="lg:hidden divide-y divide-gray-200">
               {proyectosFiltrados.map((proyecto) => {
-                const porcentajeUso = (proyecto.gastado / proyecto.presupuesto) * 100;
+                const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                 return (
                   <div key={proyecto.id} className="p-4 hover:bg-gray-50">

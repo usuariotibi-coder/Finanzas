@@ -20,6 +20,7 @@ import {
   getPendingViaticoExtension,
   removePendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
+import { getProyectoUsoPorcentaje, sanitizeProyectoMontos, toSafeMonto } from '../../utils/proyectoMetrics';
 
 type PortalToastType = 'success' | 'error' | 'info';
 
@@ -106,7 +107,7 @@ export default function PMPortal() {
         if (!isActive) {
           return;
         }
-        setProyectos(remoteProyectos);
+        setProyectos(remoteProyectos.map(sanitizeProyectoMontos));
         setViaticosUsuario(remoteViaticos);
         setViajesPendientes(remoteViajes.filter((viaje) => viaje.status === 'pendiente'));
       } catch {
@@ -200,7 +201,7 @@ export default function PMPortal() {
 
       setProyectos((prev) => {
         const map = new Map(prev.map((item) => [item.id, item]));
-        map.set(nuevo.id, nuevo);
+        map.set(nuevo.id, sanitizeProyectoMontos(nuevo));
         return Array.from(map.values());
       });
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
@@ -425,8 +426,13 @@ export default function PMPortal() {
         descripcion: clienteDescripcion,
         updatedAt: new Date().toISOString(),
       });
-      setProyectos((prev) => prev.map((item) => (item.id === updatedProyecto.id ? updatedProyecto : item)));
-      setProyectoSeleccionado(updatedProyecto);
+      const proyectoSanitizado = sanitizeProyectoMontos(updatedProyecto);
+      setProyectos((prev) =>
+        prev.map((item) =>
+          item.id === updatedProyecto.id ? proyectoSanitizado : item
+        )
+      );
+      setProyectoSeleccionado(proyectoSanitizado);
       setIsEditingProyecto(false);
       await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       showToast('Proyecto actualizado correctamente.', 'success');
@@ -481,9 +487,8 @@ export default function PMPortal() {
     return icons[estado as keyof typeof icons] || '📁';
   };
 
-  const calcularPorcentajeGastado = (gastado: number, presupuesto: number) => {
-    return ((gastado / presupuesto) * 100).toFixed(1);
-  };
+  const calcularPorcentajeGastado = (gastado: number, presupuesto: number) =>
+    getProyectoUsoPorcentaje(gastado, presupuesto);
 
   return (
     <div className="h-full min-h-0 w-full px-2 sm:px-3 lg:px-4 py-2 flex flex-col gap-3">
@@ -784,7 +789,7 @@ export default function PMPortal() {
         <h2 className="text-lg sm:text-xl font-bold text-gray-900">Mis Proyectos</h2>
         <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
           {proyectos.map((proyecto) => {
-            const porcentajeGastado = parseFloat(calcularPorcentajeGastado(proyecto.gastado, proyecto.presupuesto));
+            const porcentajeGastado = calcularPorcentajeGastado(proyecto.gastado, proyecto.presupuesto);
             const proyectoEstadoIcon = getProyectoEstadoIcon(proyecto.estado);
 
             return (
@@ -813,7 +818,7 @@ export default function PMPortal() {
                   <div>
                     <div className="flex justify-between text-[10px] mb-1">
                       <span className="text-gray-600">Presupuesto ejecutado</span>
-                      <span className="font-semibold text-gray-900">{porcentajeGastado}%</span>
+                      <span className="font-semibold text-gray-900">{porcentajeGastado.toFixed(1)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1">
                       <div
@@ -830,11 +835,11 @@ export default function PMPortal() {
                   <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-200">
                     <div>
                       <p className="text-[10px] text-gray-500">Presupuesto</p>
-                      <p className="text-[10px] font-semibold text-gray-900">${(proyecto.presupuesto / 1000000).toFixed(1)}M</p>
+                      <p className="text-[10px] font-semibold text-gray-900">${(toSafeMonto(proyecto.presupuesto) / 1000000).toFixed(1)}M</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-500">Gastado</p>
-                      <p className="text-[10px] font-semibold text-gray-900">${(proyecto.gastado / 1000000).toFixed(1)}M</p>
+                      <p className="text-[10px] font-semibold text-gray-900">${(toSafeMonto(proyecto.gastado) / 1000000).toFixed(1)}M</p>
                     </div>
                   </div>
 
@@ -1483,7 +1488,7 @@ export default function PMPortal() {
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-gray-600">Presupuesto ejecutado</span>
                   <span className="font-semibold text-gray-900">
-                    {calcularPorcentajeGastado(proyectoDetalle.gastado, proyectoDetalle.presupuesto)}%
+                    {calcularPorcentajeGastado(proyectoDetalle.gastado, proyectoDetalle.presupuesto).toFixed(1)}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -1491,7 +1496,7 @@ export default function PMPortal() {
                     className="h-1.5 rounded-full bg-primary-600"
                     style={{
                       width: `${Math.min(
-                        parseFloat(calcularPorcentajeGastado(proyectoDetalle.gastado, proyectoDetalle.presupuesto)),
+                        calcularPorcentajeGastado(proyectoDetalle.gastado, proyectoDetalle.presupuesto),
                         100
                       )}%`,
                     }}
@@ -1508,7 +1513,7 @@ export default function PMPortal() {
                         className="w-full text-sm font-semibold text-gray-900 border border-gray-200 rounded-md px-2 py-1"
                       />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">${(proyectoDetalle.presupuesto / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-semibold text-gray-900">${(toSafeMonto(proyectoDetalle.presupuesto) / 1000000).toFixed(1)}M</p>
                     )}
                   </div>
                   <div>
@@ -1521,7 +1526,7 @@ export default function PMPortal() {
                         className="w-full text-sm font-semibold text-gray-900 border border-gray-200 rounded-md px-2 py-1"
                       />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">${(proyectoDetalle.gastado / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-semibold text-gray-900">${(toSafeMonto(proyectoDetalle.gastado) / 1000000).toFixed(1)}M</p>
                     )}
                   </div>
                 </div>

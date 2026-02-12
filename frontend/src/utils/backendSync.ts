@@ -15,6 +15,7 @@ import type {
   Viatico,
 } from '../types';
 import { apiFetch } from './api';
+import { sanitizeProyectoMontos } from './proyectoMetrics';
 import { toStorageKey } from './storage';
 
 const STORAGE_EVENT = 'app-storage-change';
@@ -512,7 +513,7 @@ const deriveRecuperacionPendientes = (viaticos: Viatico[]) =>
 
 export const fetchProyectos = async (): Promise<Proyecto[]> => {
   const data = (await apiFetch('/proyectos/')) as RawRecord[];
-  return Array.isArray(data) ? data.map(mapProyectoFromApi) : [];
+  return Array.isArray(data) ? data.map(mapProyectoFromApi).map(sanitizeProyectoMontos) : [];
 };
 
 export const fetchViaticos = async (): Promise<Viatico[]> => {
@@ -741,7 +742,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
 };
 
 export const getCachedProyectos = () => {
-  const prefixed = readStorageList<Proyecto>('proyectos_data');
+  const prefixed = readStorageList<Proyecto>('proyectos_data').map(sanitizeProyectoMontos);
   if (prefixed.length > 0) return prefixed;
-  return readStorageList<Proyecto>('proyectos_data', { legacy: true });
+  return readStorageList<Proyecto>('proyectos_data', { legacy: true }).map(sanitizeProyectoMontos);
 };

@@ -2,6 +2,12 @@ import { useState, useMemo } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import type { Proyecto } from '../../types';
 import { getCachedProyectos } from '../../utils/backendSync';
+import {
+  getProyectoPresupuestoDisponible,
+  getProyectoUsoPorcentaje,
+  sanitizeProyectoMontos,
+  toSafeMonto,
+} from '../../utils/proyectoMetrics';
 import { NEW_PROJECT_ID } from '../../utils/proyectoLabel';
 
 interface ProyectoSelectorProps {
@@ -22,7 +28,7 @@ const NEW_PROJECT_LABEL = 'Nuevo Proyecto';
 function getProyectos(): Proyecto[] {
   const cached = getCachedProyectos();
   if (cached.length > 0) {
-    return cached;
+    return cached.map(sanitizeProyectoMontos);
   }
 
   if (typeof window === 'undefined') return [];
@@ -30,7 +36,7 @@ function getProyectos(): Proyecto[] {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? (parsed as Proyecto[]) : [];
+      return Array.isArray(parsed) ? (parsed as Proyecto[]).map(sanitizeProyectoMontos) : [];
     } catch {
       return [];
     }
@@ -125,11 +131,11 @@ export default function ProyectoSelector({
   };
 
   const calcularPresupuestoDisponible = (proyecto: Proyecto) => {
-    return proyecto.presupuesto - proyecto.gastado;
+    return getProyectoPresupuestoDisponible(proyecto.gastado, proyecto.presupuesto);
   };
 
   const calcularPorcentajeUso = (proyecto: Proyecto) => {
-    return (proyecto.gastado / proyecto.presupuesto) * 100;
+    return getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
   };
 
   return (
@@ -219,6 +225,8 @@ export default function ProyectoSelector({
                 </div>
               ) : (
                 filteredProyectos.map((proyecto) => {
+                  const presupuesto = toSafeMonto(proyecto.presupuesto);
+                  const gastado = toSafeMonto(proyecto.gastado);
                   const disponible = calcularPresupuestoDisponible(proyecto);
                   const porcentajeUso = calcularPorcentajeUso(proyecto);
 
@@ -257,7 +265,7 @@ export default function ProyectoSelector({
                               {getEstadoLabel(proyecto.estado)}
                             </span>
                             <span className="text-xs text-gray-600">
-                              ${proyecto.gastado.toLocaleString()} / ${proyecto.presupuesto.toLocaleString()} ({porcentajeUso.toFixed(1)}%)
+                              ${gastado.toLocaleString()} / ${presupuesto.toLocaleString()} ({porcentajeUso.toFixed(1)}%)
                             </span>
                           </div>
 

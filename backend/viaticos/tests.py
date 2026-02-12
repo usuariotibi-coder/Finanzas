@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -69,3 +71,114 @@ class ViaticoCreateTests(APITestCase):
         response = self.client.post('/api/viaticos/', self.build_payload(), format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['user'], self.admin_user.id)
+
+
+class ProyectoGastadoSyncTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='sync@na.scio-automation.com',
+            full_name='Sync User',
+            department='operaciones',
+            position='Project Manager',
+            password='SecurePass123',
+        )
+        self.project_a = Proyecto.objects.create(
+            codigo='PRJ-SYNC-001',
+            nombre='Proyecto Sync A',
+            cliente='Cliente A',
+            estado='activo',
+            presupuesto=10000,
+            gastado=0,
+            fecha_inicio='2026-01-01',
+            fecha_fin_estimada='2026-12-31',
+            responsable='Sync User',
+            departamento='operaciones',
+            descripcion='Sincronizacion A',
+        )
+        self.project_b = Proyecto.objects.create(
+            codigo='PRJ-SYNC-002',
+            nombre='Proyecto Sync B',
+            cliente='Cliente B',
+            estado='activo',
+            presupuesto=10000,
+            gastado=0,
+            fecha_inicio='2026-01-01',
+            fecha_fin_estimada='2026-12-31',
+            responsable='Sync User',
+            departamento='operaciones',
+            descripcion='Sincronizacion B',
+        )
+
+    def test_project_spent_is_updated_on_create(self):
+        Viatico.objects.create(
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Viatico A',
+            destino='Monterrey',
+            fecha_inicio='2026-02-01',
+            fecha_fin='2026-02-03',
+            monto_solicitado=1000,
+            monto_gastado=Decimal('350.40'),
+            status=Viatico.Status.PENDIENTE,
+        )
+
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('350.40'))
+
+    def test_project_spent_is_updated_on_monto_gastado_change(self):
+        viatico = Viatico.objects.create(
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Viatico A',
+            destino='Monterrey',
+            fecha_inicio='2026-02-01',
+            fecha_fin='2026-02-03',
+            monto_solicitado=1000,
+            monto_gastado=Decimal('100.00'),
+            status=Viatico.Status.PENDIENTE,
+        )
+
+        viatico.monto_gastado = Decimal('880.90')
+        viatico.save()
+
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('880.90'))
+
+    def test_project_spent_is_updated_when_viatico_changes_project(self):
+        viatico = Viatico.objects.create(
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Viatico A',
+            destino='Monterrey',
+            fecha_inicio='2026-02-01',
+            fecha_fin='2026-02-03',
+            monto_solicitado=1000,
+            monto_gastado=Decimal('200.00'),
+            status=Viatico.Status.PENDIENTE,
+        )
+
+        viatico.proyecto = self.project_b
+        viatico.save()
+
+        self.project_a.refresh_from_db()
+        self.project_b.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('0.00'))
+        self.assertEqual(self.project_b.gastado, Decimal('200.00'))
+
+    def test_project_spent_is_updated_on_delete(self):
+        viatico = Viatico.objects.create(
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Viatico A',
+            destino='Monterrey',
+            fecha_inicio='2026-02-01',
+            fecha_fin='2026-02-03',
+            monto_solicitado=1000,
+            monto_gastado=Decimal('510.00'),
+            status=Viatico.Status.PENDIENTE,
+        )
+
+        viatico.delete()
+
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('0.00'))
