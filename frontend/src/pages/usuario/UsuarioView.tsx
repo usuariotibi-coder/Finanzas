@@ -48,6 +48,21 @@ const calcularDiasExtension = (fechaFinActual: string, nuevaFechaFin: string) =>
   return Math.floor((finNuevo.getTime() - finActual.getTime()) / MS_POR_DIA);
 };
 
+const toDateInputFormat = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const getExtensionMinDate = (fechaFinActual: string) => {
+  if (!fechaFinActual) {
+    return '';
+  }
+  const currentEndDate = new Date(`${fechaFinActual}T00:00:00`);
+  if (Number.isNaN(currentEndDate.getTime())) {
+    return '';
+  }
+  currentEndDate.setDate(currentEndDate.getDate() + 1);
+  return toDateInputFormat(currentEndDate);
+};
+
 const getVehicleAssignments = (): VehicleAssignment[] => {
   const stored = localStorage.getItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY);
   if (stored) {
@@ -206,6 +221,7 @@ export default function UsuarioView() {
   const diasExtensionSugeridos = viaticoParaExtender
     ? calcularDiasExtension(viaticoParaExtender.fechaFin, nuevaFechaFin)
     : 0;
+  const extensionMinDate = viaticoParaExtender ? getExtensionMinDate(viaticoParaExtender.fechaFin) : '';
   const placeholderAlimentosExtension = diasExtensionSugeridos > 0 ? String(diasExtensionSugeridos) : '0';
   const totalAlimentosExtensionSugeridos = diasExtensionSugeridos * (150 + 200 + 250);
   const totalAlimentosExtensionCapturados =
@@ -1027,8 +1043,9 @@ export default function UsuarioView() {
                         {(viatico.status === 'dispersado' || viatico.status === 'en_viaje') && !extensionPendiente && (
                           <button
                             onClick={() => {
+                              const minExtensionDate = getExtensionMinDate(viatico.fechaFin) || viatico.fechaFin;
                               setViaticoParaExtender(viatico);
-                              setNuevaFechaFin(viatico.fechaFin);
+                              setNuevaFechaFin(minExtensionDate);
                               setAlimentosExtension({
                                 desayunos: 0,
                                 comidas: 0,
@@ -2484,7 +2501,7 @@ export default function UsuarioView() {
                   value={nuevaFechaFin}
                   onChange={(e) => setNuevaFechaFin(e.target.value)}
                   onClick={openDatePicker}
-                  min={viaticoParaExtender.fechaFin}
+                  min={extensionMinDate || viaticoParaExtender.fechaFin}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
@@ -2572,7 +2589,12 @@ export default function UsuarioView() {
               </button>
               <button
                 onClick={handleSolicitarExtension}
-                disabled={isSavingExtension || Boolean(extensionPendienteModal) || !nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin}
+                disabled={
+                  isSavingExtension ||
+                  Boolean(extensionPendienteModal) ||
+                  !nuevaFechaFin ||
+                  (extensionMinDate ? nuevaFechaFin < extensionMinDate : nuevaFechaFin <= viaticoParaExtender.fechaFin)
+                }
                 className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSavingExtension ? 'Guardando...' : extensionPendienteModal ? 'Pendiente de aprobacion PM' : 'Solicitar Extension'}
