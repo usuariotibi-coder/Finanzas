@@ -109,7 +109,7 @@ class ProyectoGastadoSyncTests(APITestCase):
             descripcion='Sincronizacion B',
         )
 
-    def test_project_spent_is_updated_on_create(self):
+    def test_pending_viatico_does_not_count_until_approved(self):
         Viatico.objects.create(
             user=self.user,
             proyecto=self.project_a,
@@ -118,14 +118,44 @@ class ProyectoGastadoSyncTests(APITestCase):
             fecha_inicio='2026-02-01',
             fecha_fin='2026-02-03',
             monto_solicitado=1000,
-            monto_gastado=Decimal('350.40'),
             status=Viatico.Status.PENDIENTE,
+        )
+
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('0.00'))
+
+    def test_project_spent_counts_approved_amount(self):
+        Viatico.objects.create(
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Viatico A',
+            destino='Monterrey',
+            fecha_inicio='2026-02-01',
+            fecha_fin='2026-02-03',
+            monto_solicitado=1000,
+            monto_aprobado=Decimal('350.40'),
+            status=Viatico.Status.APROBADO,
         )
 
         self.project_a.refresh_from_db()
         self.assertEqual(self.project_a.gastado, Decimal('350.40'))
 
-    def test_project_spent_is_updated_on_monto_gastado_change(self):
+    def test_project_spent_falls_back_to_requested_amount_if_approved_amount_missing(self):
+        Viatico.objects.create(
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Viatico A',
+            destino='Monterrey',
+            fecha_inicio='2026-02-01',
+            fecha_fin='2026-02-03',
+            monto_solicitado=Decimal('925.55'),
+            status=Viatico.Status.APROBADO,
+        )
+
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('925.55'))
+
+    def test_project_spent_updates_when_status_changes_to_approved(self):
         viatico = Viatico.objects.create(
             user=self.user,
             proyecto=self.project_a,
@@ -134,11 +164,11 @@ class ProyectoGastadoSyncTests(APITestCase):
             fecha_inicio='2026-02-01',
             fecha_fin='2026-02-03',
             monto_solicitado=1000,
-            monto_gastado=Decimal('100.00'),
             status=Viatico.Status.PENDIENTE,
         )
 
-        viatico.monto_gastado = Decimal('880.90')
+        viatico.status = Viatico.Status.APROBADO
+        viatico.monto_aprobado = Decimal('880.90')
         viatico.save()
 
         self.project_a.refresh_from_db()
@@ -153,8 +183,8 @@ class ProyectoGastadoSyncTests(APITestCase):
             fecha_inicio='2026-02-01',
             fecha_fin='2026-02-03',
             monto_solicitado=1000,
-            monto_gastado=Decimal('200.00'),
-            status=Viatico.Status.PENDIENTE,
+            monto_aprobado=Decimal('200.00'),
+            status=Viatico.Status.APROBADO,
         )
 
         viatico.proyecto = self.project_b
@@ -174,8 +204,8 @@ class ProyectoGastadoSyncTests(APITestCase):
             fecha_inicio='2026-02-01',
             fecha_fin='2026-02-03',
             monto_solicitado=1000,
-            monto_gastado=Decimal('510.00'),
-            status=Viatico.Status.PENDIENTE,
+            monto_aprobado=Decimal('510.00'),
+            status=Viatico.Status.APROBADO,
         )
 
         viatico.delete()
