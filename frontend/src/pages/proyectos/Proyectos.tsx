@@ -10,7 +10,12 @@ import {
   syncCoreAppData,
   updateProyecto,
 } from '../../utils/backendSync';
-import { getProyectoUsoPorcentaje, sanitizeProyectoMontos, toSafeMonto } from '../../utils/proyectoMetrics';
+import {
+  formatProyectoMontoCompacto,
+  getProyectoUsoPorcentaje,
+  sanitizeProyectoMontos,
+  toSafeMonto,
+} from '../../utils/proyectoMetrics';
 
 export default function Proyectos() {
   const [proyectos, setProyectos] = useState<Proyecto[]>(() => getProyectos().map(sanitizeProyectoMontos));
@@ -296,7 +301,7 @@ export default function Proyectos() {
                 <div className="flex-1">
                   <p className="text-[10px] text-gray-600">Presupuesto Total</p>
                   <p className="text-lg font-bold text-gray-900 mt-1">
-                    ${(metricas.presupuestoTotal / 1000000).toFixed(1)}M
+                    {formatProyectoMontoCompacto(metricas.presupuestoTotal)}
                   </p>
                 </div>
                 <div className="hidden sm:flex w-7 h-7 bg-blue-100 rounded-full items-center justify-center flex-shrink-0 ml-2">
@@ -320,7 +325,7 @@ export default function Proyectos() {
                 <div className="flex-1">
                   <p className="text-[10px] text-gray-600">Gastado Total</p>
                   <p className="text-lg font-bold text-gray-900 mt-1">
-                    ${(metricas.gastadoTotal / 1000000).toFixed(1)}M
+                    {formatProyectoMontoCompacto(metricas.gastadoTotal)}
                   </p>
                 </div>
                 <div className="hidden sm:flex w-7 h-7 bg-purple-100 rounded-full items-center justify-center flex-shrink-0 ml-2">

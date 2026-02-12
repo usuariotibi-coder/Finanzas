@@ -20,7 +20,11 @@ import {
   getPendingViaticoExtension,
   removePendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
-import { getProyectoUsoPorcentaje, sanitizeProyectoMontos, toSafeMonto } from '../../utils/proyectoMetrics';
+import {
+  formatProyectoMontoCompacto,
+  getProyectoUsoPorcentaje,
+  sanitizeProyectoMontos,
+} from '../../utils/proyectoMetrics';
 
 type PortalToastType = 'success' | 'error' | 'info';
 
@@ -835,11 +839,11 @@ export default function PMPortal() {
                   <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-200">
                     <div>
                       <p className="text-[10px] text-gray-500">Presupuesto</p>
-                      <p className="text-[10px] font-semibold text-gray-900">${(toSafeMonto(proyecto.presupuesto) / 1000000).toFixed(1)}M</p>
+                      <p className="text-[10px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.presupuesto)}</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-500">Gastado</p>
-                      <p className="text-[10px] font-semibold text-gray-900">${(toSafeMonto(proyecto.gastado) / 1000000).toFixed(1)}M</p>
+                      <p className="text-[10px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.gastado)}</p>
                     </div>
                   </div>
 
@@ -1513,7 +1517,7 @@ export default function PMPortal() {
                         className="w-full text-sm font-semibold text-gray-900 border border-gray-200 rounded-md px-2 py-1"
                       />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">${(toSafeMonto(proyectoDetalle.presupuesto) / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-semibold text-gray-900">{formatProyectoMontoCompacto(proyectoDetalle.presupuesto)}</p>
                     )}
                   </div>
                   <div>
@@ -1526,7 +1530,7 @@ export default function PMPortal() {
                         className="w-full text-sm font-semibold text-gray-900 border border-gray-200 rounded-md px-2 py-1"
                       />
                     ) : (
-                      <p className="text-sm font-semibold text-gray-900">${(toSafeMonto(proyectoDetalle.gastado) / 1000000).toFixed(1)}M</p>
+                      <p className="text-sm font-semibold text-gray-900">{formatProyectoMontoCompacto(proyectoDetalle.gastado)}</p>
                     )}
                   </div>
                 </div>
