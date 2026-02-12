@@ -20,14 +20,50 @@ import {
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 
+const parseDateOnly = (value: string) => {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+      return null;
+    }
+    const localDate = new Date(year, month - 1, day);
+    if (Number.isNaN(localDate.getTime())) {
+      return null;
+    }
+    return localDate;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
+const formatDateOnlyMx = (value: string) => {
+  const parsed = parseDateOnly(value);
+  if (!parsed) {
+    return value;
+  }
+  return parsed.toLocaleDateString('es-MX');
+};
+
 const calcularDiasViaje = (fechaInicio: string, fechaFin: string) => {
   if (!fechaInicio || !fechaFin) {
     return 0;
   }
 
-  const inicio = new Date(`${fechaInicio}T00:00:00`);
-  const fin = new Date(`${fechaFin}T00:00:00`);
-  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime()) || fin < inicio) {
+  const inicio = parseDateOnly(fechaInicio);
+  const fin = parseDateOnly(fechaFin);
+  if (!inicio || !fin || fin < inicio) {
     return 0;
   }
 
@@ -39,9 +75,9 @@ const calcularDiasExtension = (fechaFinActual: string, nuevaFechaFin: string) =>
     return 0;
   }
 
-  const finActual = new Date(`${fechaFinActual}T00:00:00`);
-  const finNuevo = new Date(`${nuevaFechaFin}T00:00:00`);
-  if (Number.isNaN(finActual.getTime()) || Number.isNaN(finNuevo.getTime()) || finNuevo <= finActual) {
+  const finActual = parseDateOnly(fechaFinActual);
+  const finNuevo = parseDateOnly(nuevaFechaFin);
+  if (!finActual || !finNuevo || finNuevo <= finActual) {
     return 0;
   }
 
@@ -55,8 +91,8 @@ const getExtensionMinDate = (fechaFinActual: string) => {
   if (!fechaFinActual) {
     return '';
   }
-  const currentEndDate = new Date(`${fechaFinActual}T00:00:00`);
-  if (Number.isNaN(currentEndDate.getTime())) {
+  const currentEndDate = parseDateOnly(fechaFinActual);
+  if (!currentEndDate) {
     return '';
   }
   currentEndDate.setDate(currentEndDate.getDate() + 1);
@@ -992,7 +1028,7 @@ export default function UsuarioView() {
                             <span className="truncate">{viatico.destino} - {proyectoLabel}</span>
                           </h3>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
-                            <span>{new Date(viatico.fechaInicio).toLocaleDateString('es-MX')} - {new Date(viatico.fechaFin).toLocaleDateString('es-MX')}</span>
+                            <span>{formatDateOnlyMx(viatico.fechaInicio)} - {formatDateOnlyMx(viatico.fechaFin)}</span>
                             <span className="font-semibold text-gray-900">${viatico.montoAprobado?.toLocaleString() || viatico.montoSolicitado.toLocaleString()} MXN</span>
                           </div>
                         </div>
@@ -1013,7 +1049,7 @@ export default function UsuarioView() {
                         </div>
                         {extensionPendiente && (
                           <p className="mt-1 text-[11px] text-amber-700">
-                            Extension pendiente PM: {new Date(extensionPendiente.nuevaFechaFin).toLocaleDateString('es-MX')}
+                            Extension pendiente PM: {formatDateOnlyMx(extensionPendiente.nuevaFechaFin)}
                           </p>
                         )}
                         {!extensionPendiente && extensionResuelta && (
@@ -1166,9 +1202,9 @@ export default function UsuarioView() {
                             <span><span className="font-medium">Destino:</span> {assignment.destino}</span>
                           )}
                           <span><span className="font-medium">Motivo:</span> {assignment.motivo}</span>
-                          <span><span className="font-medium">Desde:</span> {new Date(assignment.fechaInicio).toLocaleDateString('es-MX')}</span>
+                          <span><span className="font-medium">Desde:</span> {formatDateOnlyMx(assignment.fechaInicio)}</span>
                           {assignment.fechaFin && (
-                            <span><span className="font-medium">Hasta:</span> {new Date(assignment.fechaFin).toLocaleDateString('es-MX')}</span>
+                            <span><span className="font-medium">Hasta:</span> {formatDateOnlyMx(assignment.fechaFin)}</span>
                           )}
                           {assignment.kmInicial != null && (
                             <span><span className="font-medium">KM Inicial:</span> {assignment.kmInicial.toLocaleString()}</span>
@@ -1283,7 +1319,7 @@ export default function UsuarioView() {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
                           <span><span className="font-medium">Proyecto:</span> {proyectoLabel}</span>
                           <span><span className="font-medium">Motivo:</span> {solicitud.motivo}</span>
-                          <span><span className="font-medium">Fechas:</span> {new Date(solicitud.fechaInicio).toLocaleDateString('es-MX')} - {new Date(solicitud.fechaFin).toLocaleDateString('es-MX')}</span>
+                          <span><span className="font-medium">Fechas:</span> {formatDateOnlyMx(solicitud.fechaInicio)} - {formatDateOnlyMx(solicitud.fechaFin)}</span>
                         </div>
 
                         {/* Servicios solicitados con sus estados */}
@@ -1420,8 +1456,8 @@ export default function UsuarioView() {
               <div>
                 <p className="text-sm text-gray-600">Fechas</p>
                 <p className="text-base font-medium text-gray-900">
-                  {new Date(viaticoActual!.fechaInicio).toLocaleDateString('es-MX')} -{' '}
-                  {new Date(viaticoActual!.fechaFin).toLocaleDateString('es-MX')}
+                  {formatDateOnlyMx(viaticoActual!.fechaInicio)} -{' '}
+                  {formatDateOnlyMx(viaticoActual!.fechaFin)}
                 </p>
               </div>
               <div>
@@ -2488,7 +2524,7 @@ export default function UsuarioView() {
                 <p className="text-sm text-gray-600">Viático</p>
                 <p className="font-semibold text-gray-900">{viaticoParaExtender.destino}</p>
                 <p className="text-sm text-gray-600 mt-2">Fecha fin actual</p>
-                <p className="font-semibold text-gray-900">{new Date(viaticoParaExtender.fechaFin).toLocaleDateString('es-MX')}</p>
+                <p className="font-semibold text-gray-900">{formatDateOnlyMx(viaticoParaExtender.fechaFin)}</p>
               </div>
 
               {/* Nueva fecha fin */}
