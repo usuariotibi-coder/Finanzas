@@ -911,7 +911,7 @@ export default function UsuarioView() {
           </div>
         </div>
       )}
-      {!viaticoSeleccionado ? (
+      {!viaticoSeleccionado || !viaticoActual ? (
         <>
           <div className="sticky top-0 z-30 -mx-2 sm:-mx-3 lg:-mx-4 px-2 sm:px-3 lg:px-4 pt-1 pb-2">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
@@ -1466,8 +1466,8 @@ export default function UsuarioView() {
               <div>
                 <p className="text-sm text-gray-600">Fechas</p>
                 <p className="text-base font-medium text-gray-900">
-                  {formatDateOnlyMx(viaticoActual!.fechaInicio)} -{' '}
-                  {formatDateOnlyMx(viaticoActual!.fechaFin)}
+                  {formatDateOnlyMx(viaticoActual.fechaInicio)} -{' '}
+                  {formatDateOnlyMx(viaticoActual.fechaFin)}
                 </p>
               </div>
               <div>
