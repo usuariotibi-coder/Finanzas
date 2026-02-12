@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Viatico } from '../../types';
 import { createRecuperacion, syncCoreAppData, updateViatico } from '../../utils/backendSync';
+import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
 
 
 const getViaticoStatusIcon = (status: Viatico['status']) => {
@@ -71,7 +72,8 @@ export default function Recuperacion() {
 
   const handleRegistrarGasto = (viatico: Viatico) => {
     setSelectedGastoViatico(viatico);
-    setGastoMonto(viatico.montoGastado ? String(viatico.montoGastado) : '');
+    const montoBase = getViaticoGastadoKpi(viatico);
+    setGastoMonto(montoBase > 0 ? String(montoBase) : '');
     setShowGastoErrors(false);
     setShowGastoModal(true);
   };
@@ -459,7 +461,7 @@ export default function Recuperacion() {
                     <p className="text-sm text-gray-900">${viatico.montoDispersado?.toLocaleString()}</p>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <p className="text-sm text-gray-900">${viatico.montoGastado?.toLocaleString()}</p>
+                    <p className="text-sm text-gray-900">${getViaticoGastadoKpi(viatico).toLocaleString()}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 ${getGastoSourceBadge(viatico).className}`}>
                         {getGastoSourceBadge(viatico).label}
@@ -763,7 +765,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">Gastado</p>
-                  <p className="text-lg font-bold text-green-600">${viatico.montoGastado?.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-green-600">${getViaticoGastadoKpi(viatico).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600">A Recuperar</p>
@@ -895,7 +897,7 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
             </div>
             <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
               <p className="text-xs text-gray-600">Gastado</p>
-              <p className="text-lg font-bold text-green-600">${viatico.montoGastado?.toLocaleString()}</p>
+              <p className="text-lg font-bold text-green-600">${getViaticoGastadoKpi(viatico).toLocaleString()}</p>
               <div className="mt-2 flex flex-wrap items-center justify-center gap-1 text-[10px]">
                 <span className={`inline-flex items-center rounded-full px-2 py-0.5 ${gastoBadge.className}`}>
                   {gastoBadge.label}

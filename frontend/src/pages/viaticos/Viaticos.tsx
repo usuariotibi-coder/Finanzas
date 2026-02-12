@@ -9,6 +9,7 @@ import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
 import type { GSActivity } from '../../data/gsActivities';
 import { createViatico, syncCoreAppData } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
+import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
 
 
 const normalizeViaticoStatus = (status: string) => (status === 'completado' ? 'dispersado' : status);
@@ -733,6 +734,7 @@ function StatusModal({ viatico, onClose }: StatusModalProps) {
 
   const derivedStatus = getDerivedViaticoStatus(viatico);
   const statusInfo = getStatusInfo(derivedStatus);
+  const montoGastadoKpi = getViaticoGastadoKpi(viatico);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -817,10 +819,10 @@ function StatusModal({ viatico, onClose }: StatusModalProps) {
                   <p className="text-2xl font-bold text-blue-700">${viatico.montoDispersado.toLocaleString()}</p>
                 </div>
               )}
-              {viatico.montoGastado && (
+              {montoGastadoKpi > 0 && (
                 <div className="bg-purple-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">Monto Gastado</p>
-                  <p className="text-2xl font-bold text-purple-700">${viatico.montoGastado.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-purple-700">${montoGastadoKpi.toLocaleString()}</p>
                 </div>
               )}
             </div>

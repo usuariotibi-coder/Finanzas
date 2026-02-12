@@ -10,6 +10,7 @@ import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
 import { createViaje, createViatico, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
+import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
 import {
   getLatestViaticoExtensionResolution,
   getPendingViaticoExtension,
@@ -1414,11 +1415,11 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            {viaticoActual?.montoGastado !== undefined && (
+            {viaticoActual && getViaticoGastadoKpi(viaticoActual) > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Monto Comprobado:</span>
-                  <span className="font-semibold text-gray-900">${viaticoActual.montoGastado.toLocaleString()} MXN</span>
+                  <span className="font-semibold text-gray-900">${getViaticoGastadoKpi(viaticoActual).toLocaleString()} MXN</span>
                 </div>
                 {viaticoActual.saldoRestante && viaticoActual.saldoRestante > 0 && (
                   <div className="flex items-center justify-between text-sm mt-2">
