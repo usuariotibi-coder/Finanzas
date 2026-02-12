@@ -160,6 +160,7 @@ export default function UsuarioView() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [ticketFile, setTicketFile] = useState<File | null>(null);
+  const [descripcionGasto, setDescripcionGasto] = useState('');
 
   // Estado para vehículos
   const [vehicles] = useLocalStorageState<Vehicle[]>('usuario:vehicles', []);
@@ -339,6 +340,9 @@ export default function UsuarioView() {
     : {};
   const gastoArchivoError = showGastoDocumentoErrors && !pdfFile && !ticketFile
     ? 'Agrega el PDF o el ticket.'
+    : '';
+  const gastoDescripcionError = showGastoDocumentoErrors && !descripcionGasto.trim()
+    ? 'Agrega una descripcion del gasto.'
     : '';
   const subirDocumentosError = showSubirDocumentosErrors && gastos.length === 0
     ? 'Agrega al menos un gasto.'
@@ -575,16 +579,32 @@ export default function UsuarioView() {
     return procesos[status] ?? procesos.pendiente;
   };
 
+  const resetGastoDraft = () => {
+    setPdfFile(null);
+    setXmlFile(null);
+    setTicketFile(null);
+    setDescripcionGasto('');
+    setShowGastoDocumentoErrors(false);
+  };
+
+  const resetSubirDocumentosFlow = () => {
+    setViaticoSeleccionado(null);
+    setGastos([]);
+    setShowSubirDocumentosErrors(false);
+    resetGastoDraft();
+  };
+
   const handleAccionClick = (viatico: Viatico, accion: string) => {
     if (accion === 'subir') {
       setViaticoSeleccionado(viatico.id);
       setShowSubirDocumentosErrors(false);
-      setShowGastoDocumentoErrors(false);
+      resetGastoDraft();
     }
   };
 
   const handleAgregarGasto = () => {
-    if (!pdfFile && !ticketFile) {
+    const descripcionCapturada = descripcionGasto.trim();
+    if ((!pdfFile && !ticketFile) || !descripcionCapturada) {
       setShowGastoDocumentoErrors(true);
       return;
     }
@@ -593,7 +613,7 @@ export default function UsuarioView() {
       id: `GASTO-${Date.now()}`,
       viaticoId: viaticoSeleccionado!,
       tipo: xmlFile ? 'completo' : 'sin_xml',
-      descripcion: pdfFile?.name || ticketFile?.name || 'Sin descripcion',
+      descripcion: descripcionCapturada,
       monto: 0,
       pdfName: pdfFile?.name,
       xmlName: xmlFile?.name,
@@ -602,13 +622,8 @@ export default function UsuarioView() {
     };
 
     setGastos([...gastos, nuevoGasto]);
-    setShowGastoDocumentoErrors(false);
     setShowSubirDocumentosErrors(false);
-
-    // Limpiar campos
-    setPdfFile(null);
-    setXmlFile(null);
-    setTicketFile(null);
+    resetGastoDraft();
   };
 
   const handleSubirDocumentos = () => {
@@ -622,9 +637,7 @@ export default function UsuarioView() {
     showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
 
     // Limpiar y volver a la lista
-    setGastos([]);
-    setViaticoSeleccionado(null);
-    setShowSubirDocumentosErrors(false);
+    resetSubirDocumentosFlow();
   };
 
   const eliminarGasto = (gastoId: string) => {
@@ -1422,10 +1435,7 @@ export default function UsuarioView() {
           {/* Vista de Carga de Documentos */}
           <div className="flex items-center space-x-4 mb-6">
             <button
-              onClick={() => {
-                setViaticoSeleccionado(null);
-                setGastos([]);
-              }}
+              onClick={resetSubirDocumentosFlow}
               className="text-primary-600 hover:text-primary-700 flex items-center space-x-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1485,24 +1495,24 @@ export default function UsuarioView() {
           </div>
 
           {/* Subir Documentos */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Subir Documentos</h2>
+          <div className="bg-white rounded-lg shadow p-3">
+            <h2 className="text-sm font-semibold text-gray-900 mb-2">Subir Documentos</h2>
 
-            <div className="space-y-6">
+            <div className="space-y-2.5">
               {/* 1. Factura PDF */}
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-2">
+                <label className="mb-1 block text-xs font-semibold text-gray-900">
                   1️⃣ Factura PDF
                 </label>
-                <div className="flex items-center space-x-4">
-                  <label className={`flex-1 px-4 py-3 border-2 border-dashed rounded-lg hover:border-primary-500 cursor-pointer transition-colors ${
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className={`flex-1 px-3 py-2 border border-dashed rounded-md hover:border-primary-500 cursor-pointer transition-colors ${
                     gastoArchivoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
                   }`}>
                     <div className="flex items-center justify-center space-x-2">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <span className="text-sm text-gray-600">Seleccionar archivo PDF</span>
+                      <span className="text-xs text-gray-600">Seleccionar archivo PDF</span>
                     </div>
                     <input
                       type="file"
@@ -1512,10 +1522,10 @@ export default function UsuarioView() {
                     />
                   </label>
                   {pdfFile && (
-                    <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg">
-                      <span className="text-sm font-medium text-green-700">{pdfFile.name}</span>
+                    <div className="flex items-center justify-between gap-2 bg-green-50 px-2 py-1.5 rounded-md sm:max-w-[45%]">
+                      <span className="truncate text-xs font-medium text-green-700">{pdfFile.name}</span>
                       <button onClick={() => setPdfFile(null)} className="text-red-600 hover:text-red-700">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -1526,18 +1536,18 @@ export default function UsuarioView() {
 
               {/* 2. Factura XML */}
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-2">
+                <label className="mb-1 block text-xs font-semibold text-gray-900">
                   2️⃣ Factura XML
                 </label>
-                <div className="flex items-center space-x-4">
-                  <label className={`flex-1 px-4 py-3 border-2 border-dashed rounded-lg hover:border-primary-500 cursor-pointer transition-colors ${
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className={`flex-1 px-3 py-2 border border-dashed rounded-md hover:border-primary-500 cursor-pointer transition-colors ${
                     gastoArchivoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
                   }`}>
                     <div className="flex items-center justify-center space-x-2">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      <span className="text-sm text-gray-600">Seleccionar archivo XML</span>
+                      <span className="text-xs text-gray-600">Seleccionar archivo XML</span>
                     </div>
                     <input
                       type="file"
@@ -1547,10 +1557,10 @@ export default function UsuarioView() {
                     />
                   </label>
                   {xmlFile && (
-                    <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg">
-                      <span className="text-sm font-medium text-green-700">{xmlFile.name}</span>
+                    <div className="flex items-center justify-between gap-2 bg-green-50 px-2 py-1.5 rounded-md sm:max-w-[45%]">
+                      <span className="truncate text-xs font-medium text-green-700">{xmlFile.name}</span>
                       <button onClick={() => setXmlFile(null)} className="text-red-600 hover:text-red-700">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -1561,17 +1571,19 @@ export default function UsuarioView() {
 
               {/* 3. Ticket/Foto */}
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-2">
+                <label className="mb-1 block text-xs font-semibold text-gray-900">
                   3️⃣ Ticket / Comprobante (Foto)
                 </label>
-                <div className="flex items-center space-x-4">
-                  <label className="flex-1 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-500 cursor-pointer transition-colors">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className={`flex-1 px-3 py-2 border border-dashed rounded-md hover:border-primary-500 cursor-pointer transition-colors ${
+                    gastoArchivoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
+                  }`}>
                     <div className="flex items-center justify-center space-x-2">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <span className="text-sm text-gray-600">Tomar foto o seleccionar</span>
+                      <span className="text-xs text-gray-600">Tomar foto o seleccionar</span>
                     </div>
                     <input
                       type="file"
@@ -1581,10 +1593,10 @@ export default function UsuarioView() {
                     />
                   </label>
                   {ticketFile && (
-                    <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg">
-                      <span className="text-sm font-medium text-green-700">{ticketFile.name}</span>
+                    <div className="flex items-center justify-between gap-2 bg-green-50 px-2 py-1.5 rounded-md sm:max-w-[45%]">
+                      <span className="truncate text-xs font-medium text-green-700">{ticketFile.name}</span>
                       <button onClick={() => setTicketFile(null)} className="text-red-600 hover:text-red-700">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
@@ -1594,31 +1606,49 @@ export default function UsuarioView() {
               </div>
 
               {/* Botón agregar gasto */}
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-900">
+                  4. Descripcion <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={descripcionGasto}
+                  onChange={(e) => setDescripcionGasto(e.target.value)}
+                  maxLength={120}
+                  placeholder="Ej. Alimentos, casetas, estacionamiento..."
+                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    gastoDescripcionError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
+                  }`}
+                />
+              </div>
               <div className="flex justify-end">
                 <button
                   onClick={handleAgregarGasto}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
                 >
                   + Agregar Gasto
                 </button>
               </div>
               {gastoArchivoError && (
-                <p className="text-xs text-rose-600 mt-2">{gastoArchivoError}</p>
+                <p className="text-xs text-rose-600">{gastoArchivoError}</p>
+              )}
+              {gastoDescripcionError && (
+                <p className="text-xs text-rose-600">{gastoDescripcionError}</p>
               )}
 
               {/* Lista de gastos agregados */}
               {gastos.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <h3 className="text-xs font-semibold text-gray-900 mb-2">
                     Gastos agregados ({gastos.length})
                   </h3>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {gastos.map((gasto) => (
-                      <div key={gasto.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                        <div className="flex items-center space-x-3">
+                      <div key={gasto.id} className="flex items-center justify-between bg-gray-50 p-2 rounded-md">
+                        <div className="flex items-center space-x-2">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{gasto.descripcion}</p>
-                            <div className="flex items-center space-x-2 mt-1">
+                            <p className="text-xs font-medium text-gray-900">{gasto.descripcion}</p>
+                            <div className="flex items-center space-x-1.5 mt-1">
                               {gasto.pdfName && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">PDF</span>}
                               {gasto.xmlName && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">XML</span>}
                               {gasto.ticketName && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Ticket</span>}
@@ -1629,7 +1659,7 @@ export default function UsuarioView() {
                           onClick={() => eliminarGasto(gasto.id)}
                           className="text-red-600 hover:text-red-700"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -1640,41 +1670,36 @@ export default function UsuarioView() {
               )}
 
               {/* Botón final de subir */}
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-2 pt-3">
                 <button
-                  onClick={() => {
-                    setViaticoSeleccionado(null);
-                    setGastos([]);
-                    setShowGastoDocumentoErrors(false);
-                    setShowSubirDocumentosErrors(false);
-                  }}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                  onClick={resetSubirDocumentosFlow}
+                  className="px-4 py-1.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleSubirDocumentos}
                   disabled={gastos.length === 0}
-                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                  className="px-4 py-1.5 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
                 >
                   Subir Documentos ({gastos.length})
                 </button>
               </div>
               {subirDocumentosError && (
-                <p className="text-xs text-rose-600 mt-2">{subirDocumentosError}</p>
+                <p className="text-xs text-rose-600">{subirDocumentosError}</p>
               )}
             </div>
           </div>
 
           {/* Ayuda */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <div className="flex items-start">
-              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <div className="ml-3">
-                <h4 className="text-sm font-semibold text-blue-800 mb-1">Ayuda</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
+              <div className="ml-2.5">
+                <h4 className="text-xs font-semibold text-blue-800 mb-1">Ayuda</h4>
+                <ul className="text-xs text-blue-700 space-y-0.5">
                   <li>• El PDF y XML deben ser de la misma factura</li>
                   <li>• Si solo tienes un ticket (sin factura), solo sube la foto en la sección 3</li>
                   <li>• Puedes agregar múltiples gastos para un mismo viático</li>
