@@ -60,10 +60,10 @@ export default function Conciliacion() {
 
   const facturasValidadas = facturasFiltradas.filter(f => f.status === 'validada').length;
   const facturasPendientes = facturasFiltradas.filter(f => f.status === 'pendiente').length;
+  const totalFacturas = facturasFiltradas.length;
 
   const consumosSinMatch = consumosFiltrados.filter(c => !c.matched).length;
   const amexSinMatch = ticketsAMEXFiltrados.filter(a => !a.matched).length;
-  const totalFacturasEsperadas = consumosFiltrados.length + ticketsAMEXFiltrados.length;
   const uploadErrors = showUploadErrors
     ? {
       pdf: !uploadPdfFile ? 'Agrega el PDF.' : '',
@@ -257,7 +257,7 @@ export default function Conciliacion() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-              <MetricCard label="Facturas" value={totalFacturasEsperadas} color="blue" icon="F" />
+              <MetricCard label="Facturas" value={totalFacturas} color="blue" icon="F" />
               <MetricCard label="Consumos" value={consumos.length} color="purple" icon="C" />
               <MetricCard label="AMEX" value={ticketsAMEX.length} color="indigo" icon="AX" />
               <MetricCard label="Conciliadas" value={facturasValidadas} color="green" icon="OK" />
@@ -301,7 +301,7 @@ export default function Conciliacion() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              📄 Facturas ({totalFacturasEsperadas})
+              📄 Facturas ({totalFacturas})
             </button>
             <button
               onClick={() => setVistaActiva('consumos')}
@@ -359,7 +359,7 @@ export default function Conciliacion() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {facturas.map((factura) => (
+                {facturasFiltradas.map((factura) => (
                   <tr key={factura.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900">{factura.folio}</p>

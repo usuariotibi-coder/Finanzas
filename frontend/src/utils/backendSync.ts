@@ -511,6 +511,25 @@ const deriveRecuperacionPendientes = (viaticos: Viatico[]) =>
     ['dispersado', 'en_viaje', 'viaje_finalizado', 'en_recuperacion', 'completado'].includes(item.status)
   );
 
+const mergeFacturasWithCachedSimulated = (remoteFacturas: Factura[]) => {
+  const cachedFacturas = readStorageList<Factura>('conciliacion:facturas');
+  if (cachedFacturas.length === 0) {
+    return remoteFacturas;
+  }
+
+  const mergedFacturas = new Map<string, Factura>(remoteFacturas.map((item) => [item.id, item]));
+  cachedFacturas.forEach((factura) => {
+    const isSimulatedFactura =
+      (factura.uuid || '').startsWith('PEND-')
+      || (factura.folio || '').startsWith('FAC-GASTO-');
+    if (!mergedFacturas.has(factura.id) && isSimulatedFactura) {
+      mergedFacturas.set(factura.id, factura);
+    }
+  });
+
+  return Array.from(mergedFacturas.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
 export const fetchProyectos = async (): Promise<Proyecto[]> => {
   const data = (await apiFetch('/proyectos/')) as RawRecord[];
   return Array.isArray(data) ? data.map(mapProyectoFromApi).map(sanitizeProyectoMontos) : [];
@@ -726,7 +745,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
 
   writeStorageList('dispersion:dispersiones', dispersiones);
 
-  writeStorageList('conciliacion:facturas', facturas);
+  writeStorageList('conciliacion:facturas', mergeFacturasWithCachedSimulated(facturas));
   writeStorageList('conciliacion:consumos', consumos);
   writeStorageList('conciliacion:alertas', alertasConciliacion);
   writeStorageList('conciliacion:amex', amexTickets);

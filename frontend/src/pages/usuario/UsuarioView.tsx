@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
+import type { Factura, Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
@@ -157,6 +157,7 @@ export default function UsuarioView() {
 
   // Estado para documentos
   const [gastos, setGastos] = useLocalStorageState<GastoDocumento[]>('usuario:gastos', []);
+  const [, setFacturasConciliacion] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [ticketFile, setTicketFile] = useState<File | null>(null);
@@ -626,14 +627,60 @@ export default function UsuarioView() {
     resetGastoDraft();
   };
 
+  const buildFacturaFromGasto = (gasto: GastoDocumento): Factura => {
+    const viaticoGasto = viaticos.find((item) => item.id === gasto.viaticoId);
+    const facturaId = `FAC-${gasto.id}`;
+    const monto = Number.isFinite(gasto.monto) ? gasto.monto : 0;
+    const fechaFactura = parseDateOnly(gasto.fecha) || new Date();
+    const archivoPrincipal = gasto.pdfName || gasto.ticketName;
+
+    return {
+      id: facturaId,
+      viaticoId: gasto.viaticoId,
+      userId: user ? String(user.id) : (viaticoGasto?.userId || ''),
+      folio: facturaId,
+      uuid: `PEND-${gasto.id}`,
+      rfc: 'PENDIENTE',
+      razonSocial: gasto.descripcion || viaticoGasto?.destino || 'Gasto de viatico',
+      fecha: toDateInputFormat(fechaFactura),
+      subtotal: monto,
+      iva: 0,
+      total: monto,
+      formaPago: 'NA',
+      metodoPago: 'NA',
+      conceptos: [
+        {
+          claveProdServ: '00000000',
+          descripcion: gasto.descripcion || 'Gasto de viatico',
+          cantidad: 1,
+          valorUnitario: monto,
+          importe: monto,
+        },
+      ],
+      status: 'pendiente',
+      archivoPDF: archivoPrincipal,
+      archivoXML: gasto.xmlName,
+      matchConsumo: false,
+      createdAt: new Date().toISOString(),
+    };
+  };
+
   const handleSubirDocumentos = () => {
     if (gastos.length === 0) {
       setShowSubirDocumentosErrors(true);
       return;
     }
 
-    // Aquí iría la lógica para subir al backend
-    console.log('Subiendo gastos:', gastos);
+    // Flujo simulado: registrar facturas para que Conciliacion pueda revisarlas.
+    const facturasGeneradas = gastos.map(buildFacturaFromGasto);
+    setFacturasConciliacion((prev) => {
+      const facturasMap = new Map(prev.map((item) => [item.id, item]));
+      facturasGeneradas.forEach((factura) => {
+        facturasMap.set(factura.id, { ...facturasMap.get(factura.id), ...factura });
+      });
+      return Array.from(facturasMap.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    });
+
     showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
 
     // Limpiar y volver a la lista
