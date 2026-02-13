@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Factura, Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
+import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
 import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
-import { createViaje, createViatico, syncCoreAppData, updateViatico } from '../../utils/backendSync';
+import { createFactura, createViaje, createViatico, syncCoreAppData, updateViatico } from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
@@ -123,6 +123,12 @@ interface GastoDocumento {
   fecha: string;
 }
 
+interface GastoArchivos {
+  pdf?: File | null;
+  xml?: File | null;
+  ticket?: File | null;
+}
+
 type ToastType = 'success' | 'error' | 'info';
 
 interface ToastMessage {
@@ -157,7 +163,7 @@ export default function UsuarioView() {
 
   // Estado para documentos
   const [gastos, setGastos] = useLocalStorageState<GastoDocumento[]>('usuario:gastos', []);
-  const [, setFacturasConciliacion] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
+  const [gastoFiles, setGastoFiles] = useState<Record<string, GastoArchivos>>({});
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [ticketFile, setTicketFile] = useState<File | null>(null);
@@ -591,6 +597,7 @@ export default function UsuarioView() {
   const resetSubirDocumentosFlow = () => {
     setViaticoSeleccionado(null);
     setGastos([]);
+    setGastoFiles({});
     setShowSubirDocumentosErrors(false);
     resetGastoDraft();
   };
@@ -598,6 +605,8 @@ export default function UsuarioView() {
   const handleAccionClick = (viatico: Viatico, accion: string) => {
     if (accion === 'subir') {
       setViaticoSeleccionado(viatico.id);
+      setGastos([]);
+      setGastoFiles({});
       setShowSubirDocumentosErrors(false);
       resetGastoDraft();
     }
@@ -623,72 +632,72 @@ export default function UsuarioView() {
     };
 
     setGastos([...gastos, nuevoGasto]);
+    setGastoFiles((prev) => ({
+      ...prev,
+      [nuevoGasto.id]: {
+        pdf: pdfFile,
+        xml: xmlFile,
+        ticket: ticketFile,
+      },
+    }));
     setShowSubirDocumentosErrors(false);
     resetGastoDraft();
   };
 
-  const buildFacturaFromGasto = (gasto: GastoDocumento): Factura => {
-    const viaticoGasto = viaticos.find((item) => item.id === gasto.viaticoId);
-    const facturaId = `FAC-${gasto.id}`;
-    const monto = Number.isFinite(gasto.monto) ? gasto.monto : 0;
-    const fechaFactura = parseDateOnly(gasto.fecha) || new Date();
-    const archivoPrincipal = gasto.pdfName || gasto.ticketName;
-
-    return {
-      id: facturaId,
-      viaticoId: gasto.viaticoId,
-      userId: user ? String(user.id) : (viaticoGasto?.userId || ''),
-      folio: facturaId,
-      uuid: `PEND-${gasto.id}`,
-      rfc: 'PENDIENTE',
-      razonSocial: gasto.descripcion || viaticoGasto?.destino || 'Gasto de viatico',
-      fecha: toDateInputFormat(fechaFactura),
-      subtotal: monto,
-      iva: 0,
-      total: monto,
-      formaPago: 'NA',
-      metodoPago: 'NA',
-      conceptos: [
-        {
-          claveProdServ: '00000000',
-          descripcion: gasto.descripcion || 'Gasto de viatico',
-          cantidad: 1,
-          valorUnitario: monto,
-          importe: monto,
-        },
-      ],
-      status: 'pendiente',
-      archivoPDF: archivoPrincipal,
-      archivoXML: gasto.xmlName,
-      matchConsumo: false,
-      createdAt: new Date().toISOString(),
-    };
-  };
-
-  const handleSubirDocumentos = () => {
+  const handleSubirDocumentos = async () => {
     if (gastos.length === 0) {
       setShowSubirDocumentosErrors(true);
       return;
     }
 
-    // Flujo simulado: registrar facturas para que Conciliacion pueda revisarlas.
-    const facturasGeneradas = gastos.map(buildFacturaFromGasto);
-    setFacturasConciliacion((prev) => {
-      const facturasMap = new Map(prev.map((item) => [item.id, item]));
-      facturasGeneradas.forEach((factura) => {
-        facturasMap.set(factura.id, { ...facturasMap.get(factura.id), ...factura });
-      });
-      return Array.from(facturasMap.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const currentUserId = user ? String(user.id) : undefined;
+    const gastosSinArchivos = gastos.filter((gasto) => {
+      const files = gastoFiles[gasto.id];
+      return !files || (!files.pdf && !files.ticket);
     });
+    if (gastosSinArchivos.length > 0) {
+      showToast('Hay gastos sin archivo para subir. Vuelve a agregarlos.', 'error');
+      return;
+    }
 
-    showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
+    try {
+      const baseTimestamp = Date.now();
+      await Promise.all(gastos.map((gasto, index) => {
+        const files = gastoFiles[gasto.id] || {};
+        const monto = Number.isFinite(gasto.monto) ? gasto.monto : 0;
+        const fechaFactura = parseDateOnly(gasto.fecha) || new Date();
+        return createFactura({
+          viaticoId: gasto.viaticoId,
+          folio: `FAC-${baseTimestamp}-${index + 1}`,
+          uuid: `PEND-${baseTimestamp}-${index + 1}`,
+          rfc: 'XAXX010101000',
+          razonSocial: gasto.descripcion || 'Gasto de viatico',
+          fecha: toDateInputFormat(fechaFactura),
+          subtotal: monto,
+          iva: 0,
+          total: monto,
+          formaPago: 'NA',
+          metodoPago: 'NA',
+          archivoPdf: files.pdf || files.ticket || null,
+          archivoXml: files.xml || null,
+        });
+      }));
 
-    // Limpiar y volver a la lista
-    resetSubirDocumentosFlow();
+      await syncCoreAppData({ userId: currentUserId });
+      showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
+      resetSubirDocumentosFlow();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudieron subir los documentos.', 'error');
+    }
   };
 
   const eliminarGasto = (gastoId: string) => {
     setGastos(gastos.filter(g => g.id !== gastoId));
+    setGastoFiles((prev) => {
+      const next = { ...prev };
+      delete next[gastoId];
+      return next;
+    });
   };
 
   const viaticoActual = viaticos.find(v => v.id === viaticoSeleccionado);

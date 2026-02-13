@@ -9,6 +9,9 @@ class FacturaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Factura
         fields = '__all__'
+        extra_kwargs = {
+            'user': {'required': False},
+        }
 
 
 class ConsumoSerializer(serializers.ModelSerializer):

@@ -511,25 +511,6 @@ const deriveRecuperacionPendientes = (viaticos: Viatico[]) =>
     ['dispersado', 'en_viaje', 'viaje_finalizado', 'en_recuperacion', 'completado'].includes(item.status)
   );
 
-const mergeFacturasWithCachedSimulated = (remoteFacturas: Factura[]) => {
-  const cachedFacturas = readStorageList<Factura>('conciliacion:facturas');
-  if (cachedFacturas.length === 0) {
-    return remoteFacturas;
-  }
-
-  const mergedFacturas = new Map<string, Factura>(remoteFacturas.map((item) => [item.id, item]));
-  cachedFacturas.forEach((factura) => {
-    const isSimulatedFactura =
-      (factura.uuid || '').startsWith('PEND-')
-      || (factura.folio || '').startsWith('FAC-GASTO-');
-    if (!mergedFacturas.has(factura.id) && isSimulatedFactura) {
-      mergedFacturas.set(factura.id, factura);
-    }
-  });
-
-  return Array.from(mergedFacturas.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-};
-
 export const fetchProyectos = async (): Promise<Proyecto[]> => {
   const data = (await apiFetch('/proyectos/')) as RawRecord[];
   return Array.isArray(data) ? data.map(mapProyectoFromApi).map(sanitizeProyectoMontos) : [];
@@ -663,6 +644,52 @@ export const updateViaje = async (id: string, payload: Partial<SolicitudViaje>):
   return mapViajeFromApi(data);
 };
 
+export const createFactura = async (payload: {
+  viaticoId?: string;
+  folio: string;
+  uuid: string;
+  rfc: string;
+  razonSocial: string;
+  fecha: string;
+  subtotal: number;
+  iva: number;
+  total: number;
+  formaPago?: string;
+  metodoPago?: string;
+  archivoPdf?: File | null;
+  archivoXml?: File | null;
+}) => {
+  const body = new FormData();
+  if (payload.viaticoId) {
+    const viaticoApiId = toApiId(payload.viaticoId);
+    if (viaticoApiId !== undefined) {
+      body.append('viatico', String(viaticoApiId));
+    }
+  }
+  body.append('folio', payload.folio);
+  body.append('uuid', payload.uuid);
+  body.append('rfc', payload.rfc);
+  body.append('razon_social', payload.razonSocial);
+  body.append('fecha', payload.fecha);
+  body.append('subtotal', String(payload.subtotal));
+  body.append('iva', String(payload.iva));
+  body.append('total', String(payload.total));
+  body.append('forma_pago', payload.formaPago || 'NA');
+  body.append('metodo_pago', payload.metodoPago || 'NA');
+  if (payload.archivoPdf) {
+    body.append('archivo_pdf', payload.archivoPdf);
+  }
+  if (payload.archivoXml) {
+    body.append('archivo_xml', payload.archivoXml);
+  }
+
+  const data = (await apiFetch('/conciliacion/facturas/', {
+    method: 'POST',
+    body,
+  })) as RawRecord;
+  return mapFacturaFromApi(data);
+};
+
 export const createDispersion = async (payload: {
   viaticoId: string;
   monto: number;
@@ -745,7 +772,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
 
   writeStorageList('dispersion:dispersiones', dispersiones);
 
-  writeStorageList('conciliacion:facturas', mergeFacturasWithCachedSimulated(facturas));
+  writeStorageList('conciliacion:facturas', facturas);
   writeStorageList('conciliacion:consumos', consumos);
   writeStorageList('conciliacion:alertas', alertasConciliacion);
   writeStorageList('conciliacion:amex', amexTickets);
