@@ -61,6 +61,8 @@ export default function Conciliacion() {
   const facturasValidadas = facturasFiltradas.filter(f => f.status === 'validada').length;
   const facturasPendientes = facturasFiltradas.filter(f => f.status === 'pendiente').length;
   const totalFacturas = facturasFiltradas.length;
+  const selectedFactura = selectedFacturaId ? facturas.find((item) => item.id === selectedFacturaId) ?? null : null;
+  const selectedAlerta = selectedAlertaIndex !== null ? alertas[selectedAlertaIndex] ?? null : null;
 
   const consumosSinMatch = consumosFiltrados.filter(c => !c.matched).length;
   const amexSinMatch = ticketsAMEXFiltrados.filter(a => !a.matched).length;
@@ -705,11 +707,14 @@ export default function Conciliacion() {
       </div>
 
       {/* Modales */}
-      {showDetalleModal && selectedFacturaId && (
+      {showDetalleModal && selectedFactura && (
         <DetalleFacturaModal
-          factura={facturas.find(f => f.id === selectedFacturaId)!}
+          factura={selectedFactura}
           consumos={consumos}
-          onClose={() => setShowDetalleModal(false)}
+          onClose={() => {
+            setShowDetalleModal(false);
+            setSelectedFacturaId(null);
+          }}
           onUpdateStatus={(facturaId, status) => {
             setFacturas((prev) => prev.map((item) => (
               item.id === facturaId ? { ...item, status } : item
@@ -718,12 +723,15 @@ export default function Conciliacion() {
         />
       )}
 
-      {showAlertaModal && selectedAlertaIndex !== null && (
+      {showAlertaModal && selectedAlerta && (
         <AlertaDetalleModal
-          alerta={alertas[selectedAlertaIndex]}
+          alerta={selectedAlerta}
           facturas={facturas}
           consumos={consumos}
-          onClose={() => setShowAlertaModal(false)}
+          onClose={() => {
+            setShowAlertaModal(false);
+            setSelectedAlertaIndex(null);
+          }}
         />
       )}
 
