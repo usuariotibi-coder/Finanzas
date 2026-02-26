@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import useAuth from '../../hooks/useAuth';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { TicketAMEX } from '../../types';
@@ -8,6 +9,7 @@ import { aprenderPatron, clasificarGastoAuto } from '../../utils/clasificadorCon
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
+import { createAmexTicket, syncCoreAppData, updateAmexTicket } from '../../utils/backendSync';
 
 const safeString = (value: unknown) => {
   if (value === null || value === undefined) {
@@ -228,6 +230,7 @@ const mergeTickets = (prev: TicketAMEX[], incoming: TicketAMEX[]) => {
   return updated.sort((a, b) => b.fecha.localeCompare(a.fecha));
 };
 export default function Amex() {
+  const { user } = useAuth();
   const [selectedCard, setSelectedCard] = useLocalStorageState<string>('amex:selectedCard', 'all');
   const [tickets, setTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
   const [showExportModal, setShowExportModal] = useLocalStorageState('amex:showExportModal', false);
@@ -420,38 +423,39 @@ export default function Amex() {
   const gastosNoAutorizados = filteredTickets.filter(t => !t.autorizado).length;
 
   // Actualizar cuenta contable de un ticket
-  const handleUpdateCuentaContable = (ticketId: string, nuevaCuenta: string) => {
-    setTickets(prevTickets =>
-      prevTickets.map(t => {
-        if (t.id === ticketId) {
-          // Aprender el patrón para clasificaciones futuras
-          aprenderPatron(t.comercio, t.categoria, nuevaCuenta);
+  const handleUpdateCuentaContable = async (ticketId: string, nuevaCuenta: string) => {
+    const selected = tickets.find((ticket) => ticket.id === ticketId);
+    if (!selected) {
+      return;
+    }
 
-          return {
-            ...t,
-            cuentaContable: nuevaCuenta,
-            clasificacionAuto: false // Ya no es automático porque el usuario lo cambió
-          };
-        }
-        return t;
-      })
-    );
+    aprenderPatron(selected.comercio, selected.categoria, nuevaCuenta);
+
+    try {
+      const updated = await updateAmexTicket(ticketId, {
+        cuentaContable: nuevaCuenta,
+        clasificacionAuto: false,
+      });
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) => (ticket.id === ticketId ? { ...ticket, ...updated } : ticket))
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo actualizar la cuenta contable.');
+    }
   };
 
-  const handleUpdateEstado = (ticketId: string, estado: 'autorizado' | 'no_autorizado' | 'duplicado') => {
-    setTickets(prevTickets =>
-      prevTickets.map(t => {
-        if (t.id !== ticketId) {
-          return t;
-        }
-
-        return {
-          ...t,
-          autorizado: estado !== 'no_autorizado',
-          duplicado: estado === 'duplicado',
-        };
-      })
-    );
+  const handleUpdateEstado = async (ticketId: string, estado: 'autorizado' | 'no_autorizado' | 'duplicado') => {
+    try {
+      const updated = await updateAmexTicket(ticketId, {
+        autorizado: estado !== 'no_autorizado',
+        duplicado: estado === 'duplicado',
+      });
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) => (ticket.id === ticketId ? { ...ticket, ...updated } : ticket))
+      );
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado del ticket.');
+    }
   };
 
   const handleOpenFacturaModal = (ticket: TicketAMEX) => {
@@ -460,29 +464,27 @@ export default function Amex() {
     setShowFacturaModal(true);
   };
 
-  const handleGuardarFactura = () => {
+  const handleGuardarFactura = async () => {
     if (!facturaTicketId) {
       return;
     }
 
-    setTickets(prevTickets =>
-      prevTickets.map(ticket => {
-        if (ticket.id !== facturaTicketId) {
-          return ticket;
-        }
-
-        const facturaId = facturaValue.trim();
-        return {
-          ...ticket,
-          facturaId: facturaId || undefined,
-          matched: Boolean(facturaId),
-        };
-      })
-    );
-
-    setShowFacturaModal(false);
-    setFacturaTicketId(null);
-    setFacturaValue('');
+    const facturaId = facturaValue.trim();
+    try {
+      const updated = await updateAmexTicket(facturaTicketId, {
+        facturaId: facturaId || undefined,
+        matched: Boolean(facturaId),
+      });
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) => (ticket.id === facturaTicketId ? { ...ticket, ...updated } : ticket))
+      );
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowFacturaModal(false);
+      setFacturaTicketId(null);
+      setFacturaValue('');
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo actualizar la factura del ticket.');
+    }
   };
 
   // Exportar a Excel
@@ -496,7 +498,7 @@ export default function Amex() {
       'Monto MXN': formatCurrency(t.monto),
       'Monto USD': t.montoUSD ? `$${t.montoUSD.toFixed(2)}` : 'N/A',
       'Tipo Cambio': t.tipoCambio ? t.tipoCambio.toFixed(2) : 'N/A',
-      País: t.paisComercio,
+      Pais: t.paisComercio,
       'Cuenta Contable': t.cuentaContable,
       Proyecto: t.proyecto || 'N/A',
       Factura: t.matched ? 'Sí' : 'No',
@@ -517,7 +519,7 @@ export default function Amex() {
             { header: 'Monto MXN', key: 'Monto MXN', width: 15 },
             { header: 'Monto USD', key: 'Monto USD', width: 12 },
             { header: 'Tipo Cambio', key: 'Tipo Cambio', width: 12 },
-            { header: 'País', key: 'País', width: 12 },
+            { header: 'Pais', key: 'Pais', width: 12 },
             { header: 'Cuenta Contable', key: 'Cuenta Contable', width: 15 },
             { header: 'Proyecto', key: 'Proyecto', width: 20 },
             { header: 'Factura', key: 'Factura', width: 10 },
@@ -563,7 +565,7 @@ export default function Amex() {
     setShowAddErrors(false);
   };
 
-  const handleAddTicket = () => {
+  const handleAddTicket = async () => {
     const hasErrors = !newTicket.fecha
       || !newTicket.cardNumber
       || !newTicket.cardHolder.trim()
@@ -582,33 +584,37 @@ export default function Amex() {
     const montoUSD = newTicket.montoUSD ? parsedMontoUSD : undefined;
     const tipoCambio = newTicket.tipoCambio ? parsedTipoCambio : undefined;
 
-    const nuevoTicket: TicketAMEX = {
-      id: `t${Date.now()}`,
-      userId: 'user1',
-      fecha: newTicket.fecha,
-      comercio: newTicket.comercio,
-      monto,
-      montoUSD,
-      tipoCambio,
-      categoria: newTicket.categoria,
-      matched: newTicket.matched,
-      autorizado: newTicket.autorizado,
-      duplicado: newTicket.duplicado,
-      facturaId: newTicket.facturaId || undefined,
-      cardNumber: newTicket.cardNumber,
-      cardHolder: newTicket.cardHolder,
-      cuentaContable: newTicket.cuentaContable,
-      proyectoId: newTicket.proyectoId || undefined,
-      proyectoNombre: newTicket.proyectoNombre || undefined,
-      paisComercio: newTicket.paisComercio,
-      clasificacionAuto: false,
-      observaciones: newTicket.observaciones || undefined,
-    };
+    try {
+      const created = await createAmexTicket({
+        userId: user ? String(user.id) : undefined,
+        fecha: newTicket.fecha,
+        comercio: newTicket.comercio,
+        monto,
+        montoUSD,
+        tipoCambio,
+        categoria: newTicket.categoria,
+        matched: newTicket.matched,
+        autorizado: newTicket.autorizado,
+        duplicado: newTicket.duplicado,
+        facturaId: newTicket.facturaId || undefined,
+        cardNumber: newTicket.cardNumber,
+        cardHolder: newTicket.cardHolder,
+        cuentaContable: newTicket.cuentaContable,
+        proyectoId: newTicket.proyectoId || undefined,
+        proyectoNombre: newTicket.proyectoNombre || undefined,
+        paisComercio: newTicket.paisComercio,
+        clasificacionAuto: false,
+        observaciones: newTicket.observaciones || undefined,
+      });
 
-    setTickets(prevTickets => [nuevoTicket, ...prevTickets]);
-    setShowAddModal(false);
-    resetNewTicket();
-    setShowAddErrors(false);
+      setTickets((prevTickets) => [created, ...prevTickets]);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowAddModal(false);
+      resetNewTicket();
+      setShowAddErrors(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo guardar el ticket AMEX.');
+    }
   };
 
   return (
@@ -820,7 +826,7 @@ export default function Amex() {
                       </select>
                       {ticket.clasificacionAuto && (
                         <span className="text-blue-600 text-xs" title="Clasificación automática">
-                          🤖
+                          AUTO
                         </span>
                       )}
                     </div>
@@ -859,9 +865,9 @@ export default function Amex() {
                             : 'bg-red-100 text-red-700 border-red-200'
                         }`}
                       >
-                        <option value="autorizado">✅ Autorizado</option>
-                        <option value="no_autorizado">⛔ No Autorizado</option>
-                        <option value="duplicado">⚠️ Duplicado</option>
+                        <option value="autorizado">Autorizado</option>
+                        <option value="no_autorizado">No autorizado</option>
+                        <option value="duplicado">Duplicado</option>
                       </select>
                     </div>
                   </td>
@@ -885,7 +891,7 @@ export default function Amex() {
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-6">
               <p className="text-sm text-blue-800">
-                📊 Se incluirán <strong>{filteredTickets.length} tickets</strong> con todas las columnas:
+                Se incluirán <strong>{filteredTickets.length} tickets</strong> con todas las columnas:
                 Fecha, Tarjeta, Titular, Comercio, Categoría, Montos, País, Cuenta Contable, Proyecto, Factura y Estado.
               </p>
             </div>
@@ -1167,9 +1173,9 @@ export default function Amex() {
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="autorizado">✅ Autorizado</option>
-                    <option value="no_autorizado">⛔ No Autorizado</option>
-                    <option value="duplicado">⚠️ Duplicado</option>
+                    <option value="autorizado">Autorizado</option>
+                    <option value="no_autorizado">No autorizado</option>
+                    <option value="duplicado">Duplicado</option>
                   </select>
                 </div>
                 <div className="md:col-span-2">

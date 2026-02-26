@@ -1522,15 +1522,9 @@ export default function PMPortal() {
                   </div>
                   <div>
                     <p className="text-[11px] text-gray-500">Gastado</p>
-                    {isEditingProyecto ? (
-                      <input
-                        type="number"
-                        value={proyectoDetalle.gastado}
-                        onChange={(e) => updateProyectoForm({ gastado: Number(e.target.value) })}
-                        className="w-full text-sm font-semibold text-gray-900 border border-gray-200 rounded-md px-2 py-1"
-                      />
-                    ) : (
-                      <p className="text-sm font-semibold text-gray-900">{formatProyectoMontoCompacto(proyectoDetalle.gastado)}</p>
+                    <p className="text-sm font-semibold text-gray-900">{formatProyectoMontoCompacto(proyectoDetalle.gastado)}</p>
+                    {isEditingProyecto && (
+                      <p className="mt-1 text-[10px] text-gray-400">Campo automatico, no editable.</p>
                     )}
                   </div>
                 </div>

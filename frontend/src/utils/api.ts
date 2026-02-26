@@ -5,7 +5,7 @@
   return `https://${raw}`;
 };
 
-const API_ROOT = resolveApiRoot();
+export const API_ROOT = resolveApiRoot();
 const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
 let csrfTokenCache = '';
 
@@ -170,4 +170,15 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   logout: () => apiFetch('/auth/logout/', { method: 'POST' }),
+};
+
+export const toApiAssetUrl = (assetPath?: string | null) => {
+  const raw = String(assetPath || '').trim();
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const normalizedRoot = API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '');
+  if (raw.startsWith('/')) {
+    return `${normalizedRoot}${raw}`;
+  }
+  return `${normalizedRoot}/${raw}`;
 };

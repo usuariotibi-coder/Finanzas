@@ -137,19 +137,19 @@ export default function Dashboard() {
   }, [dispersiones, facturas, viaticos]);
 
   return (
-    <div className="space-y-6">
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
+    <div className="space-y-3">
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0.5 pb-1.5">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-2.5 shadow-sm">
           <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl" />
           <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-indigo-200/40 blur-3xl" />
-          <div className="relative space-y-2">
+          <div className="relative space-y-1.5">
             <div className="space-y-1">
               <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel Principal</p>
-              <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Dashboard</h1>
-              <p className="text-[11px] text-slate-600">Vista general del sistema.</p>
+              <h1 className="text-base sm:text-lg font-semibold text-slate-900">Dashboard</h1>
+              <p className="text-[10px] text-slate-600">Vista general del sistema.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1.5">
               <MetricCard
                 title="Viáticos Activos"
                 value={metrics.viaticosActivos}
@@ -183,114 +183,114 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Conciliación</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="bg-white rounded-lg shadow p-3">
+          <h2 className="text-base font-semibold text-gray-900 mb-2">Conciliación</h2>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg border border-red-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Alertas de Conciliación</p>
-                  <p className="text-sm text-gray-600">{metrics.alertasConciliacion} discrepancias encontradas</p>
+                  <p className="text-sm font-medium text-gray-900">Alertas de Conciliación</p>
+                  <p className="text-xs text-gray-600">{metrics.alertasConciliacion} discrepancias encontradas</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-red-600">{metrics.alertasConciliacion}</span>
+              <span className="text-xl font-bold text-red-600">{metrics.alertasConciliacion}</span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between p-2.5 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Facturas Pendientes</p>
-                  <p className="text-sm text-gray-600">Por validar</p>
+                  <p className="text-sm font-medium text-gray-900">Facturas Pendientes</p>
+                  <p className="text-xs text-gray-600">Por validar</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-yellow-600">{metrics.facturasPendientes}</span>
+              <span className="text-xl font-bold text-yellow-600">{metrics.facturasPendientes}</span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between p-2.5 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Gastos AMEX Pendientes</p>
-                  <p className="text-sm text-gray-600">Sin conciliar</p>
+                  <p className="text-sm font-medium text-gray-900">Gastos AMEX Pendientes</p>
+                  <p className="text-xs text-gray-600">Sin conciliar</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-purple-600">{metrics.gastosAMEXPendientes}</span>
+              <span className="text-xl font-bold text-purple-600">{metrics.gastosAMEXPendientes}</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Flotilla</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white rounded-lg shadow p-3">
+          <h2 className="text-base font-semibold text-gray-900 mb-2">Flotilla</h2>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Vehículos Disponibles</p>
-                  <p className="text-sm text-gray-600">Listos para asignar</p>
+                  <p className="text-sm font-medium text-gray-900">Vehículos Disponibles</p>
+                  <p className="text-xs text-gray-600">Listos para asignar</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-green-600">{metrics.vehiculosDisponibles}</span>
+              <span className="text-xl font-bold text-green-600">{metrics.vehiculosDisponibles}</span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Vehículos Asignados</p>
-                  <p className="text-sm text-gray-600">En uso actualmente</p>
+                  <p className="text-sm font-medium text-gray-900">Vehículos Asignados</p>
+                  <p className="text-xs text-gray-600">En uso actualmente</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-blue-600">{metrics.vehiculosAsignados}</span>
+              <span className="text-xl font-bold text-blue-600">{metrics.vehiculosAsignados}</span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center justify-between p-2.5 bg-orange-50 rounded-lg border border-orange-200">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Alertas de Mantenimiento</p>
-                  <p className="text-sm text-gray-600">Requieren atención</p>
+                  <p className="text-sm font-medium text-gray-900">Alertas de Mantenimiento</p>
+                  <p className="text-xs text-gray-600">Requieren atención</p>
                 </div>
               </div>
-              <span className="text-2xl font-bold text-orange-600">{metrics.alertasMantenimiento}</span>
+              <span className="text-xl font-bold text-orange-600">{metrics.alertasMantenimiento}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h2>
-          <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="lg:col-span-2 bg-white rounded-lg shadow p-3">
+          <h2 className="text-base font-semibold text-gray-900 mb-2">Actividad Reciente</h2>
+          <div className="space-y-2">
             {recentActivity.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-xs text-slate-600">
                 No hay actividad reciente registrada en la base de datos.
               </div>
             ) : (
@@ -307,8 +307,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
+        <div className="bg-white rounded-lg shadow p-3">
+          <h2 className="text-base font-semibold text-gray-900 mb-2">Acciones Rápidas</h2>
           <div className="space-y-2">
             <QuickActionButton icon="plus" label="Nueva Solicitud de Viático" onClick={() => navigate('/mi-portal')} />
             <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
@@ -342,19 +342,19 @@ function MetricCard({ title, value, color, subtitle }: MetricCardProps) {
   return (
     <button
       type="button"
-      className="w-full text-left bg-white rounded-lg shadow p-6 transition hover:-translate-y-0.5 hover:shadow-md select-none"
+      className="w-full text-left bg-white rounded-lg shadow p-2.5 transition hover:-translate-y-0.5 hover:shadow-md select-none"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-600">{title}</h3>
-        <div className={`w-10 h-10 rounded-full ${colorClasses[color]} flex items-center justify-center`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-gray-600">{title}</h3>
+        <div className={`w-7 h-7 rounded-full ${colorClasses[color]} flex items-center justify-center`}>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </div>
       </div>
       <div className="space-y-1">
-        <p className="text-3xl font-bold text-gray-900">{value}</p>
-        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
       </div>
     </button>
   );
@@ -377,14 +377,14 @@ function ActivityItem({ color, title, description, time }: ActivityItemProps) {
   };
 
   return (
-    <div className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-      <div className={`w-8 h-8 rounded-full ${colorClasses[color]} flex items-center justify-center flex-shrink-0`}>
-        <div className="w-2 h-2 bg-current rounded-full"></div>
+    <div className="flex items-start space-x-2 p-2 hover:bg-gray-50 rounded-lg transition-colors">
+      <div className={`w-6 h-6 rounded-full ${colorClasses[color]} flex items-center justify-center flex-shrink-0`}>
+        <div className="w-1.5 h-1.5 bg-current rounded-full"></div>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 text-sm">{title}</p>
-        <p className="text-sm text-gray-600 truncate">{description}</p>
-        <p className="text-xs text-gray-500 mt-1">{time}</p>
+        <p className="font-medium text-gray-900 text-xs">{title}</p>
+        <p className="text-xs text-gray-600 truncate">{description}</p>
+        <p className="text-[11px] text-gray-500 mt-0.5">{time}</p>
       </div>
     </div>
   );
@@ -400,12 +400,12 @@ function QuickActionButton({ label, onClick }: QuickActionButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center space-x-3 px-4 py-3 bg-gray-50 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors text-left"
+      className="w-full flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors text-left"
     >
-      <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>
-      <span className="font-medium text-sm">{label}</span>
+      <span className="font-medium text-xs">{label}</span>
     </button>
   );
 }

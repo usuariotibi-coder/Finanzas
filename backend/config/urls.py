@@ -55,5 +55,6 @@ urlpatterns = [
     path('api/', include(router.urls)),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded files from Django in all environments.
+# Railway does not provide a separate media server by default.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

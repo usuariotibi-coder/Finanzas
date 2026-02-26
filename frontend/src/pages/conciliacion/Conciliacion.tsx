@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Factura, AlertaConciliacion, Consumo, TicketAMEX, FacturaStatus } from '../../types';
+import {
+  createFactura,
+  syncCoreAppData,
+  updateAmexTicket,
+  updateConsumo,
+  updateFactura,
+} from '../../utils/backendSync';
+import { toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 export default function Conciliacion() {
+  const { user } = useAuth();
   const [facturas, setFacturas] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
   const [consumos, setConsumos] = useLocalStorageState<Consumo[]>('conciliacion:consumos', []);
   const [ticketsAMEX, setTicketsAMEX] = useLocalStorageState<TicketAMEX[]>('conciliacion:amex', []);
@@ -19,10 +29,15 @@ export default function Conciliacion() {
   const [uploadPdfFile, setUploadPdfFile] = useState<File | null>(null);
   const [uploadXmlFile, setUploadXmlFile] = useState<File | null>(null);
   const [uploadNotas, setUploadNotas] = useState('');
+  const [uploadSaving, setUploadSaving] = useState(false);
   const [showUploadErrors, setShowUploadErrors] = useState(false);
   const [selectedMes, setSelectedMes] = useLocalStorageState('conciliacion:selectedMes', 'todos');
   const [vistaActiva, setVistaActiva] = useLocalStorageState<'facturas' | 'consumos' | 'amex'>('conciliacion:vistaActiva', 'facturas');
   const [alertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
+  const facturasById = useMemo(
+    () => new Map(facturas.map((factura) => [String(factura.id), factura])),
+    [facturas]
+  );
 
   const monthLabels = {
     '01': 'Enero',
@@ -104,69 +119,7 @@ export default function Conciliacion() {
     });
   };
 
-  const buildFacturaFromConsumo = (consumo: Consumo, facturaId: string, pdfName: string, xmlName: string): Factura => {
-    return {
-      id: facturaId,
-      userId: consumo.userId,
-      folio: facturaId,
-      uuid: `PEND-${facturaId}`,
-      rfc: 'PENDIENTE',
-      razonSocial: consumo.comercio,
-      fecha: consumo.fecha,
-      subtotal: consumo.monto,
-      iva: 0,
-      total: consumo.monto,
-      formaPago: 'NA',
-      metodoPago: 'NA',
-      conceptos: [
-        {
-          claveProdServ: '00000000',
-          descripcion: consumo.categoria || 'Gasto',
-          cantidad: 1,
-          valorUnitario: consumo.monto,
-          importe: consumo.monto,
-        },
-      ],
-      status: 'pendiente',
-      matchConsumo: true,
-      archivoPDF: pdfName,
-      archivoXML: xmlName,
-      createdAt: new Date().toISOString(),
-    };
-  };
-
-  const buildFacturaFromAMEX = (ticket: TicketAMEX, facturaId: string, pdfName: string, xmlName: string): Factura => {
-    return {
-      id: facturaId,
-      userId: ticket.userId,
-      folio: facturaId,
-      uuid: `PEND-${facturaId}`,
-      rfc: 'PENDIENTE',
-      razonSocial: ticket.comercio,
-      fecha: ticket.fecha,
-      subtotal: ticket.monto,
-      iva: 0,
-      total: ticket.monto,
-      formaPago: 'NA',
-      metodoPago: 'NA',
-      conceptos: [
-        {
-          claveProdServ: '00000000',
-          descripcion: ticket.categoria || 'Gasto',
-          cantidad: 1,
-          valorUnitario: ticket.monto,
-          importe: ticket.monto,
-        },
-      ],
-      status: 'pendiente',
-      matchConsumo: true,
-      archivoPDF: pdfName,
-      archivoXML: xmlName,
-      createdAt: new Date().toISOString(),
-    };
-  };
-
-  const handleGuardarFactura = () => {
+  const handleGuardarFactura = async () => {
     if (!uploadTarget) {
       return;
     }
@@ -174,45 +127,83 @@ export default function Conciliacion() {
       setShowUploadErrors(true);
       return;
     }
-    const facturaId = `FAC-${Date.now()}`;
-    const pdfName = uploadPdfFile.name;
-    const xmlName = uploadXmlFile.name;
-    if (uploadTarget.type === 'consumo') {
-      const consumo = consumos.find((item) => item.id === uploadTarget.id);
-      setConsumos((prev) => prev.map((consumo) => (
-        consumo.id === uploadTarget.id
-          ? {
-            ...consumo,
-            facturaId,
-            facturaPdfName: pdfName,
-            facturaXmlName: xmlName,
-            facturaNotas: uploadNotas.trim() || undefined,
-            matched: false,
-          }
-          : consumo
-      )));
-      if (consumo) {
-        upsertFactura(buildFacturaFromConsumo(consumo, facturaId, pdfName, xmlName));
+    setUploadSaving(true);
+    try {
+      const targetConsumo = uploadTarget.type === 'consumo'
+        ? consumos.find((item) => item.id === uploadTarget.id) ?? null
+        : null;
+      const targetTicket = uploadTarget.type === 'amex'
+        ? ticketsAMEX.find((item) => item.id === uploadTarget.id) ?? null
+        : null;
+
+      if (!targetConsumo && !targetTicket) {
+        throw new Error('No se encontró el registro a actualizar.');
       }
-    } else {
-      const ticket = ticketsAMEX.find((item) => item.id === uploadTarget.id);
-      setTicketsAMEX((prev) => prev.map((ticket) => (
-        ticket.id === uploadTarget.id
-          ? {
-            ...ticket,
-            facturaId,
-            facturaPdfName: pdfName,
-            facturaXmlName: xmlName,
-            facturaNotas: uploadNotas.trim() || undefined,
-            matched: false,
-          }
-          : ticket
-      )));
-      if (ticket) {
-        upsertFactura(buildFacturaFromAMEX(ticket, facturaId, pdfName, xmlName));
+
+      const baseTimestamp = Date.now();
+      const baseData = targetConsumo
+        ? {
+          viaticoId: targetConsumo.viaticoId,
+          razonSocial: targetConsumo.comercio || 'Consumo',
+          fecha: targetConsumo.fecha,
+          monto: targetConsumo.monto || 0,
+          categoria: targetConsumo.categoria || 'Consumo',
+        }
+        : {
+          viaticoId: undefined,
+          razonSocial: targetTicket?.comercio || 'Ticket AMEX',
+          fecha: targetTicket?.fecha || new Date().toISOString().slice(0, 10),
+          monto: targetTicket?.monto || 0,
+          categoria: targetTicket?.categoria || 'AMEX',
+        };
+
+      const facturaCreada = await createFactura({
+        viaticoId: baseData.viaticoId,
+        folio: `FAC-CON-${baseTimestamp}`,
+        uuid: `TMP-CON-${baseTimestamp}`,
+        rfc: 'XAXX010101000',
+        razonSocial: baseData.razonSocial,
+        fecha: baseData.fecha,
+        subtotal: baseData.monto,
+        iva: 0,
+        total: baseData.monto,
+        formaPago: 'NA',
+        metodoPago: 'NA',
+        archivoPdf: uploadPdfFile,
+        archivoXml: uploadXmlFile,
+      });
+
+      const facturaId = String(facturaCreada.id);
+      const notas = uploadNotas.trim() || undefined;
+
+      if (targetConsumo) {
+        const consumoActualizado = await updateConsumo(targetConsumo.id, {
+          facturaId,
+          facturaPdfName: uploadPdfFile.name,
+          facturaXmlName: uploadXmlFile.name,
+          facturaNotas: notas,
+          matched: false,
+        });
+        setConsumos((prev) => prev.map((item) => (item.id === consumoActualizado.id ? consumoActualizado : item)));
+      } else if (targetTicket) {
+        const ticketActualizado = await updateAmexTicket(targetTicket.id, {
+          facturaId,
+          facturaPdfName: uploadPdfFile.name,
+          facturaXmlName: uploadXmlFile.name,
+          facturaNotas: notas,
+          matched: false,
+        });
+        setTicketsAMEX((prev) => prev.map((item) => (item.id === ticketActualizado.id ? ticketActualizado : item)));
       }
+
+      upsertFactura(facturaCreada);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      closeUploadModal();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo subir la factura.');
+    } finally {
+      setUploadSaving(false);
     }
-    closeUploadModal();
   };
 
   const handleRevisarAlerta = (index: number) => {
@@ -220,11 +211,22 @@ export default function Conciliacion() {
     setShowAlertaModal(true);
   };
 
-  const handlePreviewArchivo = (tipo: 'PDF' | 'XML', nombre?: string) => {
-    if (!nombre) {
+  const handlePreviewArchivo = (tipo: 'PDF' | 'XML', archivoPath?: string) => {
+    if (!archivoPath) {
       return;
     }
-    alert(`Archivo ${tipo}: ${nombre}. Descarga disponible cuando exista backend.`);
+    const normalizedPath = String(archivoPath).trim();
+    const hasBackendPath = normalizedPath.includes('/') || /^https?:\/\//i.test(normalizedPath);
+    if (!hasBackendPath) {
+      window.alert(`El archivo ${tipo} no tiene una ruta disponible en backend.`);
+      return;
+    }
+    const fileUrl = toApiAssetUrl(normalizedPath);
+    if (!fileUrl) {
+      window.alert(`No se encontró el archivo ${tipo}.`);
+      return;
+    }
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
   useEscapeKey(() => closeUploadModal(), showUploadModal);
@@ -260,8 +262,8 @@ export default function Conciliacion() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
               <MetricCard label="Facturas" value={totalFacturas} color="blue" icon="F" />
-              <MetricCard label="Consumos" value={consumos.length} color="purple" icon="C" />
-              <MetricCard label="AMEX" value={ticketsAMEX.length} color="indigo" icon="AX" />
+              <MetricCard label="Consumos" value={consumosFiltrados.length} color="purple" icon="C" />
+              <MetricCard label="AMEX" value={ticketsAMEXFiltrados.length} color="indigo" icon="AX" />
               <MetricCard label="Conciliadas" value={facturasValidadas} color="green" icon="OK" />
               <MetricCard label="Pendientes" value={facturasPendientes + consumosSinMatch + amexSinMatch} color="yellow" icon="P" />
               <MetricCard label="Alertas" value={alertas.length} color="red" icon="!" />
@@ -303,7 +305,7 @@ export default function Conciliacion() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              📄 Facturas ({totalFacturas})
+              Facturas ({totalFacturas})
             </button>
             <button
               onClick={() => setVistaActiva('consumos')}
@@ -313,7 +315,7 @@ export default function Conciliacion() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              💳 Efectifintech ({consumos.length})
+              Efectifintech ({consumosFiltrados.length})
             </button>
             <button
               onClick={() => setVistaActiva('amex')}
@@ -323,7 +325,7 @@ export default function Conciliacion() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              🏦 AMEX ({ticketsAMEX.length})
+              AMEX ({ticketsAMEXFiltrados.length})
             </button>
           </nav>
         </div>
@@ -466,7 +468,13 @@ export default function Conciliacion() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {consumos.map((consumo) => (
+                {consumosFiltrados.map((consumo) => {
+                  const facturaRelacionada = consumo.facturaId
+                    ? facturasById.get(String(consumo.facturaId))
+                    : undefined;
+                  const consumoPdf = facturaRelacionada?.archivoPDF || consumo.facturaPdfName;
+                  const consumoXml = facturaRelacionada?.archivoXML || consumo.facturaXmlName;
+                  return (
                   <tr key={consumo.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900">{consumo.id}</p>
@@ -495,21 +503,21 @@ export default function Conciliacion() {
                         <div>
                           <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">Factura cargada</span>
                           <p className="text-xs text-gray-500 mt-1">Factura: {consumo.facturaId}</p>
-                          {(consumo.facturaPdfName || consumo.facturaXmlName) && (
+                          {(consumoPdf || consumoXml) && (
                             <p className="text-[10px] text-gray-400 mt-1 break-all">
-                              {consumo.facturaPdfName ? `PDF: ${consumo.facturaPdfName}` : ''}
-                              {consumo.facturaPdfName && consumo.facturaXmlName ? ' · ' : ''}
-                              {consumo.facturaXmlName ? `XML: ${consumo.facturaXmlName}` : ''}
+                              {consumoPdf ? `PDF: ${consumoPdf}` : ''}
+                              {consumoPdf && consumoXml ? ' · ' : ''}
+                              {consumoXml ? `XML: ${consumoXml}` : ''}
                             </p>
                           )}
-                          {(consumo.facturaPdfName || consumo.facturaXmlName) && (
+                          {(consumoPdf || consumoXml) && (
                             <div className="mt-1 flex items-center gap-2 text-[10px]">
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('PDF', consumo.facturaPdfName)}
-                                disabled={!consumo.facturaPdfName}
+                                onClick={() => handlePreviewArchivo('PDF', consumoPdf)}
+                                disabled={!consumoPdf}
                                 className={`px-2 py-0.5 rounded border ${
-                                  consumo.facturaPdfName
+                                  consumoPdf
                                     ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -518,10 +526,10 @@ export default function Conciliacion() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('XML', consumo.facturaXmlName)}
-                                disabled={!consumo.facturaXmlName}
+                                onClick={() => handlePreviewArchivo('XML', consumoXml)}
+                                disabled={!consumoXml}
                                 className={`px-2 py-0.5 rounded border ${
-                                  consumo.facturaXmlName
+                                  consumoXml
                                     ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -554,7 +562,8 @@ export default function Conciliacion() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -593,8 +602,13 @@ export default function Conciliacion() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {ticketsAMEX.map((ticket) => {
+                {ticketsAMEXFiltrados.map((ticket) => {
                   const proyectoLabel = formatProyectoLabel(ticket.proyectoNombre, ticket.proyectoId);
+                  const facturaRelacionada = ticket.facturaId
+                    ? facturasById.get(String(ticket.facturaId))
+                    : undefined;
+                  const ticketPdf = facturaRelacionada?.archivoPDF || ticket.facturaPdfName;
+                  const ticketXml = facturaRelacionada?.archivoXML || ticket.facturaXmlName;
                   return (
                   <tr key={ticket.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -636,21 +650,21 @@ export default function Conciliacion() {
                         <div>
                           <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">Factura cargada</span>
                           <p className="text-xs text-gray-500 mt-1">Factura: {ticket.facturaId}</p>
-                          {(ticket.facturaPdfName || ticket.facturaXmlName) && (
+                          {(ticketPdf || ticketXml) && (
                             <p className="text-[10px] text-gray-400 mt-1 break-all">
-                              {ticket.facturaPdfName ? `PDF: ${ticket.facturaPdfName}` : ''}
-                              {ticket.facturaPdfName && ticket.facturaXmlName ? ' · ' : ''}
-                              {ticket.facturaXmlName ? `XML: ${ticket.facturaXmlName}` : ''}
+                              {ticketPdf ? `PDF: ${ticketPdf}` : ''}
+                              {ticketPdf && ticketXml ? ' · ' : ''}
+                              {ticketXml ? `XML: ${ticketXml}` : ''}
                             </p>
                           )}
-                          {(ticket.facturaPdfName || ticket.facturaXmlName) && (
+                          {(ticketPdf || ticketXml) && (
                             <div className="mt-1 flex items-center gap-2 text-[10px]">
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('PDF', ticket.facturaPdfName)}
-                                disabled={!ticket.facturaPdfName}
+                                onClick={() => handlePreviewArchivo('PDF', ticketPdf)}
+                                disabled={!ticketPdf}
                                 className={`px-2 py-0.5 rounded border ${
-                                  ticket.facturaPdfName
+                                  ticketPdf
                                     ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -659,10 +673,10 @@ export default function Conciliacion() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('XML', ticket.facturaXmlName)}
-                                disabled={!ticket.facturaXmlName}
+                                onClick={() => handlePreviewArchivo('XML', ticketXml)}
+                                disabled={!ticketXml}
                                 className={`px-2 py-0.5 rounded border ${
-                                  ticket.facturaXmlName
+                                  ticketXml
                                     ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -715,10 +729,16 @@ export default function Conciliacion() {
             setShowDetalleModal(false);
             setSelectedFacturaId(null);
           }}
-          onUpdateStatus={(facturaId, status) => {
-            setFacturas((prev) => prev.map((item) => (
-              item.id === facturaId ? { ...item, status } : item
-            )));
+          onUpdateStatus={async (facturaId, status) => {
+            try {
+              const updated = await updateFactura(facturaId, { status });
+              setFacturas((prev) => prev.map((item) => (
+                item.id === facturaId ? { ...item, ...updated } : item
+              )));
+              await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+            } catch (error) {
+              window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado de la factura.');
+            }
           }}
         />
       )}
@@ -744,6 +764,7 @@ export default function Conciliacion() {
           xmlFile={uploadXmlFile}
           notas={uploadNotas}
           errors={uploadErrors}
+          saving={uploadSaving}
           onChangePdf={setUploadPdfFile}
           onChangeXml={setUploadXmlFile}
           onChangeNotas={setUploadNotas}
@@ -843,9 +864,9 @@ function AlertaCard({ alerta, onRevisar }: { alerta: AlertaConciliacion; onRevis
 function StatusBadge({ status }: { status: string }) {
   const statusConfig = {
     pendiente: { label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800', icon: '⏳' },
-    validada: { label: 'Validada', color: 'bg-green-100 text-green-800', icon: '✅' },
-    rechazada: { label: 'Rechazada', color: 'bg-red-100 text-red-800', icon: '⛔' },
-    conciliada: { label: 'Conciliada', color: 'bg-blue-100 text-blue-800', icon: '🔗' },
+    validada: { label: 'Validada', color: 'bg-green-100 text-green-800', icon: 'OK' },
+    rechazada: { label: 'Rechazada', color: 'bg-red-100 text-red-800', icon: 'X' },
+    conciliada: { label: 'Conciliada', color: 'bg-blue-100 text-blue-800', icon: '=' },
   };
 
   const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pendiente;
@@ -863,7 +884,7 @@ interface DetalleFacturaModalProps {
   factura: Factura;
   consumos: Consumo[];
   onClose: () => void;
-  onUpdateStatus: (facturaId: string, status: FacturaStatus) => void;
+  onUpdateStatus: (facturaId: string, status: FacturaStatus) => Promise<void> | void;
 }
 
 interface SubirFacturaModalProps {
@@ -877,11 +898,12 @@ interface SubirFacturaModalProps {
     pdf?: string;
     xml?: string;
   };
+  saving?: boolean;
   onChangePdf: (file: File | null) => void;
   onChangeXml: (file: File | null) => void;
   onChangeNotas: (value: string) => void;
   onClose: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void> | void;
 }
 
 function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: DetalleFacturaModalProps) {
@@ -895,7 +917,18 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
     if (!nombre) {
       return;
     }
-    alert(`Archivo ${tipo}: ${nombre}. Descarga disponible cuando exista backend.`);
+    const normalizedPath = String(nombre).trim();
+    const hasBackendPath = normalizedPath.includes('/') || /^https?:\/\//i.test(normalizedPath);
+    if (!hasBackendPath) {
+      window.alert(`El archivo ${tipo} no tiene una ruta disponible en backend.`);
+      return;
+    }
+    const fileUrl = toApiAssetUrl(normalizedPath);
+    if (!fileUrl) {
+      window.alert(`No se encontró el archivo ${tipo}.`);
+      return;
+    }
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleStatusChange = (status: FacturaStatus) => {
@@ -1072,6 +1105,7 @@ function SubirFacturaModal({
   xmlFile,
   notas,
   errors,
+  saving = false,
   onChangePdf,
   onChangeXml,
   onChangeNotas,
@@ -1172,15 +1206,17 @@ function SubirFacturaModal({
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
           <button
             onClick={onClose}
+            disabled={saving}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
           >
             Cancelar
           </button>
           <button
             onClick={onSave}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            disabled={saving}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-60"
           >
-            Guardar factura
+            {saving ? 'Guardando...' : 'Guardar factura'}
           </button>
         </div>
       </div>
@@ -1224,7 +1260,7 @@ function AlertaDetalleModal({ alerta, facturas, consumos, onClose }: AlertaDetal
           }`}>
             <div className="flex items-start">
               <span className="text-2xl mr-3">
-                {alerta.gravedad === 'alta' ? '🚨' : alerta.gravedad === 'media' ? '⚠️' : 'ℹ️'}
+                {alerta.gravedad === 'alta' ? 'Alta' : alerta.gravedad === 'media' ? 'Media' : 'Baja'}
               </span>
               <div>
                 <p className="font-semibold text-gray-900">{alerta.descripcion}</p>
@@ -1235,7 +1271,7 @@ function AlertaDetalleModal({ alerta, facturas, consumos, onClose }: AlertaDetal
 
           {factura && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">📄 Factura Relacionada</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Factura Relacionada</h3>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1253,7 +1289,7 @@ function AlertaDetalleModal({ alerta, facturas, consumos, onClose }: AlertaDetal
 
           {consumo && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">💳 Consumo Efectifintech</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Consumo Efectifintech</h3>
               <div className="bg-purple-50 p-4 rounded-lg">
                 <p className="text-sm"><strong>{consumo.comercio}</strong> - ${consumo.monto.toLocaleString()}</p>
               </div>
@@ -1282,3 +1318,4 @@ function AlertaDetalleModal({ alerta, facturas, consumos, onClose }: AlertaDetal
     </div>
   );
 }
+

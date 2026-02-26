@@ -52,7 +52,7 @@ class VehicleAssignment(models.Model):
         VISITA = 'visita', 'Visita'
         VIAJE = 'viaje', 'Viaje'
 
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='asignaciones')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='asignaciones', null=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='vehicle_assignments')
     viatico = models.ForeignKey(Viatico, on_delete=models.SET_NULL, null=True, blank=True)
     proyecto = models.ForeignKey(Proyecto, on_delete=models.SET_NULL, null=True, blank=True)

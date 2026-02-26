@@ -1,54 +1,251 @@
-import { useEffect, useState, type FormEvent } from 'react';
+﻿import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import useAuth from '../../hooks/useAuth';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Vehicle, VehicleAssignment, VehicleAlert, CargaGasolina, MaintenanceRecord, VehicleConditionChecklist } from '../../types';
 import GasolinaKPI from '../../components/flotilla/GasolinaKPI';
 import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
+import { createFlotillaVehiculo, fetchFlotillaAsignaciones, syncCoreAppData, updateFlotillaAsignacion, updateFlotillaVehiculo } from '../../utils/backendSync';
+import { API_ROOT, toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
-const VEHICLE_IMAGE_FALLBACK = 'https://via.placeholder.com/1200x800/e5e7eb/6b7280?text=Sin+Imagen';
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 const getVehicleImageSeed = (brand: string, model: string) => {
-  const value = `${brand}-${model}`.toLowerCase();
+  const value = `${normalizeText(brand)}-${normalizeText(model)}`;
   let total = 0;
   for (let i = 0; i < value.length; i += 1) {
-    total += value.charCodeAt(i);
+    total += value.charCodeAt(i) * (i + 1);
   }
   return total;
 };
 
-const getVehicleImageUrl = (brand: string, model: string) => {
-  const query = encodeURIComponent(`${brand} ${model} car`);
-  const seed = getVehicleImageSeed(brand, model);
-  return `https://source.unsplash.com/1200x800/?${query}&sig=${seed}`;
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_ROOT).origin;
+  } catch {
+    return '';
+  }
+})();
+
+const isTrustedVehiclePhoto = (value: string) => {
+  const raw = String(value || '').trim();
+  if (!raw) return false;
+  if (raw.startsWith('data:image/') || raw.startsWith('blob:')) return true;
+  if (raw.startsWith('/media/')) return true;
+  if (!/^https?:\/\//i.test(raw)) return false;
+  try {
+    const parsed = new URL(raw);
+    return parsed.origin === API_ORIGIN && parsed.pathname.startsWith('/media/');
+  } catch {
+    return false;
+  }
+};
+
+const resolveVehicleUploadedImage = (value?: string | null) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  if (isTrustedVehiclePhoto(raw)) {
+    return toApiAssetUrl(raw) || raw;
+  }
+
+  const apiCandidate = toApiAssetUrl(raw);
+  if (apiCandidate && isTrustedVehiclePhoto(apiCandidate)) {
+    return apiCandidate;
+  }
+
+  return '';
+};
+
+type VehicleBodyType = 'sedan' | 'suv' | 'pickup' | 'hatchback' | 'van' | 'coupe';
+
+const inferVehicleBodyType = (model: string): VehicleBodyType => {
+  const normalized = normalizeText(model);
+  if (/(np300|frontier|hilux|s10|silverado|ranger|amarok|bt-50|oroch|pickup)/.test(normalized)) {
+    return 'pickup';
+  }
+  if (/(transit|hiace|van)/.test(normalized)) {
+    return 'van';
+  }
+  if (/(rav4|x-trail|escape|tracker|taos|tiguan|sportage|seltos|tucson|creta|santa fe|cx-3|cx-5|hr-v|cr-v|br-v|duster|koleos|suv)/.test(normalized)) {
+    return 'suv';
+  }
+  if (/(march|kwid|onix|hatchback)/.test(normalized)) {
+    return 'hatchback';
+  }
+  if (/(coupe)/.test(normalized)) {
+    return 'coupe';
+  }
+  return 'sedan';
+};
+
+const getVehicleColorHex = (color: string) => {
+  const normalizedColor = normalizeText(color);
+  const palette: Record<string, string> = {
+    blanco: '#f8fafc',
+    negro: '#111827',
+    gris: '#9ca3af',
+    plata: '#cbd5e1',
+    azul: '#2563eb',
+    rojo: '#dc2626',
+    verde: '#16a34a',
+    beige: '#d6c6a8',
+    cafe: '#8b5a2b',
+    marron: '#8b5a2b',
+    amarillo: '#facc15',
+    naranja: '#f97316',
+  };
+  return palette[normalizedColor] ?? '#64748b';
+};
+
+const getVehiclePlaceholderImage = (_brand: string, _model: string, color = '') => {
+  const seed = getVehicleImageSeed(_brand, _model);
+  const bodyType = inferVehicleBodyType(_model);
+  const vehicleColor = getVehicleColorHex(color);
+  const wheelOffset = seed % 26;
+  const frontWheelX = 760 + wheelOffset;
+  const rearWheelX = 390 - Math.floor(wheelOffset / 2);
+  const bodyByType: Record<VehicleBodyType, string> = {
+    sedan: `M305 500 L430 386 H770 L890 500 Z`,
+    suv: `M285 500 L390 352 H790 L925 500 Z`,
+    pickup: `M300 500 L430 396 H670 L745 445 H900 L920 500 Z`,
+    hatchback: `M320 500 L430 398 H720 L820 455 H900 L920 500 Z`,
+    van: `M285 500 L345 350 H860 L920 500 Z`,
+    coupe: `M335 500 L500 410 H770 L880 500 Z`,
+  };
+  const windowByType: Record<VehicleBodyType, string> = {
+    sedan: `
+      <rect x="470" y="418" width="120" height="66" rx="12" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
+      <rect x="602" y="418" width="145" height="66" rx="12" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
+    `,
+    suv: `
+      <rect x="438" y="390" width="132" height="76" rx="12" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
+      <rect x="585" y="390" width="165" height="76" rx="12" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
+    `,
+    pickup: `
+      <rect x="462" y="420" width="120" height="62" rx="10" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
+      <rect x="595" y="420" width="130" height="62" rx="10" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
+    `,
+    hatchback: `
+      <rect x="468" y="422" width="128" height="62" rx="12" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
+      <path d="M608 422 H746 Q760 422 760 438 V484 H608 Z" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
+    `,
+    van: `
+      <rect x="390" y="376" width="122" height="88" rx="10" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
+      <rect x="524" y="376" width="136" height="88" rx="10" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
+      <rect x="672" y="376" width="126" height="88" rx="10" fill="#93c5fd" stroke="#1f2937" stroke-width="6" />
+    `,
+    coupe: `
+      <rect x="520" y="438" width="118" height="56" rx="10" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
+      <rect x="648" y="438" width="112" height="56" rx="10" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
+    `,
+  };
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#e2e8f0" />
+          <stop offset="100%" stop-color="#cfd8e3" />
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="800" fill="url(#bg)" />
+      <rect x="0" y="600" width="1200" height="200" fill="#94a3b8" />
+      <rect x="0" y="630" width="1200" height="14" fill="#e2e8f0" />
+
+      <path d="${bodyByType[bodyType]}" fill="${vehicleColor}" stroke="#1f2937" stroke-width="8" />
+      <rect x="240" y="500" width="700" height="130" rx="64" fill="${vehicleColor}" stroke="#1f2937" stroke-width="8" />
+      ${windowByType[bodyType]}
+
+      <circle cx="${rearWheelX}" cy="640" r="68" fill="#0f172a" />
+      <circle cx="${rearWheelX}" cy="640" r="30" fill="#cbd5e1" />
+      <circle cx="${frontWheelX}" cy="640" r="68" fill="#0f172a" />
+      <circle cx="${frontWheelX}" cy="640" r="30" fill="#cbd5e1" />
+    </svg>
+  `;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
+
+const getVehicleImageSources = (brand: string, model: string, color?: string, uploadedImage = '') => {
+  const placeholder = getVehiclePlaceholderImage(brand, model, color);
+  const sources = [
+    uploadedImage,
+    placeholder,
+  ];
+
+  const unique = new Set<string>();
+  return sources.filter((value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized || unique.has(normalized)) {
+      return false;
+    }
+    unique.add(normalized);
+    return true;
+  });
 };
 
 const getVehicleStatusIcon = (status: Vehicle['status']) => {
   const icons: Record<Vehicle['status'], string> = {
-    disponible: '✅',
-    asignado: '🚗',
-    en_taller: '🛠️',
-    baja: '⛔',
-    available: '✅',
-    assigned: '🚗',
-    in_shop: '🛠️',
-    out_of_service: '⛔',
+    disponible: '\u2705',
+    asignado: '\ud83d\ude97',
+    en_taller: '\ud83d\udee0\ufe0f',
+    baja: '\u26d4',
+    available: '\u2705',
+    assigned: '\ud83d\ude97',
+    in_shop: '\ud83d\udee0\ufe0f',
+    out_of_service: '\u26d4',
   };
 
-  return icons[status] ?? '🚗';
+  return icons[status] ?? '\ud83d\ude97';
 };
 
 const getAssignmentStatusIcon = (status: VehicleAssignment['status']) => {
   const icons: Record<VehicleAssignment['status'], string> = {
-    solicitado: '⏳',
-    asignado: '🚗',
-    activo: '✅',
-    completado: '🏁',
-    rechazado: '⛔',
+    solicitado: '\u23f3',
+    asignado: '\ud83d\ude97',
+    activo: '\u2705',
+    completado: '\ud83c\udfc1',
+    rechazado: '\u26d4',
   };
 
-  return icons[status] ?? '🚗';
+  return icons[status] ?? '\ud83d\ude97';
+};
+
+type CanonicalVehicleStatus = 'available' | 'assigned' | 'in_shop' | 'out_of_service';
+
+const toCanonicalVehicleStatus = (status: Vehicle['status'] | string): CanonicalVehicleStatus => {
+  const normalized = String(status).trim();
+  switch (normalized) {
+    case 'disponible':
+    case 'activo':
+    case 'available':
+      return 'available';
+    case 'asignado':
+    case 'assigned':
+      return 'assigned';
+    case 'en_taller':
+    case 'in_shop':
+      return 'in_shop';
+    case 'baja':
+    case 'de_baja':
+    case 'out_of_service':
+    default:
+      return 'out_of_service';
+  }
+};
+
+const getVehicleStatusLabel = (status: Vehicle['status']) => {
+  const canonical = toCanonicalVehicleStatus(status);
+  if (canonical === 'available') return 'Disponible';
+  if (canonical === 'assigned') return 'Asignado';
+  if (canonical === 'in_shop') return 'En Taller';
+  return 'De Baja';
 };
 
 
@@ -69,6 +266,7 @@ const getVehicleAssignments = (): VehicleAssignment[] => {
   return [];
 };
 export default function Flotilla() {
+  const { user } = useAuth();
   const [showNewVehicleForm, setShowNewVehicleForm] = useLocalStorageState('flotilla:showNewVehicleForm', false);
   const [showAssignmentForm, setShowAssignmentForm] = useLocalStorageState('flotilla:showAssignmentForm', false);
   const [showExportModal, setShowExportModal] = useLocalStorageState('flotilla:showExportModal', false);
@@ -76,6 +274,7 @@ export default function Flotilla() {
   const [selectedVehicleId, setSelectedVehicleId] = useLocalStorageState<string | null>('flotilla:selectedVehicleId', null);
   const [showDetalleModal, setShowDetalleModal] = useLocalStorageState('flotilla:showDetalleModal', false);
   const [showHistorialModal, setShowHistorialModal] = useLocalStorageState('flotilla:showHistorialModal', false);
+  const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [vehicles] = useLocalStorageState<Vehicle[]>('flotilla:vehiculos', []);
   const [alerts] = useLocalStorageState<VehicleAlert[]>('flotilla:alertas', []);
   const [cargasGasolina] = useLocalStorageState<CargaGasolina[]>('flotilla:cargasGasolina', []);
@@ -85,6 +284,29 @@ export default function Flotilla() {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
 
   useEscapeKey(() => setShowExportModal(false), showExportModal);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAssignments = async () => {
+      try {
+        const remoteAssignments = await fetchFlotillaAsignaciones();
+        if (!isActive) {
+          return;
+        }
+        setAssignments(remoteAssignments);
+        localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(remoteAssignments));
+        window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
+      } catch {
+        // Keep local cache if backend is temporarily unavailable.
+      }
+    };
+
+    void loadAssignments();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -123,16 +345,21 @@ export default function Flotilla() {
       .map(a => a.vehicleId)
   );
   const vehiclesWithStatus = vehicles.map((vehicle) => {
-    if (vehicle.status === 'in_shop' || vehicle.status === 'out_of_service') {
-      return vehicle;
+    const normalizedVehicle = {
+      ...vehicle,
+      status: toCanonicalVehicleStatus(vehicle.status) as Vehicle['status'],
+    };
+
+    if (normalizedVehicle.status === 'in_shop' || normalizedVehicle.status === 'out_of_service') {
+      return normalizedVehicle;
     }
-    if (assignedVehicleIds.has(vehicle.id)) {
-      return { ...vehicle, status: 'assigned' as const };
+    if (assignedVehicleIds.has(normalizedVehicle.id)) {
+      return { ...normalizedVehicle, status: 'assigned' as const };
     }
-    if (vehicle.status === 'assigned') {
-      return { ...vehicle, status: 'available' as const };
+    if (normalizedVehicle.status === 'assigned') {
+      return { ...normalizedVehicle, status: 'available' as const };
     }
-    return vehicle;
+    return normalizedVehicle;
   });
 
   const vehiculosDisponibles = vehiclesWithStatus.filter(v => v.status === 'available').length;
@@ -148,6 +375,9 @@ export default function Flotilla() {
   const selectedAssignmentVehicle = selectedAssignment
     ? vehiclesWithStatus.find(v => v.id === selectedAssignment.vehicleId) ?? null
     : null;
+  const editingVehicle = editingVehicleId
+    ? vehiclesWithStatus.find((vehicle) => vehicle.id === editingVehicleId) ?? null
+    : null;
 
   const saveAssignments = (nextAssignments: VehicleAssignment[]) => {
     setAssignments(nextAssignments);
@@ -155,20 +385,28 @@ export default function Flotilla() {
     window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
   };
 
-  const handleAssignVehicle = (requestId: string, vehicleId: string, vehiculoLabel: string) => {
-    const updatedAssignments = assignments.map((assignment) => {
-      if (assignment.id !== requestId) {
-        return assignment;
-      }
-      return {
-        ...assignment,
+  const handleAssignVehicle = async (requestId: string, vehicleId: string, vehiculoLabel: string) => {
+    try {
+      const persisted = await updateFlotillaAsignacion(requestId, {
         vehicleId,
-        vehiculoLabel,
-        status: 'asignado' as VehicleAssignment['status'],
-      };
-    });
-    saveAssignments(updatedAssignments);
-    setShowAssignmentForm(false);
+        status: 'asignado',
+      });
+
+      const hasAssignment = assignments.some((assignment) => assignment.id === persisted.id);
+      const updatedAssignments = hasAssignment
+        ? assignments.map((assignment) => (
+            assignment.id === persisted.id
+              ? { ...assignment, ...persisted, vehiculoLabel: persisted.vehiculoLabel || vehiculoLabel }
+              : assignment
+          ))
+        : [{ ...persisted, vehiculoLabel: persisted.vehiculoLabel || vehiculoLabel }, ...assignments];
+
+      saveAssignments(updatedAssignments);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowAssignmentForm(false);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo asignar el vehiculo.');
+    }
   };
 
   const handleOpenFinalizarModal = (assignmentId: string) => {
@@ -181,20 +419,29 @@ export default function Flotilla() {
     setSelectedAssignmentId(null);
   };
 
-  const handleFinalizarAsignacion = (assignmentId: string, kmFinal: number, checklistEntrega: VehicleConditionChecklist) => {
-    const updatedAssignments = assignments.map((assignment) => (
-      assignment.id === assignmentId
-        ? {
-          ...assignment,
-          kmFinal,
-          fechaFin: new Date().toISOString(),
-          status: 'completado' as VehicleAssignment['status'],
-          checklistEntrega,
-        }
-        : assignment
-    ));
-    saveAssignments(updatedAssignments);
-    handleCloseFinalizarModal();
+  const handleFinalizarAsignacion = async (
+    assignmentId: string,
+    kmFinal: number,
+    checklistEntrega: VehicleConditionChecklist
+  ) => {
+    try {
+      const persisted = await updateFlotillaAsignacion(assignmentId, {
+        kmFinal,
+        fechaFin: new Date().toISOString().split('T')[0],
+        status: 'completado',
+        checklistEntrega,
+        fotoOdometroFinal: checklistEntrega.foto || '',
+      });
+
+      const updatedAssignments = assignments.map((assignment) => (
+        assignment.id === assignmentId ? { ...assignment, ...persisted } : assignment
+      ));
+      saveAssignments(updatedAssignments);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      handleCloseFinalizarModal();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo finalizar la asignacion.');
+    }
   };
   const handleScheduleService = (alertId: string) => {
     console.log('Agendar servicio:', alertId);
@@ -215,7 +462,7 @@ export default function Flotilla() {
         columns: [
           { header: 'Vehículo', key: 'vehicle', width: 25 },
           { header: 'Placas', key: 'plates', width: 12 },
-          { header: 'KM Actual', key: 'currentKm', width: 12 },
+          { header: 'Kilometraje actual', key: 'currentKm', width: 18 },
           { header: 'Estado', key: 'status', width: 15 },
           { header: 'Próximo Servicio', key: 'nextService', width: 15 },
           { header: 'KM Próximo Servicio', key: 'nextServiceKm', width: 18 },
@@ -224,7 +471,7 @@ export default function Flotilla() {
           vehicle: `${v.brand} ${v.model} ${v.year}`,
           plates: v.plates,
           currentKm: v.currentKm.toLocaleString(),
-          status: v.status === 'available' ? 'Disponible' : v.status === 'assigned' ? 'Asignado' : 'En Taller',
+          status: getVehicleStatusLabel(v.status),
           nextService: formatDate(v.maintenance.nextServiceDate),
           nextServiceKm: v.maintenance.nextServiceKm.toLocaleString(),
         })),
@@ -336,42 +583,42 @@ export default function Flotilla() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-1 pb-2">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
+    <div className="space-y-3">
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0.5 pb-1.5">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-2.5 shadow-sm">
           <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-blue-200/40 blur-3xl" />
           <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-slate-200/40 blur-3xl" />
-          <div className="relative space-y-2">
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative space-y-1.5">
+            <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
                 <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Flotilla</p>
-                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Administracion de Flotilla</h1>
-                <p className="text-[11px] text-slate-600">Gestión de vehículos empresariales.</p>
+                <h1 className="text-base sm:text-lg font-semibold text-slate-900">Administracion de Flotilla</h1>
+                <p className="text-[10px] text-slate-600">Gestión de vehículos empresariales.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   onClick={() => setShowExportModal(true)}
-                  className="px-2.5 py-1.5 text-[11px] bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                  className="px-2 py-1 text-[10px] bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   <span>Exportar Excel</span>
                 </button>
                 <button
                   onClick={() => setShowAssignmentForm(true)}
-                  className="px-2.5 py-1.5 text-[11px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                  className="px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
                   <span>Asignar Vehiculo</span>
                 </button>
                 <button
                   onClick={() => setShowNewVehicleForm(true)}
-                  className="px-2.5 py-1.5 text-[11px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+                  className="px-2 py-1 text-[10px] bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   <span>Nuevo Vehiculo</span>
@@ -379,7 +626,7 @@ export default function Flotilla() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5">
               <MetricCard label="Total Vehiculos" value={vehiclesWithStatus.length} color="blue" />
               <MetricCard label="Disponibles" value={vehiculosDisponibles} color="green" />
               <MetricCard label="Asignados" value={vehiculosAsignados} color="yellow" />
@@ -391,13 +638,13 @@ export default function Flotilla() {
       </div>
 
       {alertasPendientes > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-2.5">
           <div className="flex">
-            <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div className="ml-3">
-              <p className="text-sm font-medium text-red-800">
+              <p className="text-xs font-medium text-red-800">
                 Tienes {alertasPendientes} alerta(s) pendiente(s) que requieren atención inmediata
               </p>
             </div>
@@ -415,9 +662,9 @@ export default function Flotilla() {
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-3">
           {activeTab === 'vehiculos' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
               {vehiclesWithStatus.map((vehicle) => (
                 <VehicleCard
                   key={vehicle.id}
@@ -430,17 +677,20 @@ export default function Flotilla() {
                     setSelectedVehicleId(vehicle.id);
                     setShowHistorialModal(true);
                   }}
+                  onEditar={() => {
+                    setEditingVehicleId(vehicle.id);
+                  }}
                 />
               ))}
             </div>
           )}
 
           {activeTab === 'asignaciones' && (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {assignments.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {asignacionesActivas.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {asignacionesActivas.map((assignment) => (
                         <AssignmentCard
                           key={assignment.id}
@@ -454,9 +704,9 @@ export default function Flotilla() {
                   {asignacionesCompletadas.length > 0 && (
                     <div className="space-y-2">
                       {asignacionesActivas.length > 0 && (
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Finalizados</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Finalizados</p>
                       )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {asignacionesCompletadas.map((assignment) => (
                           <AssignmentCard
                             key={assignment.id}
@@ -470,11 +720,11 @@ export default function Flotilla() {
                   )}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="text-center py-8">
+                  <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
-                  <p className="text-gray-500">No hay asignaciones activas</p>
+                  <p className="text-sm text-gray-500">No hay asignaciones activas</p>
                 </div>
               )}
             </div>
@@ -557,6 +807,13 @@ export default function Flotilla() {
         <NewVehicleModal onClose={() => setShowNewVehicleForm(false)} />
       )}
 
+      {editingVehicle && (
+        <NewVehicleModal
+          initialVehicle={editingVehicle}
+          onClose={() => setEditingVehicleId(null)}
+        />
+      )}
+
       {showAssignmentForm && (
         <AssignmentModal
           vehicles={vehiclesWithStatus.filter(v => v.status === 'available')}
@@ -616,7 +873,7 @@ function TabButton({ label, count, isActive, onClick }: TabButtonProps) {
   return (
     <button
       onClick={onClick}
-      className={`px-6 py-4 text-sm font-medium border-b-2 flex items-center space-x-2 ${
+      className={`px-3 py-2 text-xs font-medium border-b-2 flex items-center space-x-1.5 ${
         isActive
           ? 'border-primary-500 text-primary-600'
           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -624,7 +881,7 @@ function TabButton({ label, count, isActive, onClick }: TabButtonProps) {
     >
       <span>{label}</span>
       {count !== undefined && count > 0 && (
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
           isActive ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600'
         }`}>
           {count}
@@ -653,16 +910,16 @@ function MetricCard({ label, value, color }: MetricCardProps) {
   return (
     <button
       type="button"
-      className="relative w-full overflow-hidden rounded-lg border border-slate-200 bg-white/90 p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md select-none"
+      className="relative w-full overflow-hidden rounded-lg border border-slate-200 bg-white/90 p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md select-none"
     >
       <span className={`absolute inset-y-0 left-0 w-1 ${palette.accent}`} />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="text-lg font-semibold text-slate-900">{value}</p>
+          <p className="text-[9px] uppercase tracking-wide text-slate-500">{label}</p>
+          <p className="text-base font-semibold text-slate-900">{value}</p>
         </div>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-full ${palette.soft}`}>
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className={`flex h-7 w-7 items-center justify-center rounded-full ${palette.soft}`}>
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
           </svg>
         </div>
@@ -675,39 +932,51 @@ interface VehicleCardProps {
   vehicle: Vehicle;
   onVerDetalles: () => void;
   onVerHistorial: () => void;
+  onEditar: () => void;
 }
 
-function VehicleCard({ vehicle, onVerDetalles, onVerHistorial }: VehicleCardProps) {
+function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: VehicleCardProps) {
   const statusConfig: Record<Vehicle['status'], { color: string; label: string; icon: string }> = {
-    disponible: { color: 'bg-green-100 text-green-800', label: 'Disponible', icon: '✅' },
-    asignado: { color: 'bg-blue-100 text-blue-800', label: 'Asignado', icon: '🚗' },
-    en_taller: { color: 'bg-red-100 text-red-800', label: 'En Taller', icon: '🛠️' },
-    baja: { color: 'bg-gray-100 text-gray-800', label: 'De Baja', icon: '⛔' },
-    available: { color: 'bg-green-100 text-green-800', label: 'Disponible', icon: '✅' },
-    assigned: { color: 'bg-blue-100 text-blue-800', label: 'Asignado', icon: '🚗' },
-    in_shop: { color: 'bg-red-100 text-red-800', label: 'En Taller', icon: '🛠️' },
-    out_of_service: { color: 'bg-gray-100 text-gray-800', label: 'De Baja', icon: '⛔' },
+    disponible: { color: 'bg-green-100 text-green-800', label: 'Disponible', icon: '\u2705' },
+    asignado: { color: 'bg-blue-100 text-blue-800', label: 'Asignado', icon: '\ud83d\ude97' },
+    en_taller: { color: 'bg-red-100 text-red-800', label: 'En Taller', icon: '\ud83d\udee0\ufe0f' },
+    baja: { color: 'bg-gray-100 text-gray-800', label: 'De Baja', icon: '\u26d4' },
+    available: { color: 'bg-green-100 text-green-800', label: 'Disponible', icon: '\u2705' },
+    assigned: { color: 'bg-blue-100 text-blue-800', label: 'Asignado', icon: '\ud83d\ude97' },
+    in_shop: { color: 'bg-red-100 text-red-800', label: 'En Taller', icon: '\ud83d\udee0\ufe0f' },
+    out_of_service: { color: 'bg-gray-100 text-gray-800', label: 'De Baja', icon: '\u26d4' },
   };
 
   const status = statusConfig[vehicle.status];
-  const vehicleImage = getVehicleImageUrl(vehicle.brand, vehicle.model);
-  const fallbackImage = vehicle.foto ?? VEHICLE_IMAGE_FALLBACK;
+  const uploadedImage = vehicle.foto ? (toApiAssetUrl(vehicle.foto) ?? vehicle.foto) : '';
+  const imageSources = useMemo(
+    () => getVehicleImageSources(vehicle.brand, vehicle.model, vehicle.color, uploadedImage),
+    [vehicle.brand, vehicle.model, vehicle.color, uploadedImage]
+  );
+  const [imageIndex, setImageIndex] = useState(0);
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [imageSources]);
+
+  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehiclePlaceholderImage(vehicle.brand, vehicle.model, vehicle.color);
+  const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+    <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
       {/* Imagen del Vehículo */}
-      <div className="relative h-48 bg-gray-200">
+      <div className="relative h-24 bg-gray-200">
         <img
           src={vehicleImage}
           alt={`${vehicle.brand} ${vehicle.model}`}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.src = fallbackImage;
+          className={`h-full w-full object-contain ${isPlaceholderImage ? 'bg-slate-100 p-1.5' : 'bg-slate-50 p-1'}`}
+          loading="lazy"
+          onError={() => {
+            setImageIndex((prev) => (prev < imageSources.length - 1 ? prev + 1 : prev));
           }}
         />
-        <div className="absolute top-3 right-3">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${status.color} shadow-sm`}>
+        <div className="absolute right-1.5 top-1.5">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold ${status.color} shadow-sm`}>
             <span className="text-xs">{status.icon}</span>
             {status.label}
           </span>
@@ -715,47 +984,53 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial }: VehicleCardProp
       </div>
 
       {/* Información del Vehículo */}
-      <div className="p-5">
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900">{vehicle.brand} {vehicle.model}</h3>
-          <p className="text-sm text-gray-600">{vehicle.year}</p>
+      <div className="p-2">
+        <div className="mb-1">
+          <h3 className="text-[14px] font-bold text-gray-900">{vehicle.brand} {vehicle.model}</h3>
+          <p className="text-[11px] text-gray-600">{vehicle.year}</p>
         </div>
 
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
+        <div className="mb-1.5 space-y-0.5">
+          <div className="flex justify-between text-[11px]">
             <span className="text-gray-600">Placas:</span>
             <span className="font-semibold text-gray-900">{vehicle.plates}</span>
           </div>
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-[11px]">
             <span className="text-gray-600">Color:</span>
             <span className="text-gray-900">{vehicle.color}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">KM Actual:</span>
+          <div className="flex justify-between text-[11px]">
+            <span className="text-gray-600">Kilometraje actual:</span>
             <span className="font-semibold text-gray-900">{vehicle.currentKm.toLocaleString()} km</span>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-3 mb-3">
-          <p className="text-xs text-gray-600 mb-2">Próximo Mantenimiento:</p>
+        <div className="mb-1.5 border-t border-gray-200 pt-1">
+          <p className="mb-0.5 text-[10px] text-gray-600">Próximo Mantenimiento:</p>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-900">{formatDate(vehicle.maintenance.nextServiceDate)}</span>
-            <span className="text-xs text-gray-600">{vehicle.maintenance.nextServiceKm.toLocaleString()} km</span>
+            <span className="text-[10px] text-gray-900">{formatDate(vehicle.maintenance.nextServiceDate)}</span>
+            <span className="text-[10px] text-gray-600">{vehicle.maintenance.nextServiceKm.toLocaleString()} km</span>
           </div>
         </div>
 
-        <div className="flex space-x-2">
+        <div className="grid grid-cols-3 gap-1">
           <button
             onClick={onVerDetalles}
-            className="flex-1 px-3 py-2 bg-primary-50 text-primary-700 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors"
+            className="flex-1 rounded-lg bg-primary-50 px-1.5 py-1 text-[10px] font-medium text-primary-700 transition-colors hover:bg-primary-100"
           >
             Ver Detalles
           </button>
           <button
             onClick={onVerHistorial}
-            className="flex-1 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
+            className="flex-1 rounded-lg bg-gray-50 px-1.5 py-1 text-[10px] font-medium text-gray-700 transition-colors hover:bg-gray-100"
           >
             Historial
+          </button>
+          <button
+            onClick={onEditar}
+            className="rounded-lg bg-amber-50 px-1.5 py-1 text-[10px] font-medium text-amber-700 transition-colors hover:bg-amber-100"
+          >
+            Modificar
           </button>
         </div>
       </div>
@@ -796,40 +1071,40 @@ function AssignmentCard({
   })();
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
-            <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="rounded-lg border border-gray-200 bg-white p-2.5 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-blue-100">
+            <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900 flex items-center gap-1">
-              <span className="text-xs">{statusIcon}</span>
+            <p className="text-xs font-semibold text-gray-900 flex items-center gap-1">
+              <span className="text-[11px]">{statusIcon}</span>
               <span className="truncate">{vehicleLabel}</span>
             </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusBadge.color}`}>
                 {statusBadge.label}
               </span>
-              <p className="text-xs text-gray-600 truncate">Asignado a: {assignment.userName}</p>
+              <p className="text-[11px] text-gray-600 truncate">Asignado a: {assignment.userName}</p>
             </div>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-[11px] text-gray-600">KM Inicial</p>
-          <p className="text-xs font-semibold text-gray-900">{assignment.kmInicial.toLocaleString()}</p>
+          <p className="text-[10px] text-gray-600">KM Inicial</p>
+          <p className="text-[11px] font-semibold text-gray-900">{assignment.kmInicial.toLocaleString()}</p>
           {isCompleted ? (
-            <span className="mt-2 inline-flex items-center justify-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              🏁 Finalizado
+            <span className="mt-1.5 inline-flex items-center justify-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+              {'\ud83c\udfc1'} Finalizado
             </span>
           ) : (
             <button
               onClick={onFinalize}
-              className="mt-2 inline-flex items-center justify-center gap-1 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              className="mt-1.5 inline-flex items-center justify-center gap-1 rounded-full bg-primary-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500/50"
             >
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               Finalizar
@@ -837,7 +1112,7 @@ function AssignmentCard({
           )}
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-gray-500 truncate">
+      <p className="mt-1.5 text-[10px] text-gray-500 truncate">
         {assignment.motivo} - Desde {formatDate(assignment.fechaInicio)}
       </p>
     </div>
@@ -853,12 +1128,13 @@ function FinalizarAsignacionModal({
   assignment: VehicleAssignment;
   vehicle: Vehicle | null;
   onClose: () => void;
-  onFinalize: (kmFinal: number, checklistEntrega: VehicleConditionChecklist) => void;
+  onFinalize: (kmFinal: number, checklistEntrega: VehicleConditionChecklist) => Promise<void> | void;
 }) {
   useEscapeKey(onClose);
   const [kmFinal, setKmFinal] = useState<string>(assignment.kmFinal ? String(assignment.kmFinal) : '');
   const [fotoEntrega, setFotoEntrega] = useState<File | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [checklistEntrega, setChecklistEntrega] = useState<VehicleConditionChecklist>(
     assignment.checklistEntrega ?? {
       exterior: {
@@ -918,7 +1194,7 @@ function FinalizarAsignacionModal({
   const fuelError = showErrors && !checklistEntrega.nivelCombustible ? 'Selecciona el nivel de combustible.' : '';
   const fotoError = showErrors && !fotoEntrega ? 'Agrega al menos una foto.' : '';
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setShowErrors(true);
     if (kmFinalInvalid || kmFinalValue < assignment.kmInicial || !checklistEntrega.nivelCombustible || !fotoEntrega) {
       return;
@@ -927,7 +1203,12 @@ function FinalizarAsignacionModal({
       ...checklistEntrega,
       foto: fotoEntrega?.name,
     };
-    onFinalize(kmFinalValue, checklistToSave);
+    setSubmitting(true);
+    try {
+      await onFinalize(kmFinalValue, checklistToSave);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -1165,16 +1446,20 @@ function FinalizarAsignacionModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={submitting}
             className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
           >
             Cancelar
           </button>
           <button
             type="button"
-            onClick={handleSubmit}
-            className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            onClick={() => {
+              void handleSubmit();
+            }}
+            disabled={submitting}
+            className="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-60"
           >
-            Finalizar
+            {submitting ? 'Guardando...' : 'Finalizar'}
           </button>
         </div>
       </div>
@@ -1182,20 +1467,69 @@ function FinalizarAsignacionModal({
   );
 }
 
-function NewVehicleModal({ onClose }: { onClose: () => void }) {
+function NewVehicleModal({
+  onClose,
+  initialVehicle = null,
+}: {
+  onClose: () => void;
+  initialVehicle?: Vehicle | null;
+}) {
   useEscapeKey(onClose);
-  const [formData, setFormData] = useState({
-    brand: '',
-    model: '',
-    year: '',
-    plates: '',
-    serialNumber: '',
-    color: '',
-  });
+  const { user } = useAuth();
+  const isEditMode = Boolean(initialVehicle);
+  const brandModelOptions: Record<string, string[]> = {
+    Nissan: ['Versa', 'Sentra', 'March', 'NP300', 'Frontier', 'Kicks', 'X-Trail'],
+    Toyota: ['Yaris', 'Corolla', 'Hilux', 'RAV4', 'Avanza', 'Hiace'],
+    Chevrolet: ['Aveo', 'Onix', 'Tracker', 'S10', 'Silverado', 'Captiva'],
+    Volkswagen: ['Jetta', 'Vento', 'Taos', 'Tiguan', 'Saveiro', 'Amarok'],
+    Ford: ['Figo', 'Focus', 'Escape', 'Ranger', 'Transit', 'Maverick'],
+    Kia: ['Rio', 'Forte', 'Sportage', 'Seltos', 'Soul', 'K3'],
+    Hyundai: ['Grand i10', 'Accent', 'Elantra', 'Tucson', 'Creta', 'Santa Fe'],
+    Mazda: ['Mazda2', 'Mazda3', 'CX-3', 'CX-5', 'BT-50'],
+    Honda: ['City', 'Civic', 'HR-V', 'CR-V', 'BR-V'],
+    Renault: ['Kwid', 'Logan', 'Duster', 'Oroch', 'Koleos'],
+    Otro: ['Sedan', 'SUV', 'Pickup', 'Van', 'Hatchback', 'Coupe'],
+  };
+  const brandOptions = Object.keys(brandModelOptions);
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 31 }, (_, index) => String(currentYear + 1 - index));
+  const colorOptions = ['Blanco', 'Negro', 'Gris', 'Plata', 'Azul', 'Rojo', 'Verde', 'Beige', 'Cafe', 'Amarillo', 'Naranja', 'Otro'];
+  const existingPhotoUrl = initialVehicle?.foto ? (toApiAssetUrl(initialVehicle.foto) || initialVehicle.foto) : '';
+
+  const [formData, setFormData] = useState(() => ({
+    brand: initialVehicle?.brand || initialVehicle?.marca || '',
+    model: initialVehicle?.model || initialVehicle?.modelo || '',
+    year: initialVehicle ? String(initialVehicle.year || initialVehicle.anio || '') : '',
+    plates: initialVehicle?.plates || initialVehicle?.placas || '',
+    serialNumber: initialVehicle?.serialNumber || initialVehicle?.numeroSerie || '',
+    color: initialVehicle?.color || '',
+    currentKm: initialVehicle ? String(initialVehicle.currentKm ?? initialVehicle.kmActual ?? 0) : '0',
+    insuranceCompany: initialVehicle?.insurance?.company || initialVehicle?.seguro?.compania || '',
+    insurancePolicyNumber: initialVehicle?.insurance?.policyNumber || initialVehicle?.seguro?.poliza || '',
+    insuranceExpirationDate: initialVehicle?.insurance?.expirationDate || initialVehicle?.seguro?.vigencia || '',
+  }));
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState(existingPhotoUrl);
+  const modelOptions = formData.brand ? (brandModelOptions[formData.brand] ?? []) : [];
   const [showErrors, setShowErrors] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreviewUrl(existingPhotoUrl);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPhotoPreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [photoFile, existingPhotoUrl]);
 
   const yearValue = Number(formData.year);
   const yearInvalid = !formData.year || Number.isNaN(yearValue) || yearValue <= 0;
+  const currentKmValue = Number(formData.currentKm);
+  const currentKmInvalid = Number.isNaN(currentKmValue) || currentKmValue < 0;
   const computedErrors = {
     brand: !formData.brand.trim() ? 'Ingresa la marca.' : '',
     model: !formData.model.trim() ? 'Ingresa el modelo.' : '',
@@ -1203,17 +1537,51 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
     plates: !formData.plates.trim() ? 'Ingresa las placas.' : '',
     serialNumber: !formData.serialNumber.trim() ? 'Ingresa el número de serie.' : '',
     color: !formData.color.trim() ? 'Ingresa el color.' : '',
+    currentKm: currentKmInvalid ? 'Ingresa un kilometraje actual válido (>= 0).' : '',
   };
   const errors: Partial<typeof computedErrors> = showErrors ? computedErrors : {};
   const hasErrors = Object.values(computedErrors).some(Boolean);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (hasErrors) {
       setShowErrors(true);
       return;
     }
-    onClose();
+    setSubmitting(true);
+    try {
+      const payload = {
+        brand: formData.brand.trim(),
+        model: formData.model.trim(),
+        year: Number(formData.year),
+        plates: formData.plates.trim().toUpperCase(),
+        serialNumber: formData.serialNumber.trim().toUpperCase(),
+        color: formData.color.trim(),
+        currentKm: Number(formData.currentKm || 0),
+        insuranceCompany: formData.insuranceCompany.trim(),
+        insurancePolicyNumber: formData.insurancePolicyNumber.trim(),
+        insuranceExpirationDate: formData.insuranceExpirationDate.trim(),
+        foto: photoFile,
+      };
+
+      if (isEditMode && initialVehicle) {
+        await updateFlotillaVehiculo(initialVehicle.id, payload);
+      } else {
+        await createFlotillaVehiculo(payload);
+      }
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      onClose();
+    } catch (error) {
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : isEditMode
+            ? 'No se pudo actualizar el vehiculo.'
+            : 'No se pudo registrar el vehiculo.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -1221,7 +1589,9 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
       <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Registrar Nuevo Vehículo</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {isEditMode ? 'Modificar Vehiculo' : 'Registrar Nuevo Vehiculo'}
+            </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1230,44 +1600,64 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+        <form className="p-6 space-y-6" onSubmit={(event) => {
+          void handleSubmit(event);
+        }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marca</label>
-              <input
-                type="text"
+              <select
                 value={formData.brand}
-                onChange={(event) => setFormData((prev) => ({ ...prev, brand: event.target.value }))}
+                onChange={(event) => setFormData((prev) => ({
+                  ...prev,
+                  brand: event.target.value,
+                  model: '',
+                }))}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
                   errors.brand
                     ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                     : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
                 }`}
-              />
+              >
+                <option value="">Selecciona una marca</option>
+                {brandOptions.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
               {errors.brand && (
                 <p className="mt-1 text-xs text-rose-600">{errors.brand}</p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Modelo</label>
-              <input
-                type="text"
+              <select
                 value={formData.model}
                 onChange={(event) => setFormData((prev) => ({ ...prev, model: event.target.value }))}
+                disabled={!formData.brand}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
                   errors.model
                     ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                     : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
                 }`}
-              />
+              >
+                <option value="">
+                  {formData.brand ? 'Selecciona un modelo' : 'Primero selecciona marca'}
+                </option>
+                {modelOptions.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
               {errors.model && (
                 <p className="mt-1 text-xs text-rose-600">{errors.model}</p>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Año</label>
-              <input
-                type="number"
+              <select
                 value={formData.year}
                 onChange={(event) => setFormData((prev) => ({ ...prev, year: event.target.value }))}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
@@ -1275,7 +1665,14 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
                     ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                     : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
                 }`}
-              />
+              >
+                <option value="">Selecciona el anio</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
               {errors.year && (
                 <p className="mt-1 text-xs text-rose-600">{errors.year}</p>
               )}
@@ -1314,8 +1711,7 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
-              <input
-                type="text"
+              <select
                 value={formData.color}
                 onChange={(event) => setFormData((prev) => ({ ...prev, color: event.target.value }))}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
@@ -1323,19 +1719,113 @@ function NewVehicleModal({ onClose }: { onClose: () => void }) {
                     ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                     : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
                 }`}
-              />
+              >
+                <option value="">Selecciona un color</option>
+                {colorOptions.map((color) => (
+                  <option key={color} value={color}>
+                    {color}
+                  </option>
+                ))}
+              </select>
               {errors.color && (
                 <p className="mt-1 text-xs text-rose-600">{errors.color}</p>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Kilometraje actual</label>
+              <input
+                type="number"
+                min={0}
+                value={formData.currentKm}
+                onChange={(event) => setFormData((prev) => ({ ...prev, currentKm: event.target.value }))}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                  errors.currentKm
+                    ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
+                    : 'border-gray-300 focus:ring-primary-500 focus:border-transparent'
+                }`}
+                placeholder="Ej: 12500"
+              />
+              {errors.currentKm && (
+                <p className="mt-1 text-xs text-rose-600">{errors.currentKm}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Compañía de seguro (opcional)</label>
+              <input
+                type="text"
+                value={formData.insuranceCompany}
+                onChange={(event) => setFormData((prev) => ({ ...prev, insuranceCompany: event.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Ej: AXA"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Póliza (opcional)</label>
+              <input
+                type="text"
+                value={formData.insurancePolicyNumber}
+                onChange={(event) => setFormData((prev) => ({ ...prev, insurancePolicyNumber: event.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Ej: POL-123456"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Vigencia del seguro (opcional)</label>
+              <input
+                type="date"
+                value={formData.insuranceExpirationDate}
+                onChange={(event) => setFormData((prev) => ({ ...prev, insuranceExpirationDate: event.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Vehiculo (opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setPhotoFile(file);
+                  }}
+                  className="block w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border-0 file:bg-primary-600 file:px-3 file:py-1.5 file:text-white hover:file:bg-primary-700"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  Formatos recomendados: JPG o PNG. Maximo sugerido: 5 MB.
+                </p>
+              </div>
+              <div className="w-full md:w-56">
+                <div className="h-28 w-full overflow-hidden rounded-md border border-gray-200 bg-white">
+                  {photoPreviewUrl ? (
+                    <img src={photoPreviewUrl} alt="Vista previa del vehiculo" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-gray-500">
+                      Sin imagen
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <button type="button" onClick={onClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
               Cancelar
             </button>
-            <button type="submit" className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
-              Registrar Vehículo
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-60"
+            >
+              {submitting ? (isEditMode ? 'Guardando...' : 'Registrando...') : (isEditMode ? 'Guardar cambios' : 'Registrar Vehiculo')}
             </button>
           </div>
         </form>
@@ -1352,7 +1842,7 @@ function AssignmentModal({
 }: {
   vehicles: Vehicle[];
   requests: VehicleAssignment[];
-  onAssign: (requestId: string, vehicleId: string, vehiculoLabel: string) => void;
+  onAssign: (requestId: string, vehicleId: string, vehiculoLabel: string) => Promise<void> | void;
   onClose: () => void;
 }) {
   useEscapeKey(onClose);
@@ -1363,6 +1853,7 @@ function AssignmentModal({
   const [solicitudGasolina, setSolicitudGasolina] = useState('');
   const [comentarios, setComentarios] = useState('');
   const [showErrors, setShowErrors] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const selectedRequest = requests.find(r => r.id === selectedRequestId);
   const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
@@ -1370,14 +1861,19 @@ function AssignmentModal({
   const requestError = showErrors && !selectedRequestId ? 'Selecciona una solicitud.' : '';
   const vehicleError = showErrors && !selectedVehicleId ? 'Selecciona un vehiculo.' : '';
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedRequestId || !selectedVehicleId) {
       setShowErrors(true);
       return;
     }
     const label = selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model} - ${selectedVehicle.plates}` : '';
-    onAssign(selectedRequestId, selectedVehicleId, label);
+    setSubmitting(true);
+    try {
+      await onAssign(selectedRequestId, selectedVehicleId, label);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -1410,7 +1906,12 @@ function AssignmentModal({
           </div>
         </div>
 
-        <form className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/40" onSubmit={handleSubmit}>
+        <form
+          className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/40"
+          onSubmit={(event) => {
+            void handleSubmit(event);
+          }}
+        >
           <div className="p-6 space-y-6 pb-28">
             {requests.length === 0 ? (
               <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
@@ -1637,16 +2138,17 @@ function AssignmentModal({
                 <button
                   type="button"
                   onClick={onClose}
+                  disabled={submitting}
                   className="px-6 py-2 border border-slate-300 text-slate-700 rounded-xl bg-white shadow-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={requests.length === 0}
+                  disabled={requests.length === 0 || submitting}
                   className="px-6 py-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 hover:from-blue-700 hover:via-indigo-700 hover:to-emerald-600 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-300 disabled:shadow-none disabled:cursor-not-allowed"
                 >
-                  Guardar
+                  {submitting ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -1669,73 +2171,83 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
   useEscapeKey(onClose);
 
   const activeAssignment = assignments.find(a => a.status === 'activo' || a.status === 'asignado');
-  const vehicleImage = getVehicleImageUrl(vehicle.brand, vehicle.model);
-  const fallbackImage = vehicle.foto ?? VEHICLE_IMAGE_FALLBACK;
+  const normalizedStatus = toCanonicalVehicleStatus(vehicle.status);
+  const uploadedImage = vehicle.foto ? (toApiAssetUrl(vehicle.foto) ?? vehicle.foto) : '';
+  const imageSources = useMemo(
+    () => getVehicleImageSources(vehicle.brand, vehicle.model, vehicle.color, uploadedImage),
+    [vehicle.brand, vehicle.model, vehicle.color, uploadedImage]
+  );
+  const [imageIndex, setImageIndex] = useState(0);
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [imageSources]);
+
+  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehiclePlaceholderImage(vehicle.brand, vehicle.model, vehicle.color);
+  const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 px-6 py-4 border-b border-gray-200 bg-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+      <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-xl">
+        <div className="sticky top-0 border-b border-gray-200 bg-white px-4 py-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Detalles del Vehículo</h2>
+            <h2 className="text-xl font-bold text-gray-900">Detalles del Vehículo</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="space-y-4 p-4">
           {/* Imagen del Vehículo */}
-          <div className="relative h-64 bg-gray-200 rounded-lg overflow-hidden">
+          <div className="relative h-44 overflow-hidden rounded-lg bg-gray-200 sm:h-52">
             <img
               src={vehicleImage}
               alt={`${vehicle.brand} ${vehicle.model}`}
-              className="w-full h-full object-cover"
-              onError={(event) => {
-                const target = event.target as HTMLImageElement;
-                target.src = fallbackImage;
+              className={`h-full w-full object-contain ${isPlaceholderImage ? 'bg-slate-100 p-2' : 'bg-slate-50 p-1.5'}`}
+              loading="lazy"
+              onError={() => {
+                setImageIndex((prev) => (prev < imageSources.length - 1 ? prev + 1 : prev));
               }}
             />
           </div>
 
           {/* Información General */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Información General</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+            <h3 className="mb-3 text-base font-semibold text-gray-900">Información General</h3>
+            <div className="grid grid-cols-1 gap-3 rounded-lg bg-gray-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <p className="text-sm text-gray-600">Marca y Modelo</p>
-                <p className="text-base font-medium text-gray-900">{vehicle.brand} {vehicle.model} {vehicle.year}</p>
+                <p className="text-xs text-gray-600">Marca y Modelo</p>
+                <p className="text-sm font-medium text-gray-900">{vehicle.brand} {vehicle.model} {vehicle.year}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Placas</p>
-                <p className="text-base font-medium text-gray-900">{vehicle.plates}</p>
+                <p className="text-xs text-gray-600">Placas</p>
+                <p className="text-sm font-medium text-gray-900">{vehicle.plates}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Número de Serie</p>
-                <p className="text-base font-medium text-gray-900">{vehicle.serialNumber}</p>
+                <p className="text-xs text-gray-600">Número de Serie</p>
+                <p className="text-sm font-medium text-gray-900">{vehicle.serialNumber}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Color</p>
-                <p className="text-base font-medium text-gray-900">{vehicle.color}</p>
+                <p className="text-xs text-gray-600">Color</p>
+                <p className="text-sm font-medium text-gray-900">{vehicle.color}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Kilometraje Actual</p>
-                <p className="text-base font-medium text-gray-900">{vehicle.currentKm.toLocaleString()} km</p>
+                <p className="text-xs text-gray-600">Kilometraje actual</p>
+                <p className="text-sm font-medium text-gray-900">{vehicle.currentKm.toLocaleString()} km</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Estado</p>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                  vehicle.status === 'available' ? 'bg-green-100 text-green-800' :
-                  vehicle.status === 'assigned' ? 'bg-blue-100 text-blue-800' :
-                  vehicle.status === 'in_shop' ? 'bg-red-100 text-red-800' :
+                <p className="text-xs text-gray-600">Estado</p>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  normalizedStatus === 'available' ? 'bg-green-100 text-green-800' :
+                  normalizedStatus === 'assigned' ? 'bg-blue-100 text-blue-800' :
+                  normalizedStatus === 'in_shop' ? 'bg-red-100 text-red-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
-                  <span className="text-xs">{getVehicleStatusIcon(vehicle.status)}</span>
-                  {vehicle.status === 'available' ? 'Disponible' :
-                   vehicle.status === 'assigned' ? 'Asignado' :
-                   vehicle.status === 'in_shop' ? 'En Taller' : 'De Baja'}
+                  <span className="text-xs">{getVehicleStatusIcon(normalizedStatus)}</span>
+                  {getVehicleStatusLabel(normalizedStatus)}
                 </span>
               </div>
             </div>
@@ -1743,20 +2255,20 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
 
           {/* Seguro */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Seguro</h3>
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h3 className="mb-3 text-base font-semibold text-gray-900">Seguro</h3>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
-                  <p className="text-sm text-gray-600">Compañía</p>
-                  <p className="text-base font-medium text-gray-900">{vehicle.insurance.company}</p>
+                  <p className="text-xs text-gray-600">Compañía</p>
+                  <p className="text-sm font-medium text-gray-900">{vehicle.insurance.company || 'Sin capturar'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Póliza</p>
-                  <p className="text-base font-medium text-gray-900">{vehicle.insurance.policyNumber}</p>
+                  <p className="text-xs text-gray-600">Póliza</p>
+                  <p className="text-sm font-medium text-gray-900">{vehicle.insurance.policyNumber || 'Sin capturar'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Vigencia</p>
-                  <p className="text-base font-medium text-gray-900">{formatDate(vehicle.insurance.expirationDate)}</p>
+                  <p className="text-xs text-gray-600">Vigencia</p>
+                  <p className="text-sm font-medium text-gray-900">{vehicle.insurance.expirationDate ? formatDate(vehicle.insurance.expirationDate) : 'Sin capturar'}</p>
                 </div>
               </div>
             </div>
@@ -1764,17 +2276,17 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
 
           {/* Mantenimiento */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Mantenimiento</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-xs text-gray-600 mb-2">Último Servicio</p>
-                <p className="text-base font-medium text-gray-900">{formatDate(vehicle.maintenance.lastServiceDate)}</p>
-                <p className="text-sm text-gray-600">{vehicle.maintenance.lastServiceKm.toLocaleString()} km</p>
+            <h3 className="mb-3 text-base font-semibold text-gray-900">Mantenimiento</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs text-gray-600">Último Servicio</p>
+                <p className="text-sm font-medium text-gray-900">{formatDate(vehicle.maintenance.lastServiceDate)}</p>
+                <p className="text-xs text-gray-600">{vehicle.maintenance.lastServiceKm.toLocaleString()} km</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-xs text-gray-600 mb-2">Próximo Servicio</p>
-                <p className="text-base font-medium text-gray-900">{formatDate(vehicle.maintenance.nextServiceDate)}</p>
-                <p className="text-sm text-gray-600">{vehicle.maintenance.nextServiceKm.toLocaleString()} km</p>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs text-gray-600">Próximo Servicio</p>
+                <p className="text-sm font-medium text-gray-900">{formatDate(vehicle.maintenance.nextServiceDate)}</p>
+                <p className="text-xs text-gray-600">{vehicle.maintenance.nextServiceKm.toLocaleString()} km</p>
               </div>
             </div>
           </div>
@@ -1782,24 +2294,24 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
           {/* Asignación Actual */}
           {activeAssignment && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Asignación Actual</h3>
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <div className="space-y-2">
+              <h3 className="mb-3 text-base font-semibold text-gray-900">Asignación Actual</h3>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <div className="space-y-1.5">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Asignado a:</span>
-                    <span className="font-medium text-gray-900">{activeAssignment.userName}</span>
+                    <span className="text-xs text-gray-600">Asignado a:</span>
+                    <span className="text-sm font-medium text-gray-900">{activeAssignment.userName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Motivo:</span>
-                    <span className="text-gray-900">{activeAssignment.motivo}</span>
+                    <span className="text-xs text-gray-600">Motivo:</span>
+                    <span className="text-sm text-gray-900">{activeAssignment.motivo}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Desde:</span>
-                    <span className="text-gray-900">{formatDate(activeAssignment.fechaInicio)}</span>
+                    <span className="text-xs text-gray-600">Desde:</span>
+                    <span className="text-sm text-gray-900">{formatDate(activeAssignment.fechaInicio)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">KM Inicial:</span>
-                    <span className="text-gray-900">{activeAssignment.kmInicial.toLocaleString()} km</span>
+                    <span className="text-xs text-gray-600">KM Inicial:</span>
+                    <span className="text-sm text-gray-900">{activeAssignment.kmInicial.toLocaleString()} km</span>
                   </div>
                 </div>
               </div>
@@ -1809,12 +2321,12 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
           {/* Alertas Pendientes */}
           {alerts.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Alertas Pendientes</h3>
-              <div className="space-y-3">
+              <h3 className="mb-3 text-base font-semibold text-gray-900">Alertas Pendientes</h3>
+              <div className="space-y-2.5">
                 {alerts.map((alert) => (
                   <div
                     key={alert.id}
-                    className={`p-4 rounded-lg border ${
+                    className={`rounded-lg border p-3 ${
                       alert.severity === 'critical' ? 'bg-red-50 border-red-200' :
                       alert.severity === 'high' ? 'bg-orange-50 border-orange-200' :
                       alert.severity === 'medium' ? 'bg-yellow-50 border-yellow-200' :
@@ -1823,16 +2335,16 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{alert.type}</h4>
-                        <p className="text-sm text-gray-700 mt-1">{alert.message}</p>
-                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-600">
+                        <h4 className="text-sm font-semibold text-gray-900">{alert.type}</h4>
+                        <p className="mt-1 text-xs text-gray-700">{alert.message}</p>
+                        <div className="mt-2 flex items-center space-x-4 text-[11px] text-gray-600">
                           <span>Vence: {alert.dueDate ? formatDate(alert.dueDate) : 'Sin fecha'}</span>
                           {alert.costoEstimado && (
                             <span>Costo Est: {formatCurrency(alert.costoEstimado)}</span>
                           )}
                         </div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                      <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${
                         alert.severity === 'critical' ? 'bg-red-100 text-red-800' :
                         alert.severity === 'high' ? 'bg-orange-100 text-orange-800' :
                         alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
@@ -1850,10 +2362,10 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
           )}
         </div>
 
-        <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 bg-white flex justify-end">
+        <div className="sticky bottom-0 flex justify-end border-t border-gray-200 bg-white px-4 py-3">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            className="rounded-lg bg-primary-600 px-4 py-1.5 text-sm text-white hover:bg-primary-700"
           >
             Cerrar
           </button>
@@ -1862,8 +2374,6 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
     </div>
   );
 }
-
-// Modal de Historial del Vehículo
 interface HistorialVehiculoModalProps {
   vehicle: Vehicle;
   maintenanceHistory: MaintenanceRecord[];
@@ -2048,3 +2558,4 @@ function HistorialVehiculoModal({ vehicle, maintenanceHistory, cargasGasolina, o
     </div>
   );
 }
+

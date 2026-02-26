@@ -57,6 +57,15 @@ const parseBoolean = (value: unknown, fallback = false) => {
   return fallback;
 };
 
+const normalizeVehicleStatus = (value: unknown): Vehicle['status'] => {
+  const status = parseString(value).trim();
+  if (status === 'disponible' || status === 'activo' || status === 'available') return 'available';
+  if (status === 'asignado' || status === 'assigned') return 'assigned';
+  if (status === 'en_taller' || status === 'in_shop') return 'in_shop';
+  if (status === 'baja' || status === 'de_baja' || status === 'out_of_service') return 'out_of_service';
+  return 'available';
+};
+
 const readStorageList = <T,>(key: string, { legacy = false }: { legacy?: boolean } = {}): T[] => {
   if (typeof window === 'undefined') return [];
   const storageKey = legacy ? key : toStorageKey(key);
@@ -316,7 +325,7 @@ const mapVehicleFromApi = (raw: RawRecord): Vehicle => ({
     kmProximoServicio: parseNumber(raw.mantenimiento_km_proximo),
   },
   kmActual: parseNumber(raw.km_actual),
-  status: (parseString(raw.status) || 'disponible') as Vehicle['status'],
+  status: normalizeVehicleStatus(raw.status),
   foto: toNullableString(raw.foto),
   createdAt: parseString(raw.created_at),
 });
@@ -412,7 +421,6 @@ const toProyectoPayload = (value: Partial<Proyecto>) => {
   if ('cliente' in value) payload.cliente = parseString(value.cliente).trim();
   if ('estado' in value) payload.estado = value.estado || 'activo';
   if ('presupuesto' in value) payload.presupuesto = parseNumber(value.presupuesto);
-  if ('gastado' in value) payload.gastado = parseNumber(value.gastado);
   if ('fechaInicio' in value) payload.fecha_inicio = parseString(value.fechaInicio);
   if ('fechaFinEstimada' in value) payload.fecha_fin_estimada = toNullableString(value.fechaFinEstimada) ?? null;
   if ('fechaFinReal' in value) payload.fecha_fin_real = toNullableString(value.fechaFinReal) ?? null;
@@ -484,6 +492,90 @@ const toViajePayload = (value: Partial<SolicitudViaje>) => {
     payload.confirmaciones_hotel = value.confirmaciones?.hotel || [];
   }
   if ('atendidoPor' in value) payload.atendido_por = parseString(value.atendidoPor);
+
+  return payload;
+};
+
+const toFacturaPayload = (value: Partial<Factura>) => {
+  const payload: RawRecord = {};
+
+  if ('viaticoId' in value) payload.viatico = toApiId(value.viaticoId) ?? null;
+  if ('status' in value) payload.status = value.status || 'pendiente';
+  if ('matchConsumo' in value) payload.match_consumo = Boolean(value.matchConsumo);
+  if ('validacionCFDI' in value) payload.validacion_cfdi = value.validacionCFDI || {};
+
+  return payload;
+};
+
+const toConsumoPayload = (value: Partial<Consumo>) => {
+  const payload: RawRecord = {};
+
+  if ('userId' in value) payload.user = toApiId(value.userId) ?? null;
+  if ('viaticoId' in value) payload.viatico = toApiId(value.viaticoId) ?? null;
+  if ('facturaId' in value) payload.factura = toApiId(value.facturaId) ?? null;
+  if ('fecha' in value) payload.fecha = parseString(value.fecha);
+  if ('comercio' in value) payload.comercio = parseString(value.comercio);
+  if ('monto' in value) payload.monto = parseNumber(value.monto);
+  if ('categoria' in value) payload.categoria = parseString(value.categoria);
+  if ('facturaPdfName' in value) payload.factura_pdf_name = parseString(value.facturaPdfName);
+  if ('facturaXmlName' in value) payload.factura_xml_name = parseString(value.facturaXmlName);
+  if ('facturaNotas' in value) payload.factura_notas = parseString(value.facturaNotas);
+  if ('matched' in value) payload.matched = Boolean(value.matched);
+  if ('autorizado' in value) payload.autorizado = Boolean(value.autorizado);
+
+  return payload;
+};
+
+const toAmexTicketPayload = (value: Partial<TicketAMEX>) => {
+  const payload: RawRecord = {};
+
+  if ('userId' in value) payload.user = toApiId(value.userId) ?? null;
+  if ('cardNumber' in value) payload.card_number = parseString(value.cardNumber);
+  if ('cardHolder' in value) payload.card_holder = parseString(value.cardHolder);
+  if ('fecha' in value) payload.fecha = parseString(value.fecha);
+  if ('comercio' in value) payload.comercio = parseString(value.comercio);
+  if ('monto' in value) payload.monto = parseNumber(value.monto);
+  if ('montoUSD' in value) payload.monto_usd = toNullableNumber(value.montoUSD) ?? null;
+  if ('tipoCambio' in value) payload.tipo_cambio = toNullableNumber(value.tipoCambio) ?? null;
+  if ('categoria' in value) payload.categoria = parseString(value.categoria);
+  if ('cuentaContable' in value) payload.cuenta_contable = parseString(value.cuentaContable);
+  if ('proyectoId' in value) payload.proyecto = toApiId(value.proyectoId) ?? null;
+  if ('gsActivityId' in value) payload.gs_activity_id = toNullableNumber(value.gsActivityId) ?? null;
+  if ('paisComercio' in value) payload.pais_comercio = parseString(value.paisComercio);
+  if ('facturaId' in value) payload.factura = toApiId(value.facturaId) ?? null;
+  if ('facturaPdfName' in value) payload.factura_pdf_name = parseString(value.facturaPdfName);
+  if ('facturaXmlName' in value) payload.factura_xml_name = parseString(value.facturaXmlName);
+  if ('facturaNotas' in value) payload.factura_notas = parseString(value.facturaNotas);
+  if ('matched' in value) payload.matched = Boolean(value.matched);
+  if ('autorizado' in value) payload.autorizado = Boolean(value.autorizado);
+  if ('duplicado' in value) payload.duplicado = Boolean(value.duplicado);
+  if ('clasificacionAuto' in value) payload.clasificacion_auto = Boolean(value.clasificacionAuto);
+  if ('observaciones' in value) payload.observaciones = parseString(value.observaciones);
+
+  return payload;
+};
+
+const toVehicleAssignmentPayload = (value: Partial<VehicleAssignment>) => {
+  const payload: RawRecord = {};
+
+  if ('vehicleId' in value) payload.vehicle = toApiId(value.vehicleId) ?? null;
+  if ('userId' in value) payload.user = toApiId(value.userId) ?? null;
+  if ('viaticoId' in value) payload.viatico = toApiId(value.viaticoId) ?? null;
+  if ('proyectoId' in value) payload.proyecto = toApiId(value.proyectoId) ?? null;
+  if ('origen' in value) payload.origen = parseString(value.origen);
+  if ('destino' in value) payload.destino = parseString(value.destino);
+  if ('fechaInicio' in value) payload.fecha_inicio = parseString(value.fechaInicio);
+  if ('fechaFin' in value) payload.fecha_fin = toNullableString(value.fechaFin) ?? null;
+  if ('motivo' in value) payload.motivo = parseString(value.motivo);
+  if ('proposito' in value) payload.proposito = value.proposito || 'operaciones';
+  if ('kmInicial' in value) payload.km_inicial = parseNumber(value.kmInicial);
+  if ('kmFinal' in value) payload.km_final = toNullableNumber(value.kmFinal) ?? null;
+  if ('fotoOdometroInicial' in value) payload.foto_odometro_inicial = parseString(value.fotoOdometroInicial);
+  if ('fotoOdometroFinal' in value) payload.foto_odometro_final = parseString(value.fotoOdometroFinal);
+  if ('checklistRecepcion' in value) payload.checklist_recepcion = value.checklistRecepcion || {};
+  if ('checklistEntrega' in value) payload.checklist_entrega = value.checklistEntrega || {};
+  if ('status' in value) payload.status = value.status || 'solicitado';
+  if ('incidentes' in value) payload.incidentes = value.incidentes || [];
 
   return payload;
 };
@@ -688,6 +780,140 @@ export const createFactura = async (payload: {
     body,
   })) as RawRecord;
   return mapFacturaFromApi(data);
+};
+
+export const updateFactura = async (id: string, payload: Partial<Factura>): Promise<Factura> => {
+  const data = (await apiFetch(`/conciliacion/facturas/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(toFacturaPayload(payload)),
+  })) as RawRecord;
+  return mapFacturaFromApi(data);
+};
+
+export const updateConsumo = async (id: string, payload: Partial<Consumo>): Promise<Consumo> => {
+  const data = (await apiFetch(`/conciliacion/consumos/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(toConsumoPayload(payload)),
+  })) as RawRecord;
+  return mapConsumoFromApi(data);
+};
+
+export const createAmexTicket = async (payload: Partial<TicketAMEX>): Promise<TicketAMEX> => {
+  const data = (await apiFetch('/amex/tickets/', {
+    method: 'POST',
+    body: JSON.stringify(toAmexTicketPayload(payload)),
+  })) as RawRecord;
+  return mapTicketAmexFromApi(data);
+};
+
+export const updateAmexTicket = async (id: string, payload: Partial<TicketAMEX>): Promise<TicketAMEX> => {
+  const data = (await apiFetch(`/amex/tickets/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(toAmexTicketPayload(payload)),
+  })) as RawRecord;
+  return mapTicketAmexFromApi(data);
+};
+
+export const createFlotillaAsignacion = async (payload: Partial<VehicleAssignment>): Promise<VehicleAssignment> => {
+  const data = (await apiFetch('/flotilla/asignaciones/', {
+    method: 'POST',
+    body: JSON.stringify(toVehicleAssignmentPayload(payload)),
+  })) as RawRecord;
+  return mapVehicleAssignmentFromApi(data);
+};
+
+export const createFlotillaVehiculo = async (payload: {
+  brand: string;
+  model: string;
+  year: number;
+  plates: string;
+  serialNumber: string;
+  color: string;
+  currentKm?: number;
+  insuranceCompany?: string;
+  insurancePolicyNumber?: string;
+  insuranceExpirationDate?: string;
+  foto?: File | null;
+}) => {
+  const body = new FormData();
+  body.append('marca', payload.brand);
+  body.append('modelo', payload.model);
+  body.append('anio', String(payload.year));
+  body.append('placas', payload.plates);
+  body.append('numero_serie', payload.serialNumber);
+  body.append('color', payload.color);
+  if (payload.currentKm !== undefined) {
+    body.append('km_actual', String(payload.currentKm));
+  }
+  if (payload.insuranceCompany !== undefined) {
+    body.append('seguro_compania', payload.insuranceCompany);
+  }
+  if (payload.insurancePolicyNumber !== undefined) {
+    body.append('seguro_poliza', payload.insurancePolicyNumber);
+  }
+  if (payload.insuranceExpirationDate !== undefined && payload.insuranceExpirationDate.trim()) {
+    body.append('seguro_vigencia', payload.insuranceExpirationDate.trim());
+  }
+  if (payload.foto) {
+    body.append('foto', payload.foto);
+  }
+
+  const data = (await apiFetch('/flotilla/vehiculos/', {
+    method: 'POST',
+    body,
+  })) as RawRecord;
+  return mapVehicleFromApi(data);
+};
+
+export const updateFlotillaVehiculo = async (
+  id: string,
+  payload: Partial<{
+    brand: string;
+    model: string;
+    year: number;
+    plates: string;
+    serialNumber: string;
+    color: string;
+    currentKm: number;
+    insuranceCompany: string;
+    insurancePolicyNumber: string;
+    insuranceExpirationDate: string;
+    foto: File | null;
+  }>
+) => {
+  const body = new FormData();
+  if (payload.brand !== undefined) body.append('marca', payload.brand);
+  if (payload.model !== undefined) body.append('modelo', payload.model);
+  if (payload.year !== undefined) body.append('anio', String(payload.year));
+  if (payload.plates !== undefined) body.append('placas', payload.plates);
+  if (payload.serialNumber !== undefined) body.append('numero_serie', payload.serialNumber);
+  if (payload.color !== undefined) body.append('color', payload.color);
+  if (payload.currentKm !== undefined) body.append('km_actual', String(payload.currentKm));
+  if (payload.insuranceCompany !== undefined) body.append('seguro_compania', payload.insuranceCompany);
+  if (payload.insurancePolicyNumber !== undefined) body.append('seguro_poliza', payload.insurancePolicyNumber);
+  if (payload.insuranceExpirationDate !== undefined && payload.insuranceExpirationDate.trim()) {
+    body.append('seguro_vigencia', payload.insuranceExpirationDate.trim());
+  }
+  if (payload.foto instanceof File) {
+    body.append('foto', payload.foto);
+  }
+
+  const data = (await apiFetch(`/flotilla/vehiculos/${id}/`, {
+    method: 'PATCH',
+    body,
+  })) as RawRecord;
+  return mapVehicleFromApi(data);
+};
+
+export const updateFlotillaAsignacion = async (
+  id: string,
+  payload: Partial<VehicleAssignment>
+): Promise<VehicleAssignment> => {
+  const data = (await apiFetch(`/flotilla/asignaciones/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(toVehicleAssignmentPayload(payload)),
+  })) as RawRecord;
+  return mapVehicleAssignmentFromApi(data);
 };
 
 export const createDispersion = async (payload: {

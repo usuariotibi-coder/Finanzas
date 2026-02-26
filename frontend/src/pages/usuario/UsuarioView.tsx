@@ -7,7 +7,16 @@ import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
 import { GS_ACTIVITY_OTHER_ID, getActivityById } from '../../data/gsActivities';
-import { createFactura, createViaje, createViatico, syncCoreAppData, updateViatico } from '../../utils/backendSync';
+import {
+  createFactura,
+  createFlotillaAsignacion,
+  createViaje,
+  createViatico,
+  fetchFlotillaAsignaciones,
+  syncCoreAppData,
+  updateFlotillaAsignacion,
+  updateViatico,
+} from '../../utils/backendSync';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
@@ -193,6 +202,29 @@ export default function UsuarioView() {
     localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
     window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
   };
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadAssignments = async () => {
+      try {
+        const remoteAssignments = await fetchFlotillaAsignaciones();
+        if (!isActive) {
+          return;
+        }
+        setVehicleAssignments(remoteAssignments);
+        localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(remoteAssignments));
+        window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
+      } catch {
+        // Keep local cache if backend is temporarily unavailable.
+      }
+    };
+
+    void loadAssignments();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const [formSolicitudVehiculo, setFormSolicitudVehiculo] = useLocalStorageState('usuario:formSolicitudVehiculo', {
     proyectoId: '',
@@ -496,12 +528,12 @@ export default function UsuarioView() {
     const configs = {
       pendiente: { label: 'Pendiente de Aprobación', color: 'bg-yellow-100 text-yellow-700', icon: '⏳' },
       aprobado: { label: 'Esperando dispersión', color: 'bg-blue-100 text-blue-700', icon: '⏳' },
-      rechazado: { label: 'Rechazado', color: 'bg-red-100 text-red-700', icon: '❌' },
-      dispersado: { label: 'Dispersado', color: 'bg-green-100 text-green-700', icon: '✅' },
-      en_viaje: { label: 'En Viaje', color: 'bg-purple-100 text-purple-700', icon: '✈️' },
-      viaje_finalizado: { label: 'Viaje Finalizado', color: 'bg-indigo-100 text-indigo-700', icon: '🏁' },
-      en_recuperacion: { label: 'Pendiente Recuperación', color: 'bg-orange-100 text-orange-700', icon: '💰' },
-      completado: { label: 'Completado', color: 'bg-gray-100 text-gray-700', icon: '✅' },
+      rechazado: { label: 'Rechazado', color: 'bg-red-100 text-red-700', icon: 'X' },
+      dispersado: { label: 'Dispersado', color: 'bg-green-100 text-green-700', icon: 'OK' },
+      en_viaje: { label: 'En Viaje', color: 'bg-purple-100 text-purple-700', icon: 'AIR' },
+      viaje_finalizado: { label: 'Viaje Finalizado', color: 'bg-indigo-100 text-indigo-700', icon: 'FIN' },
+      en_recuperacion: { label: 'Pendiente Recuperación', color: 'bg-orange-100 text-orange-700', icon: '$' },
+      completado: { label: 'Completado', color: 'bg-gray-100 text-gray-700', icon: 'OK' },
     };
     return configs[status] || configs.pendiente;
   };
@@ -528,27 +560,27 @@ export default function UsuarioView() {
     if (viatico.status === 'dispersado' || viatico.status === 'viaje_finalizado') {
       const facturasCompletas = (viatico.montoGastado || 0) >= (viatico.montoDispersado || 0) * 0.9;
       return facturasCompletas
-        ? { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: '✅', accion: 'ver' }
-        : { label: 'Pendiente por subir facturas', color: 'bg-yellow-100 text-yellow-700', icon: '📄', accion: 'subir' };
+        ? { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: 'OK', accion: 'ver' }
+        : { label: 'Pendiente por subir facturas', color: 'bg-yellow-100 text-yellow-700', icon: 'DOC', accion: 'subir' };
     }
     if (viatico.status === 'aprobado') {
       return { label: 'Esperando dispersión', color: 'bg-blue-100 text-blue-700', icon: '⏳', accion: 'none' };
     }
     if (viatico.status === 'completado') {
-      return { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: '✅', accion: 'ver' };
+      return { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: 'OK', accion: 'ver' };
     }
-    return { label: 'Ver detalles', color: 'bg-gray-100 text-gray-700', icon: 'ℹ️', accion: 'ver' };
+    return { label: 'Ver detalles', color: 'bg-gray-100 text-gray-700', icon: 'i', accion: 'ver' };
   };
 
   const getVehiculoStatusIcon = (status: VehicleAssignment['status']) => {
     const icons: Record<VehicleAssignment['status'], string> = {
       solicitado: '⏳',
-      asignado: '📌',
-      activo: '🚗',
-      completado: '🏁',
-      rechazado: '⛔',
+      asignado: 'PIN',
+      activo: 'CAR',
+      completado: 'FIN',
+      rechazado: 'X',
     };
-    return icons[status] ?? '🚗';
+    return icons[status] ?? 'CAR';
   };
 
   const getProcesoVehiculo = (status: VehicleAssignment['status']) => {
@@ -565,13 +597,13 @@ export default function UsuarioView() {
   const getViajeStatusIcon = (status: SolicitudViaje['status']) => {
     const icons = {
       pendiente: '⏳',
-      en_proceso: '🧭',
-      confirmado: '✅',
-      rechazado: '⛔',
-      cancelado: '⛔',
-      completado: '🏁',
+      en_proceso: 'PROC',
+      confirmado: 'OK',
+      rechazado: 'X',
+      cancelado: 'X',
+      completado: 'FIN',
     };
-    return icons[status] || '🧭';
+    return icons[status] || 'PROC';
   };
 
   const getProcesoViaje = (status: SolicitudViaje['status']) => {
@@ -751,7 +783,7 @@ export default function UsuarioView() {
   };
 
   // Funciones para vehículos (solo coches)
-  const handleSolicitarVehiculo = () => {
+  const handleSolicitarVehiculo = async () => {
     if (!formSolicitudVehiculo.proyectoId || !formSolicitudVehiculo.origen || !formSolicitudVehiculo.destino || !formSolicitudVehiculo.motivo || !formSolicitudVehiculo.fechaInicio) {
       setShowSolicitarVehiculoErrors(true);
       return;
@@ -762,42 +794,41 @@ export default function UsuarioView() {
       requiereGasolina: formSolicitudVehiculo.requiereGasolina,
     });
 
-    const nuevaSolicitud: VehicleAssignment = {
-      id: `ASG-${String(vehicleAssignments.length + 1).padStart(3, '0')}`,
-      vehicleId: '',
-      userId: 'user1',
-      userName: 'Juan Pérez',
-      proyectoId: formSolicitudVehiculo.proyectoId,
-      proyectoNombre: formatProyectoLabel(
-        proyectos.find(p => p.id === formSolicitudVehiculo.proyectoId)?.nombre,
-        formSolicitudVehiculo.proyectoId
-      ),
-      origen: formSolicitudVehiculo.origen,
-      destino: formSolicitudVehiculo.destino,
-      fechaInicio: formSolicitudVehiculo.fechaInicio,
-      fechaFin: formSolicitudVehiculo.fechaFin,
-      motivo: formSolicitudVehiculo.motivo,
-      proposito: formSolicitudVehiculo.proposito,
-      kmInicial: 0,
-      status: 'solicitado',
-      createdAt: new Date().toISOString(),
-    };
+    const currentUserId = user ? String(user.id) : undefined;
 
-    saveVehicleAssignments([...vehicleAssignments, nuevaSolicitud]);
-    showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
+    try {
+      const nuevaSolicitud = await createFlotillaAsignacion({
+        userId: currentUserId,
+        proyectoId: formSolicitudVehiculo.proyectoId,
+        origen: formSolicitudVehiculo.origen,
+        destino: formSolicitudVehiculo.destino,
+        fechaInicio: formSolicitudVehiculo.fechaInicio,
+        fechaFin: formSolicitudVehiculo.fechaFin || undefined,
+        motivo: formSolicitudVehiculo.motivo,
+        proposito: formSolicitudVehiculo.proposito,
+        kmInicial: 0,
+        status: 'solicitado',
+      });
 
-    setShowModalSolicitarVehiculo(false);
-    setFormSolicitudVehiculo({
-      proyectoId: '',
-      origen: '',
-      destino: '',
-      motivo: '',
-      fechaInicio: '',
-      fechaFin: '',
-      proposito: 'operaciones',
-      requiereGasolina: false,
-    });
-    setShowSolicitarVehiculoErrors(false);
+      saveVehicleAssignments([nuevaSolicitud, ...vehicleAssignments]);
+      await syncCoreAppData({ userId: currentUserId });
+      showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
+
+      setShowModalSolicitarVehiculo(false);
+      setFormSolicitudVehiculo({
+        proyectoId: '',
+        origen: '',
+        destino: '',
+        motivo: '',
+        fechaInicio: '',
+        fechaFin: '',
+        proposito: 'operaciones',
+        requiereGasolina: false,
+      });
+      setShowSolicitarVehiculoErrors(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo solicitar el vehiculo.', 'error');
+    }
   };
 
   // Función para solicitar viaje (avión, camión, hotel)
@@ -865,7 +896,7 @@ export default function UsuarioView() {
     }
   };
 
-  const handleRecibirVehiculo = () => {
+  const handleRecibirVehiculo = async () => {
     if (kmInicial <= 0) {
       setShowRecibirErrors(true);
       return;
@@ -874,28 +905,32 @@ export default function UsuarioView() {
     const assignment = vehicleAssignments.find(a => a.id === assignmentSeleccionado);
     if (!assignment) return;
 
-    const updatedAssignments = vehicleAssignments.map(a => {
-      if (a.id === assignmentSeleccionado) {
-        return {
-          ...a,
-          kmInicial,
-          checklistRecepcion: { ...checklistRecepcion, foto: fotoRecepcion?.name },
-          status: 'activo' as const,
-        };
-      }
-      return a;
-    });
+    try {
+      const persisted = await updateFlotillaAsignacion(assignment.id, {
+        kmInicial,
+        checklistRecepcion: { ...checklistRecepcion, foto: fotoRecepcion?.name },
+        fotoOdometroInicial: fotoRecepcion?.name,
+        status: 'activo',
+      });
 
-    saveVehicleAssignments(updatedAssignments);
-    showToast('Vehiculo recibido correctamente', 'success');
-    setShowModalRecibirVehiculo(false);
-    setAssignmentSeleccionado(null);
-    setKmInicial(0);
-    setFotoRecepcion(null);
-    setShowRecibirErrors(false);
+      const updatedAssignments = vehicleAssignments.map((item) => (
+        item.id === persisted.id ? { ...item, ...persisted } : item
+      ));
+
+      saveVehicleAssignments(updatedAssignments);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      showToast('Vehiculo recibido correctamente', 'success');
+      setShowModalRecibirVehiculo(false);
+      setAssignmentSeleccionado(null);
+      setKmInicial(0);
+      setFotoRecepcion(null);
+      setShowRecibirErrors(false);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo registrar la recepcion del vehiculo.', 'error');
+    }
   };
 
-  const handleDevolverVehiculo = () => {
+  const handleDevolverVehiculo = async () => {
     const assignment = vehicleAssignments.find(a => a.id === assignmentSeleccionado);
     if (!assignment || !assignment.kmInicial) return;
 
@@ -904,26 +939,30 @@ export default function UsuarioView() {
       return;
     }
 
-    const updatedAssignments = vehicleAssignments.map(a => {
-      if (a.id === assignmentSeleccionado) {
-        return {
-          ...a,
-          kmFinal,
-          checklistEntrega: { ...checklistEntrega, foto: fotoEntrega?.name },
-          fechaFin: new Date().toISOString().split('T')[0],
-          status: 'completado' as const,
-        };
-      }
-      return a;
-    });
+    try {
+      const persisted = await updateFlotillaAsignacion(assignment.id, {
+        kmFinal,
+        checklistEntrega: { ...checklistEntrega, foto: fotoEntrega?.name },
+        fotoOdometroFinal: fotoEntrega.name,
+        fechaFin: new Date().toISOString().split('T')[0],
+        status: 'completado',
+      });
 
-    saveVehicleAssignments(updatedAssignments);
-    setShowVehicleReturnSuccess(true);
-    setShowModalDevolverVehiculo(false);
-    setShowDevolverErrors(false);
-    setAssignmentSeleccionado(null);
-    setKmFinal(0);
-    setFotoEntrega(null);
+      const updatedAssignments = vehicleAssignments.map((item) => (
+        item.id === persisted.id ? { ...item, ...persisted } : item
+      ));
+
+      saveVehicleAssignments(updatedAssignments);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      setShowVehicleReturnSuccess(true);
+      setShowModalDevolverVehiculo(false);
+      setShowDevolverErrors(false);
+      setAssignmentSeleccionado(null);
+      setKmFinal(0);
+      setFotoEntrega(null);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo registrar la devolucion del vehiculo.', 'error');
+    }
   };
 
   const handleClearLocalData = () => {
@@ -952,7 +991,7 @@ export default function UsuarioView() {
           >
             <div className="flex items-start gap-3 p-3.5">
               <span className="mt-0.5 text-base">
-                {toast.type === 'success' ? '✓' : toast.type === 'error' ? '!' : 'i'}
+                {toast.type === 'success' ? 'OK' : toast.type === 'error' ? '!' : 'i'}
               </span>
               <p className="flex-1 text-sm font-medium leading-5">{toast.text}</p>
               <button
@@ -961,7 +1000,7 @@ export default function UsuarioView() {
                 aria-label="Cerrar notificacion"
                 type="button"
               >
-                ×
+                x
               </button>
             </div>
           </div>
@@ -1161,7 +1200,7 @@ export default function UsuarioView() {
                             className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
                             type="button"
                           >
-                            🔄 <span>Extender Viaje</span>
+                            <span>Extender Viaje</span>
                           </button>
                         )}
 
@@ -1237,17 +1276,17 @@ export default function UsuarioView() {
                           )}
                           {assignment.status === 'asignado' && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                              📌 Asignado - Pendiente Recepción
+                              Asignado - Pendiente Recepción
                             </span>
                           )}
                           {assignment.status === 'activo' && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                              🚗 En Uso
+                              En Uso
                             </span>
                           )}
                           {assignment.status === 'completado' && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
-                              🏁 Completado
+                              Completado
                             </span>
                           )}
                           </div>
@@ -1315,7 +1354,7 @@ export default function UsuarioView() {
                           )}
                           {assignment.checklistRecepcion && (
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
-                              ✓ Checklist recepción completado
+                              Checklist recepción completado
                             </span>
                           )}
                         </div>
@@ -1366,10 +1405,10 @@ export default function UsuarioView() {
                             'bg-purple-100 text-purple-800'
                           }`}>
                             {solicitud.status === 'pendiente' ? '⏳ Pendiente' :
-                             solicitud.status === 'en_proceso' ? '🧭 En Proceso' :
-                             solicitud.status === 'confirmado' ? '✅ Confirmado' :
-                             solicitud.status === 'rechazado' ? '⛔ Rechazado' :
-                             solicitud.status === 'cancelado' ? '⛔ Cancelado' : '🏁 Completado'}
+                             solicitud.status === 'en_proceso' ? 'En Proceso' :
+                             solicitud.status === 'confirmado' ? 'Confirmado' :
+                             solicitud.status === 'rechazado' ? 'Rechazado' :
+                             solicitud.status === 'cancelado' ? 'Cancelado' : 'Completado'}
                           </span>
                         </div>
 
@@ -1396,7 +1435,7 @@ export default function UsuarioView() {
                           {solicitud.necesitaAvion && (
                             <div className="flex items-center gap-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                ✈️ Avión
+                                Avión
                               </span>
                               {solicitud.statusAvion && (
                                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -1405,7 +1444,7 @@ export default function UsuarioView() {
                                   'bg-green-50 text-green-700 border border-green-200'
                                 }`}>
                                   {solicitud.statusAvion === 'pendiente' ? 'Pendiente' :
-                                   solicitud.statusAvion === 'gestionando' ? 'Gestionando' : '✓ Confirmado'}
+                                   solicitud.statusAvion === 'gestionando' ? 'Gestionando' : 'Confirmado'}
                                 </span>
                               )}
                             </div>
@@ -1413,7 +1452,7 @@ export default function UsuarioView() {
                           {solicitud.necesitaCamion && (
                             <div className="flex items-center gap-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                                🚛 Camión
+                                Camión
                               </span>
                               {solicitud.statusCamion && (
                                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -1422,7 +1461,7 @@ export default function UsuarioView() {
                                   'bg-green-50 text-green-700 border border-green-200'
                                 }`}>
                                   {solicitud.statusCamion === 'pendiente' ? 'Pendiente' :
-                                   solicitud.statusCamion === 'gestionando' ? 'Gestionando' : '✓ Confirmado'}
+                                   solicitud.statusCamion === 'gestionando' ? 'Gestionando' : 'Confirmado'}
                                 </span>
                               )}
                             </div>
@@ -1430,7 +1469,7 @@ export default function UsuarioView() {
                           {solicitud.necesitaHotel && (
                             <div className="flex items-center gap-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                🏨 Hotel
+                                Hotel
                               </span>
                               {solicitud.statusHotel && (
                                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -1439,7 +1478,7 @@ export default function UsuarioView() {
                                   'bg-green-50 text-green-700 border border-green-200'
                                 }`}>
                                   {solicitud.statusHotel === 'pendiente' ? 'Pendiente' :
-                                   solicitud.statusHotel === 'gestionando' ? 'Gestionando' : '✓ Confirmado'}
+                                   solicitud.statusHotel === 'gestionando' ? 'Gestionando' : 'Confirmado'}
                                 </span>
                               )}
                             </div>
@@ -1452,13 +1491,13 @@ export default function UsuarioView() {
                             <p className="text-xs font-medium text-gray-700 mb-1">Confirmaciones:</p>
                             <div className="space-y-1 text-xs text-gray-600">
                               {confirmacionesAvion.map((confirmacion, index) => (
-                                <p key={`avion-${solicitud.id}-${index}`}>✈️ {confirmacion.aerolinea} - Conf: {confirmacion.confirmacion}</p>
+                                <p key={`avion-${solicitud.id}-${index}`}>Avión: {confirmacion.aerolinea} - Conf: {confirmacion.confirmacion}</p>
                               ))}
                               {confirmacionesCamion.map((confirmacion, index) => (
-                                <p key={`camion-${solicitud.id}-${index}`}>🚛 {confirmacion.proveedor} - Conf: {confirmacion.confirmacion}</p>
+                                <p key={`camion-${solicitud.id}-${index}`}>Camión: {confirmacion.proveedor} - Conf: {confirmacion.confirmacion}</p>
                               ))}
                               {confirmacionesHotel.map((confirmacion, index) => (
-                                <p key={`hotel-${solicitud.id}-${index}`}>🏨 {confirmacion.nombre} - Conf: {confirmacion.confirmacion}</p>
+                                <p key={`hotel-${solicitud.id}-${index}`}>Hotel: {confirmacion.nombre} - Conf: {confirmacion.confirmacion}</p>
                               ))}
                             </div>
                           </div>
@@ -1558,7 +1597,7 @@ export default function UsuarioView() {
               {/* 1. Factura PDF */}
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-900">
-                  1️⃣ Factura PDF
+                  1️⒣ Factura PDF
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className={`flex-1 px-3 py-2 border border-dashed rounded-md hover:border-primary-500 cursor-pointer transition-colors ${
@@ -1593,7 +1632,7 @@ export default function UsuarioView() {
               {/* 2. Factura XML */}
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-900">
-                  2️⃣ Factura XML
+                  2️⒣ Factura XML
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className={`flex-1 px-3 py-2 border border-dashed rounded-md hover:border-primary-500 cursor-pointer transition-colors ${
@@ -1628,7 +1667,7 @@ export default function UsuarioView() {
               {/* 3. Ticket/Foto */}
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-900">
-                  3️⃣ Ticket / Comprobante (Foto)
+                  3️⒣ Ticket / Comprobante (Foto)
                 </label>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <label className={`flex-1 px-3 py-2 border border-dashed rounded-md hover:border-primary-500 cursor-pointer transition-colors ${
@@ -1756,10 +1795,10 @@ export default function UsuarioView() {
               <div className="ml-2.5">
                 <h4 className="text-xs font-semibold text-blue-800 mb-1">Ayuda</h4>
                 <ul className="text-xs text-blue-700 space-y-0.5">
-                  <li>• El PDF y XML deben ser de la misma factura</li>
-                  <li>• Si solo tienes un ticket (sin factura), solo sube la foto en la sección 3</li>
-                  <li>• Puedes agregar múltiples gastos para un mismo viático</li>
-                  <li>• Asegúrate de que las fotos sean legibles</li>
+                  <li>⬢ El PDF y XML deben ser de la misma factura</li>
+                  <li>⬢ Si solo tienes un ticket (sin factura), solo sube la foto en la sección 3</li>
+                  <li>⬢ Puedes agregar múltiples gastos para un mismo viático</li>
+                  <li>⬢ Asegúrate de que las fotos sean legibles</li>
                 </ul>
               </div>
             </div>
@@ -2587,7 +2626,7 @@ export default function UsuarioView() {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">🔄 Extender Viaje</h2>
+                <h2 className="text-xl font-bold text-gray-900">Extender Viaje</h2>
                 <button
                   onClick={resetExtensionState}
                   className="text-gray-400 hover:text-gray-600"
