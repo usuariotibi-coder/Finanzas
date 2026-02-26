@@ -167,11 +167,21 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
   const filteredItems = menuItems.filter((item) => canAccessPath(user?.role, item.path));
 
-  if (!isOpen) return null;
-
   return (
-    <aside className="fixed left-0 top-16 w-56 h-[calc(100vh-4rem)] bg-white border-r border-neutral-200 overflow-y-auto">
-      <nav className="p-3 space-y-0.5">
+    <aside
+      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-56 border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
+        isOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none'
+      }`}
+      aria-hidden={!isOpen}
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-500 via-accent-500 to-primary-500" />
+
+      <div className="border-b border-neutral-200 px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.28em] text-neutral-500">Navegacion</p>
+        <p className="mt-1 text-xs font-medium text-primary-800">Accesos rapidos del sistema</p>
+      </div>
+
+      <nav className="h-[calc(100%-7.3rem)] overflow-y-auto p-3 space-y-1">
         {filteredItems.map((item) => {
           const isActive = location.pathname === item.path;
 
@@ -179,15 +189,17 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center justify-between py-2 rounded-lg transition-colors ${
+              className={`group flex items-center justify-between rounded-xl py-2 transition-all duration-200 ${
                 isActive
-                  ? 'bg-primary-50 text-primary-800 border-l-4 border-accent-500 pl-2.5 pr-3'
-                  : 'text-neutral-700 hover:bg-neutral-50 px-3'
+                  ? 'bg-primary-50 text-primary-800 border-l-4 border-accent-500 pl-2.5 pr-3 shadow-sm'
+                  : 'text-neutral-700 hover:bg-neutral-50 hover:translate-x-0.5 px-3'
               }`}
             >
               <div className="flex items-center space-x-2.5">
                 <svg
-                  className={`w-[18px] h-[18px] ${isActive ? 'text-primary-700' : 'text-neutral-500'}`}
+                  className={`w-[18px] h-[18px] transition-transform duration-200 ${
+                    isActive ? 'text-primary-700' : 'text-neutral-500 group-hover:text-primary-700 group-hover:scale-110'
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -212,7 +224,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   return null;
                 }
                 return (
-                  <span className="px-1.5 py-0.5 text-[11px] font-semibold text-white bg-accent-500 rounded-full">
+                  <span className="px-1.5 py-0.5 text-[11px] font-semibold text-white bg-accent-500 rounded-full shadow-sm">
                     {badgeValue}
                   </span>
                 );
@@ -222,10 +234,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         })}
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-neutral-200 bg-white">
+      <div className="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white px-3 py-2.5">
         <div className="flex items-center justify-between text-xs text-neutral-600">
-          <span>Versión 1.0.0</span>
-          <button className="hover:text-accent-600 transition-colors">
+          <span>Version 1.0.0</span>
+          <button className="rounded-md p-1 hover:bg-primary-50 hover:text-accent-600 transition-colors">
             <svg
               className="w-4 h-4"
               fill="none"

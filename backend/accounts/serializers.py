@@ -130,3 +130,32 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, min_length=8, trim_whitespace=False)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('La contrasena actual es incorrecta.')
+        return value
+
+    def validate_new_password(self, value):
+        user = self.context['request'].user
+        user_data = {
+            'email': getattr(user, 'email', ''),
+            'full_name': getattr(user, 'full_name', ''),
+            'department': getattr(user, 'department', ''),
+            'position': getattr(user, 'position', ''),
+        }
+        validate_user_password(value, user_data)
+        return value
+
+    def validate(self, attrs):
+        if attrs['current_password'] == attrs['new_password']:
+            raise serializers.ValidationError(
+                {'new_password': ['La nueva contrasena debe ser diferente a la actual.']}
+            )
+        return attrs

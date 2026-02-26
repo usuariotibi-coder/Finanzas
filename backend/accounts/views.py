@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout, update_session_auth_hash
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
@@ -6,7 +6,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .permissions import IsAdmin
-from .serializers import AdminUserUpdateSerializer, RegisterSerializer, UserSerializer
+from .serializers import (
+    AdminUserUpdateSerializer,
+    ChangePasswordSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 
 
 User = get_user_model()
@@ -85,3 +90,15 @@ class MeView(APIView):
         if not request.user or not request.user.is_authenticated:
             return Response({'detail': 'No autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
         return Response(UserSerializer(request.user).data)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save()
+        update_session_auth_hash(request, request.user)
+        return Response({'detail': 'Contrasena actualizada correctamente.'}, status=status.HTTP_200_OK)

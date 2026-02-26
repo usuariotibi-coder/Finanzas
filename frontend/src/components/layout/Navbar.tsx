@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { roleLabels } from '../../context/AuthContext';
 import useAuth from '../../hooks/useAuth';
@@ -7,6 +7,7 @@ import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, Viatico } from '../../types';
 import { canAccessPath } from '../../utils/access';
 import { getPendingViaticoExtension } from '../../utils/viaticoExtensions';
+import { api } from '../../utils/api';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -20,11 +21,40 @@ interface NotificationItem {
   path: string;
 }
 
+const strengthMeta = [
+  { label: 'Muy debil', color: 'bg-red-500', text: 'text-red-600' },
+  { label: 'Debil', color: 'bg-orange-500', text: 'text-orange-600' },
+  { label: 'Media', color: 'bg-amber-500', text: 'text-amber-700' },
+  { label: 'Fuerte', color: 'bg-emerald-500', text: 'text-emerald-700' },
+  { label: 'Muy fuerte', color: 'bg-emerald-600', text: 'text-emerald-800' },
+];
+
+const buildPasswordChecks = (value: string) => [
+  { label: 'Minimo 8 caracteres', ok: value.length >= 8 },
+  { label: 'Una mayuscula (A-Z)', ok: /[A-Z]/.test(value) },
+  { label: 'Una minuscula (a-z)', ok: /[a-z]/.test(value) },
+  { label: 'Un numero (0-9)', ok: /\d/.test(value) },
+  { label: 'Un simbolo (!@#$...)', ok: /[^A-Za-z0-9]/.test(value) },
+  { label: 'Sin espacios', ok: !/\s/.test(value) },
+];
+
 export default function Navbar({ onMenuClick }: NavbarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [viaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticosResueltos] = useLocalStorageState<string[]>('pm-portal:viaticosResueltos', []);
   const [viajesPendientesPm] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', []);
@@ -136,6 +166,14 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     .slice(0, 2)
     .toUpperCase();
 
+  const passwordChecks = useMemo(
+    () => buildPasswordChecks(newPassword),
+    [newPassword]
+  );
+  const passedChecks = passwordChecks.filter((check) => check.ok).length;
+  const strengthScore = Math.min(5, passedChecks + (newPassword.length >= 12 ? 1 : 0));
+  const currentStrength = strengthMeta[Math.max(0, Math.min(4, strengthScore - 1))];
+
   const getNotificationStyle = (id: string) => {
     const styles = {
       'portal-pm': {
@@ -206,25 +244,96 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
     };
   };
 
-  useEscapeKey(() => setIsOpen(false), isOpen);
+  const closePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmNewPassword(false);
+    setPasswordError('');
+    setPasswordSuccess('');
+    setPasswordSubmitting(false);
+  };
+
+  useEscapeKey(
+    () => {
+      setIsOpen(false);
+      setIsUserMenuOpen(false);
+      if (isPasswordModalOpen) {
+        closePasswordModal();
+      }
+    },
+    isOpen || isUserMenuOpen || isPasswordModalOpen
+  );
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && !isUserMenuOpen) {
       return;
     }
+
     const handleClick = (event: MouseEvent) => {
       const target = event.target as Node;
       if (panelRef.current && !panelRef.current.contains(target)) {
         setIsOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setIsUserMenuOpen(false);
+      }
     };
+
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [isOpen]);
+  }, [isOpen, isUserMenuOpen]);
 
   const handleLogout = async () => {
+    setIsUserMenuOpen(false);
     await logout();
     navigate('/login');
+  };
+
+  const handleChangePasswordSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('Completa los tres campos de contrasena.');
+      return;
+    }
+    if (passwordChecks.some((check) => !check.ok)) {
+      setPasswordError(
+        'La nueva contrasena debe tener minimo 8 caracteres, incluir mayuscula, minuscula, numero, simbolo y no contener espacios.'
+      );
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('La confirmacion no coincide con la nueva contrasena.');
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      await api.csrf();
+      await api.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      setPasswordSuccess('Contrasena actualizada correctamente.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmNewPassword(false);
+    } catch (err) {
+      setPasswordError(
+        err instanceof Error ? err.message : 'No se pudo actualizar la contrasena.'
+      );
+    } finally {
+      setPasswordSubmitting(false);
+    }
   };
 
   return (
@@ -259,7 +368,10 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         <div className="flex items-center space-x-4">
           <div className="relative" ref={panelRef}>
             <button
-              onClick={() => setIsOpen((prev) => !prev)}
+              onClick={() => {
+                setIsUserMenuOpen(false);
+                setIsOpen((prev) => !prev);
+              }}
               className="relative p-2 rounded-lg hover:bg-primary-50 transition-colors"
               aria-label="Notificaciones"
             >
@@ -347,23 +459,217 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             )}
           </div>
 
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-primary-900">{userName}</p>
-              <p className="text-xs text-neutral-600">{userRoleLabel}</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-semibold">
-              {initials || 'US'}
-            </div>
+          <div className="relative" ref={userMenuRef}>
             <button
-              onClick={handleLogout}
-              className="text-xs font-semibold text-neutral-600 hover:text-accent-600 transition-colors"
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setIsUserMenuOpen((prev) => !prev);
+              }}
+              className="group flex items-center gap-3 rounded-xl border border-transparent px-2 py-1 transition-all hover:border-primary-100 hover:bg-primary-50/60"
             >
-              Salir
+              <div className="text-right">
+                <p className="text-sm font-medium text-primary-900">{userName}</p>
+                <p className="text-xs text-neutral-600">{userRoleLabel}</p>
+              </div>
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white font-semibold shadow-sm transition-transform group-hover:scale-105">
+                {initials || 'US'}
+              </div>
+              <svg
+                className={`h-4 w-4 text-neutral-500 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
+
+            {isUserMenuOpen && (
+              <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl ring-1 ring-black/5">
+                <div className="border-b border-neutral-200 bg-gradient-to-r from-primary-50 via-white to-neutral-50 px-4 py-3">
+                  <p className="truncate text-sm font-semibold text-primary-900">{userName}</p>
+                  <p className="text-xs text-neutral-600">{userRoleLabel}</p>
+                </div>
+                <div className="p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      setIsPasswordModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary-800 transition-colors hover:bg-primary-50"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2V9a2 2 0 00-2-2h-1V6a5 5 0 10-10 0v1H6a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Cambiar contrasena
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-rose-700 transition-colors hover:bg-rose-50"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H9m4 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                    Cerrar sesion
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Seguridad</p>
+                <h3 className="text-xl font-semibold text-primary-900">Cambiar contrasena</h3>
+                <p className="mt-1 text-xs text-neutral-600">
+                  Protege tu cuenta usando una contrasena fuerte y unica.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <form className="mt-5 space-y-4" onSubmit={handleChangePasswordSubmit}>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Contrasena actual</label>
+                <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    className="w-full rounded-l-lg px-3 py-2.5 text-sm outline-none"
+                    placeholder="Contrasena actual"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword((prev) => !prev)}
+                    className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                  >
+                    {showCurrentPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Nueva contrasena</label>
+                  <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      className="w-full rounded-l-lg px-3 py-2.5 text-sm outline-none"
+                      placeholder="Nueva contrasena"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                    >
+                      {showNewPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Confirmar nueva contrasena</label>
+                  <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                    <input
+                      type={showConfirmNewPassword ? 'text' : 'password'}
+                      value={confirmNewPassword}
+                      onChange={(event) => setConfirmNewPassword(event.target.value)}
+                      className="w-full rounded-l-lg px-3 py-2.5 text-sm outline-none"
+                      placeholder="Repite la nueva contrasena"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword((prev) => !prev)}
+                      className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                    >
+                      {showConfirmNewPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold text-slate-700">Seguridad de nueva contrasena</p>
+                  {newPassword.length > 0 && (
+                    <span className={`text-xs font-semibold ${currentStrength.text}`}>{currentStrength.label}</span>
+                  )}
+                </div>
+                <div className="mt-2 h-1.5 rounded-full bg-white shadow-inner">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${currentStrength.color}`}
+                    style={{ width: `${(strengthScore / 5) * 100}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                  {passwordChecks.map((check) => (
+                    <span
+                      key={check.label}
+                      className={check.ok ? 'font-medium text-emerald-700' : 'text-slate-500'}
+                    >
+                      {check.ok ? '* ' : 'o '}
+                      {check.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {passwordError && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {passwordError}
+                </div>
+              )}
+              {passwordSuccess && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  {passwordSuccess}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closePasswordModal}
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={passwordSubmitting}
+                  className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {passwordSubmitting ? 'Actualizando...' : 'Actualizar contrasena'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

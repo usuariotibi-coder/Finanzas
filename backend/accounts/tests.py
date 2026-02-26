@@ -61,6 +61,43 @@ class AuthFlowTests(APITestCase):
         )
         self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_authenticated_user_can_change_own_password(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {
+            'current_password': self.password,
+            'new_password': 'NuevaClave123!',
+        }
+
+        response = self.client.post('/api/auth/change-password/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(payload['new_password']))
+
+    def test_change_password_rejects_invalid_current_password(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {
+            'current_password': 'Incorrecta123!',
+            'new_password': 'NuevaClave123!',
+        }
+
+        response = self.client.post('/api/auth/change-password/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('current_password', response.data)
+
+    def test_change_password_rejects_weak_password(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {
+            'current_password': self.password,
+            'new_password': '12345678',
+        }
+
+        response = self.client.post('/api/auth/change-password/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', response.data)
+
 
 class AdminRegisterTests(APITestCase):
     def setUp(self):
