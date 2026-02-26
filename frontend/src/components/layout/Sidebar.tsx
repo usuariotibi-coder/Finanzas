@@ -169,7 +169,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-52 border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
+      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-48 border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
         isOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none'
       }`}
       aria-hidden={!isOpen}
@@ -178,7 +178,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
       <div className="border-b border-neutral-200 px-4 py-3">
         <p className="text-[10px] uppercase tracking-[0.28em] text-neutral-500">Navegacion</p>
-        <p className="mt-1 text-xs font-medium text-primary-800">Accesos rapidos del sistema</p>
+        <p className="mt-1 pr-2 text-xs font-medium text-primary-800">Accesos rapidos del sistema</p>
       </div>
 
       <nav className="h-[calc(100%-7.3rem)] overflow-y-auto p-3 space-y-1">
@@ -206,7 +206,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 >
                   {icons[item.icon]}
                 </svg>
-                <span className="text-[15px] font-medium">{item.label}</span>
+                <span className="pr-1 text-[14px] font-medium">{item.label}</span>
               </div>
 
               {(() => {
