@@ -17,145 +17,37 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
-const toImageKeyword = (value: string) =>
-  normalizeText(value)
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-const getVehicleImageSeed = (brand: string, model: string) => {
-  const value = `${normalizeText(brand)}-${normalizeText(model)}`;
-  let total = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    total += value.charCodeAt(i) * (i + 1);
-  }
-  return total;
-};
-
-type VehicleBodyType = 'sedan' | 'suv' | 'pickup' | 'hatchback' | 'van' | 'coupe';
-
-const inferVehicleBodyType = (model: string): VehicleBodyType => {
-  const normalized = normalizeText(model);
-  if (/(np300|frontier|hilux|s10|silverado|ranger|amarok|bt-50|oroch|pickup)/.test(normalized)) {
-    return 'pickup';
-  }
-  if (/(transit|hiace|van)/.test(normalized)) {
-    return 'van';
-  }
-  if (/(rav4|x-trail|escape|tracker|taos|tiguan|sportage|seltos|tucson|creta|santa fe|cx-3|cx-5|hr-v|cr-v|br-v|duster|koleos|suv)/.test(normalized)) {
-    return 'suv';
-  }
-  if (/(march|kwid|onix|hatchback)/.test(normalized)) {
-    return 'hatchback';
-  }
-  if (/(coupe)/.test(normalized)) {
-    return 'coupe';
-  }
-  return 'sedan';
-};
-
-const getVehicleColorHex = (color: string) => {
-  const normalizedColor = normalizeText(color);
-  const palette: Record<string, string> = {
-    blanco: '#f8fafc',
-    negro: '#111827',
-    gris: '#9ca3af',
-    plata: '#cbd5e1',
-    azul: '#2563eb',
-    rojo: '#dc2626',
-    verde: '#16a34a',
-    beige: '#d6c6a8',
-    cafe: '#8b5a2b',
-    marron: '#8b5a2b',
-    amarillo: '#facc15',
-    naranja: '#f97316',
-  };
-  return palette[normalizedColor] ?? '#64748b';
-};
-
-const getVehiclePlaceholderImage = (_brand: string, _model: string, color = '') => {
-  const seed = getVehicleImageSeed(_brand, _model);
-  const bodyType = inferVehicleBodyType(_model);
-  const vehicleColor = getVehicleColorHex(color);
-  const wheelOffset = seed % 26;
-  const frontWheelX = 760 + wheelOffset;
-  const rearWheelX = 390 - Math.floor(wheelOffset / 2);
-  const bodyByType: Record<VehicleBodyType, string> = {
-    sedan: `M305 500 L430 386 H770 L890 500 Z`,
-    suv: `M285 500 L390 352 H790 L925 500 Z`,
-    pickup: `M300 500 L430 396 H670 L745 445 H900 L920 500 Z`,
-    hatchback: `M320 500 L430 398 H720 L820 455 H900 L920 500 Z`,
-    van: `M285 500 L345 350 H860 L920 500 Z`,
-    coupe: `M335 500 L500 410 H770 L880 500 Z`,
-  };
-  const windowByType: Record<VehicleBodyType, string> = {
-    sedan: `
-      <rect x="470" y="418" width="120" height="66" rx="12" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
-      <rect x="602" y="418" width="145" height="66" rx="12" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
-    `,
-    suv: `
-      <rect x="438" y="390" width="132" height="76" rx="12" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
-      <rect x="585" y="390" width="165" height="76" rx="12" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
-    `,
-    pickup: `
-      <rect x="462" y="420" width="120" height="62" rx="10" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
-      <rect x="595" y="420" width="130" height="62" rx="10" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
-    `,
-    hatchback: `
-      <rect x="468" y="422" width="128" height="62" rx="12" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
-      <path d="M608 422 H746 Q760 422 760 438 V484 H608 Z" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
-    `,
-    van: `
-      <rect x="390" y="376" width="122" height="88" rx="10" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
-      <rect x="524" y="376" width="136" height="88" rx="10" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
-      <rect x="672" y="376" width="126" height="88" rx="10" fill="#93c5fd" stroke="#1f2937" stroke-width="6" />
-    `,
-    coupe: `
-      <rect x="520" y="438" width="118" height="56" rx="10" fill="#dbeafe" stroke="#1f2937" stroke-width="6" />
-      <rect x="648" y="438" width="112" height="56" rx="10" fill="#bfdbfe" stroke="#1f2937" stroke-width="6" />
-    `,
-  };
+const getVehicleFallbackImage = (brand: string, model: string) => {
+  const title = `${brand} ${model}`.trim() || 'Vehiculo';
+  const safeTitle = title
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
       <defs>
         <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="#e2e8f0" />
-          <stop offset="100%" stop-color="#cfd8e3" />
+          <stop offset="100%" stop-color="#cbd5e1" />
         </linearGradient>
       </defs>
       <rect width="1200" height="800" fill="url(#bg)" />
-      <rect x="0" y="600" width="1200" height="200" fill="#94a3b8" />
-      <rect x="0" y="630" width="1200" height="14" fill="#e2e8f0" />
-
-      <path d="${bodyByType[bodyType]}" fill="${vehicleColor}" stroke="#1f2937" stroke-width="8" />
-      <rect x="240" y="500" width="700" height="130" rx="64" fill="${vehicleColor}" stroke="#1f2937" stroke-width="8" />
-      ${windowByType[bodyType]}
-
-      <circle cx="${rearWheelX}" cy="640" r="68" fill="#0f172a" />
-      <circle cx="${rearWheelX}" cy="640" r="30" fill="#cbd5e1" />
-      <circle cx="${frontWheelX}" cy="640" r="68" fill="#0f172a" />
-      <circle cx="${frontWheelX}" cy="640" r="30" fill="#cbd5e1" />
+      <rect x="160" y="200" width="880" height="400" rx="28" fill="#f8fafc" stroke="#94a3b8" stroke-width="8" />
+      <text x="600" y="340" text-anchor="middle" fill="#334155" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">
+        ${safeTitle}
+      </text>
+      <text x="600" y="420" text-anchor="middle" fill="#64748b" font-family="Segoe UI, Arial, sans-serif" font-size="36">
+        Foto de referencia no disponible
+      </text>
     </svg>
   `;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-const getVehicleReferenceImage = (brand: string, model: string) => {
-  const brandKeyword = toImageKeyword(brand);
-  const modelKeyword = toImageKeyword(model);
-  if (!brandKeyword || !modelKeyword) {
-    return '';
-  }
-  const seed = getVehicleImageSeed(brand, model) || 1;
-  return `https://loremflickr.com/1280/720/${brandKeyword},${modelKeyword},car?lock=${seed}`;
-};
-
-const getVehicleImageSources = (brand: string, model: string, color?: string, uploadedImage = '') => {
-  const referenceImage = getVehicleReferenceImage(brand, model);
-  const placeholder = getVehiclePlaceholderImage(brand, model, color);
+const getVehicleImageSources = (uploadedImage = '', referenceImage = '') => {
   const sources = [
     uploadedImage,
     referenceImage,
-    placeholder,
   ];
 
   const unique = new Set<string>();
@@ -167,6 +59,185 @@ const getVehicleImageSources = (brand: string, model: string, color?: string, up
     unique.add(normalized);
     return true;
   });
+};
+
+const VEHICLE_REFERENCE_IMAGE_CACHE_KEY = 'flotilla:vehicle-reference-image-cache:v1';
+const vehicleReferenceImageCache = new Map<string, string | null>();
+const vehicleReferenceImagePending = new Map<string, Promise<string | null>>();
+let vehicleReferenceImageCacheLoaded = false;
+
+const getVehicleReferenceKey = (brand: string, model: string) => {
+  const normalizedBrand = normalizeText(brand);
+  const normalizedModel = normalizeText(model);
+  if (!normalizedBrand || !normalizedModel) {
+    return '';
+  }
+  return `${normalizedBrand}::${normalizedModel}`;
+};
+
+const hydrateVehicleReferenceImageCache = () => {
+  if (vehicleReferenceImageCacheLoaded || typeof window === 'undefined') {
+    return;
+  }
+  vehicleReferenceImageCacheLoaded = true;
+  try {
+    const raw = window.localStorage.getItem(VEHICLE_REFERENCE_IMAGE_CACHE_KEY);
+    if (!raw) {
+      return;
+    }
+    const parsed = JSON.parse(raw) as Record<string, string | null>;
+    Object.entries(parsed).forEach(([key, value]) => {
+      vehicleReferenceImageCache.set(key, typeof value === 'string' ? value : null);
+    });
+  } catch {
+    // ignore cache parsing errors
+  }
+};
+
+const persistVehicleReferenceImageCache = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const payload = Object.fromEntries(vehicleReferenceImageCache.entries());
+  try {
+    window.localStorage.setItem(VEHICLE_REFERENCE_IMAGE_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // ignore storage write errors
+  }
+};
+
+const getCachedVehicleReferenceImage = (brand: string, model: string) => {
+  const key = getVehicleReferenceKey(brand, model);
+  if (!key) {
+    return undefined;
+  }
+  hydrateVehicleReferenceImageCache();
+  return vehicleReferenceImageCache.get(key);
+};
+
+const setCachedVehicleReferenceImage = (brand: string, model: string, image: string | null) => {
+  const key = getVehicleReferenceKey(brand, model);
+  if (!key) {
+    return;
+  }
+  hydrateVehicleReferenceImageCache();
+  vehicleReferenceImageCache.set(key, image);
+  persistVehicleReferenceImageCache();
+};
+
+const searchWikipediaVehicleImage = async (language: 'es' | 'en', query: string) => {
+  try {
+    const endpoint = `https://${language}.wikipedia.org/w/api.php`;
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      origin: '*',
+      generator: 'search',
+      gsrnamespace: '0',
+      gsrlimit: '6',
+      gsrsearch: query,
+      prop: 'pageimages',
+      piprop: 'original|thumbnail',
+      pithumbsize: '1200',
+    });
+    const response = await fetch(`${endpoint}?${params.toString()}`);
+    if (!response.ok) {
+      return '';
+    }
+    const data = (await response.json()) as {
+      query?: { pages?: Record<string, { original?: { source?: string }; thumbnail?: { source?: string } }> };
+    };
+    const pages = Object.values(data.query?.pages ?? {});
+    for (const page of pages) {
+      const source = page.original?.source || page.thumbnail?.source || '';
+      if (source.startsWith('http')) {
+        return source;
+      }
+    }
+  } catch {
+    // ignore network/API errors and try next query
+  }
+  return '';
+};
+
+const resolveVehicleReferenceImage = async (brand: string, model: string): Promise<string | null> => {
+  const cacheKey = getVehicleReferenceKey(brand, model);
+  if (!cacheKey) {
+    return null;
+  }
+
+  const cached = getCachedVehicleReferenceImage(brand, model);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const pending = vehicleReferenceImagePending.get(cacheKey);
+  if (pending) {
+    return pending;
+  }
+
+  const request = (async () => {
+    const baseQuery = `${brand} ${model}`.trim();
+    const queries = [
+      baseQuery,
+      `${baseQuery} carro`,
+      `${baseQuery} coche`,
+      `${baseQuery} automobile`,
+      `${baseQuery} sedan`,
+    ];
+
+    for (const language of ['es', 'en'] as const) {
+      for (const query of queries) {
+        const image = await searchWikipediaVehicleImage(language, query);
+        if (image) {
+          setCachedVehicleReferenceImage(brand, model, image);
+          return image;
+        }
+      }
+    }
+
+    setCachedVehicleReferenceImage(brand, model, null);
+    return null;
+  })().finally(() => {
+    vehicleReferenceImagePending.delete(cacheKey);
+  });
+
+  vehicleReferenceImagePending.set(cacheKey, request);
+  return request;
+};
+
+const useVehicleReferenceImage = (brand: string, model: string) => {
+  const referenceKey = useMemo(() => getVehicleReferenceKey(brand, model), [brand, model]);
+  const [referenceImage, setReferenceImage] = useState<string>(() => {
+    const cached = getCachedVehicleReferenceImage(brand, model);
+    return typeof cached === 'string' ? cached : '';
+  });
+
+  useEffect(() => {
+    const cached = getCachedVehicleReferenceImage(brand, model);
+    if (cached !== undefined) {
+      setReferenceImage(cached ?? '');
+      return;
+    }
+
+    if (!referenceKey) {
+      setReferenceImage('');
+      return;
+    }
+
+    let cancelled = false;
+    void resolveVehicleReferenceImage(brand, model).then((image) => {
+      if (!cancelled) {
+        setReferenceImage(image ?? '');
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [brand, model, referenceKey]);
+
+  return referenceImage;
 };
 
 const getVehicleStatusIcon = (status: Vehicle['status']) => {
@@ -928,9 +999,10 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: Vehic
 
   const status = statusConfig[vehicle.status];
   const uploadedImage = vehicle.foto ? (toApiAssetUrl(vehicle.foto) ?? vehicle.foto) : '';
+  const referenceImage = useVehicleReferenceImage(vehicle.brand, vehicle.model);
   const imageSources = useMemo(
-    () => getVehicleImageSources(vehicle.brand, vehicle.model, vehicle.color, uploadedImage),
-    [vehicle.brand, vehicle.model, vehicle.color, uploadedImage]
+    () => getVehicleImageSources(uploadedImage, referenceImage),
+    [uploadedImage, referenceImage]
   );
   const [imageIndex, setImageIndex] = useState(0);
 
@@ -938,7 +1010,7 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: Vehic
     setImageIndex(0);
   }, [imageSources]);
 
-  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehiclePlaceholderImage(vehicle.brand, vehicle.model, vehicle.color);
+  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehicleFallbackImage(vehicle.brand, vehicle.model);
   const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
@@ -1490,12 +1562,16 @@ function NewVehicleModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(existingPhotoUrl);
   const modelOptions = formData.brand ? (brandModelOptions[formData.brand] ?? []) : [];
+  const referencePhotoUrl = useVehicleReferenceImage(formData.brand, formData.model);
+  const modelSelected = Boolean(formData.brand.trim() && formData.model.trim());
+  const referenceLookupStatus = getCachedVehicleReferenceImage(formData.brand, formData.model);
+  const referenceLookupFinished = modelSelected && referenceLookupStatus !== undefined;
   const autoPhotoPreviewSources = useMemo(() => {
-    if (!formData.brand.trim() || !formData.model.trim()) {
+    if (!modelSelected) {
       return [];
     }
-    return getVehicleImageSources(formData.brand, formData.model, formData.color);
-  }, [formData.brand, formData.model, formData.color]);
+    return getVehicleImageSources('', referencePhotoUrl);
+  }, [modelSelected, referencePhotoUrl]);
   const previewSources = useMemo(
     () => (existingPhotoUrl ? [existingPhotoUrl, ...autoPhotoPreviewSources] : autoPhotoPreviewSources),
     [existingPhotoUrl, autoPhotoPreviewSources]
@@ -1811,7 +1887,9 @@ function NewVehicleModal({
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-gray-500">
-                      Selecciona marca y modelo
+                      {modelSelected
+                        ? (referenceLookupFinished ? 'No se encontro foto de referencia' : 'Buscando foto de referencia...')
+                        : 'Selecciona marca y modelo'}
                     </div>
                   )}
                 </div>
@@ -2181,9 +2259,10 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
   const activeAssignment = assignments.find(a => a.status === 'activo' || a.status === 'asignado');
   const normalizedStatus = toCanonicalVehicleStatus(vehicle.status);
   const uploadedImage = vehicle.foto ? (toApiAssetUrl(vehicle.foto) ?? vehicle.foto) : '';
+  const referenceImage = useVehicleReferenceImage(vehicle.brand, vehicle.model);
   const imageSources = useMemo(
-    () => getVehicleImageSources(vehicle.brand, vehicle.model, vehicle.color, uploadedImage),
-    [vehicle.brand, vehicle.model, vehicle.color, uploadedImage]
+    () => getVehicleImageSources(uploadedImage, referenceImage),
+    [uploadedImage, referenceImage]
   );
   const [imageIndex, setImageIndex] = useState(0);
 
@@ -2191,7 +2270,7 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
     setImageIndex(0);
   }, [imageSources]);
 
-  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehiclePlaceholderImage(vehicle.brand, vehicle.model, vehicle.color);
+  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehicleFallbackImage(vehicle.brand, vehicle.model);
   const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
