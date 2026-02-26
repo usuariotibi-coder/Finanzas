@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, Viatico } from '../../types';
+import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, VehicleAssignment, Viatico } from '../../types';
 import { canAccessPath } from '../../utils/access';
 import { getPendingViaticoExtension } from '../../utils/viaticoExtensions';
 
@@ -31,6 +32,24 @@ const menuItems: MenuItem[] = [
   { path: '/viajes', label: 'Viajes', icon: 'airplane' },
   { path: '/reportes', label: 'Reportes', icon: 'document' },
 ];
+
+const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
+
+const readVehicleAssignments = (): VehicleAssignment[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  const raw = localStorage.getItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as VehicleAssignment[]) : [];
+  } catch {
+    return [];
+  }
+};
 
 const icons: Record<string, React.JSX.Element> = {
   home: (
@@ -151,6 +170,37 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   const [conciliacionAlertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
   const [amexTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
   const [viajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
+  const [vehicleAssignments, setVehicleAssignments] = useState<VehicleAssignment[]>(readVehicleAssignments);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncAssignments = () => {
+      setVehicleAssignments(readVehicleAssignments());
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === VEHICLE_ASSIGNMENTS_STORAGE_KEY) {
+        syncAssignments();
+      }
+    };
+
+    const handleCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string }>).detail;
+      if (detail?.key === VEHICLE_ASSIGNMENTS_STORAGE_KEY) {
+        syncAssignments();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('app-storage-change', handleCustom);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('app-storage-change', handleCustom);
+    };
+  }, []);
 
   const portalPmViaticosPendientes = viaticosUsuario.filter((viatico) => {
     const hasExtensionRequest = Boolean(getPendingViaticoExtension(viatico.comentarios));
@@ -164,6 +214,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   const conciliacionBadge = conciliacionAlertas.length;
   const amexBadge = amexTickets.filter((ticket) => !ticket.matched).length;
   const viajesBadge = viajesSolicitudes.filter((viaje) => viaje.status === 'pendiente' || viaje.status === 'en_proceso').length;
+  const flotillaBadge = vehicleAssignments.filter((assignment) => {
+    const status = String(assignment.status);
+    return status === 'solicitado' || status === 'pendiente';
+  }).length;
 
   const filteredItems = menuItems.filter((item) => canAccessPath(user?.role, item.path));
 
@@ -217,6 +271,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   '/recuperacion': recuperacionBadge,
                   '/conciliacion': conciliacionBadge,
                   '/amex': amexBadge,
+                  '/flotilla': flotillaBadge,
                   '/viajes': viajesBadge,
                 };
                 const badgeValue = badgeMap[item.path];
