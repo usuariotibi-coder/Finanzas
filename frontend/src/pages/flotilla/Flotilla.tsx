@@ -44,10 +44,11 @@ const getVehicleFallbackImage = (brand: string, model: string) => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-const getVehicleImageSources = (uploadedImage = '', referenceImage = '') => {
+const getVehicleImageSources = (uploadedImage = '', referenceImage = '', fallbackImage = '') => {
   const sources = [
     uploadedImage,
     referenceImage,
+    fallbackImage,
   ];
 
   const unique = new Set<string>();
@@ -180,14 +181,33 @@ const resolveVehicleReferenceImage = async (brand: string, model: string): Promi
     const baseQuery = `${brand} ${model}`.trim();
     const queries = [
       baseQuery,
+      `${baseQuery} car`,
+      `${baseQuery} (automobile)`,
       `${baseQuery} carro`,
       `${baseQuery} coche`,
       `${baseQuery} automobile`,
       `${baseQuery} sedan`,
+      `${brand} ${model} auto`,
+      `${brand} ${model} vehicle`,
+      `${brand} ${model} mexico`,
+      `${brand} ${model} specs`,
+    ];
+    const brandOnlyQueries = [
+      `${brand} car`,
+      `${brand} automobile`,
+      `${brand} sedan`,
+      `${brand} suv`,
     ];
 
     for (const language of ['es', 'en'] as const) {
       for (const query of queries) {
+        const image = await searchWikipediaVehicleImage(language, query);
+        if (image) {
+          setCachedVehicleReferenceImage(brand, model, image);
+          return image;
+        }
+      }
+      for (const query of brandOnlyQueries) {
         const image = await searchWikipediaVehicleImage(language, query);
         if (image) {
           setCachedVehicleReferenceImage(brand, model, image);
@@ -1000,9 +1020,10 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: Vehic
   const status = statusConfig[vehicle.status];
   const uploadedImage = vehicle.foto ? (toApiAssetUrl(vehicle.foto) ?? vehicle.foto) : '';
   const referenceImage = useVehicleReferenceImage(vehicle.brand, vehicle.model);
+  const fallbackImage = getVehicleFallbackImage(vehicle.brand, vehicle.model);
   const imageSources = useMemo(
-    () => getVehicleImageSources(uploadedImage, referenceImage),
-    [uploadedImage, referenceImage]
+    () => getVehicleImageSources(uploadedImage, referenceImage, fallbackImage),
+    [uploadedImage, referenceImage, fallbackImage]
   );
   const [imageIndex, setImageIndex] = useState(0);
 
@@ -1010,7 +1031,7 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: Vehic
     setImageIndex(0);
   }, [imageSources]);
 
-  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehicleFallbackImage(vehicle.brand, vehicle.model);
+  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || fallbackImage;
   const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
@@ -1564,14 +1585,15 @@ function NewVehicleModal({
   const modelOptions = formData.brand ? (brandModelOptions[formData.brand] ?? []) : [];
   const referencePhotoUrl = useVehicleReferenceImage(formData.brand, formData.model);
   const modelSelected = Boolean(formData.brand.trim() && formData.model.trim());
+  const fallbackPhotoUrl = modelSelected ? getVehicleFallbackImage(formData.brand, formData.model) : '';
   const referenceLookupStatus = getCachedVehicleReferenceImage(formData.brand, formData.model);
   const referenceLookupFinished = modelSelected && referenceLookupStatus !== undefined;
   const autoPhotoPreviewSources = useMemo(() => {
     if (!modelSelected) {
       return [];
     }
-    return getVehicleImageSources('', referencePhotoUrl);
-  }, [modelSelected, referencePhotoUrl]);
+    return getVehicleImageSources('', referencePhotoUrl, fallbackPhotoUrl);
+  }, [modelSelected, referencePhotoUrl, fallbackPhotoUrl]);
   const previewSources = useMemo(
     () => (existingPhotoUrl ? [existingPhotoUrl, ...autoPhotoPreviewSources] : autoPhotoPreviewSources),
     [existingPhotoUrl, autoPhotoPreviewSources]
@@ -1868,7 +1890,7 @@ function NewVehicleModal({
                   Formatos recomendados: JPG o PNG. Maximo sugerido: 5 MB.
                 </p>
                 <p className="mt-1 text-xs text-primary-700">
-                  Si no seleccionas archivo, se usara una foto automatica de referencia por marca y modelo.
+                  Si no seleccionas archivo, se usara una foto automatica y, si no existe, un fallback del vehiculo.
                 </p>
               </div>
               <div className="w-full md:w-56">
@@ -1888,7 +1910,7 @@ function NewVehicleModal({
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-gray-500">
                       {modelSelected
-                        ? (referenceLookupFinished ? 'No se encontro foto de referencia' : 'Buscando foto de referencia...')
+                        ? (referenceLookupFinished ? 'Cargando fallback del vehiculo...' : 'Buscando foto de referencia...')
                         : 'Selecciona marca y modelo'}
                     </div>
                   )}
@@ -2260,9 +2282,10 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
   const normalizedStatus = toCanonicalVehicleStatus(vehicle.status);
   const uploadedImage = vehicle.foto ? (toApiAssetUrl(vehicle.foto) ?? vehicle.foto) : '';
   const referenceImage = useVehicleReferenceImage(vehicle.brand, vehicle.model);
+  const fallbackImage = getVehicleFallbackImage(vehicle.brand, vehicle.model);
   const imageSources = useMemo(
-    () => getVehicleImageSources(uploadedImage, referenceImage),
-    [uploadedImage, referenceImage]
+    () => getVehicleImageSources(uploadedImage, referenceImage, fallbackImage),
+    [uploadedImage, referenceImage, fallbackImage]
   );
   const [imageIndex, setImageIndex] = useState(0);
 
@@ -2270,7 +2293,7 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
     setImageIndex(0);
   }, [imageSources]);
 
-  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || getVehicleFallbackImage(vehicle.brand, vehicle.model);
+  const vehicleImage = imageSources[Math.min(imageIndex, imageSources.length - 1)] || fallbackImage;
   const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
