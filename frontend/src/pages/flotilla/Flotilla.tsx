@@ -1473,12 +1473,18 @@ function NewVehicleModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(existingPhotoUrl);
   const modelOptions = formData.brand ? (brandModelOptions[formData.brand] ?? []) : [];
+  const autoPhotoPreviewUrl = useMemo(() => {
+    if (!formData.brand.trim() || !formData.model.trim()) {
+      return '';
+    }
+    return getVehiclePlaceholderImage(formData.brand, formData.model, formData.color);
+  }, [formData.brand, formData.model, formData.color]);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!photoFile) {
-      setPhotoPreviewUrl(existingPhotoUrl);
+      setPhotoPreviewUrl(existingPhotoUrl || autoPhotoPreviewUrl);
       return;
     }
     const objectUrl = URL.createObjectURL(photoFile);
@@ -1486,7 +1492,7 @@ function NewVehicleModal({
     return () => {
       URL.revokeObjectURL(objectUrl);
     };
-  }, [photoFile, existingPhotoUrl]);
+  }, [photoFile, existingPhotoUrl, autoPhotoPreviewUrl]);
 
   const yearValue = Number(formData.year);
   const yearInvalid = !formData.year || Number.isNaN(yearValue) || yearValue <= 0;
@@ -1758,6 +1764,9 @@ function NewVehicleModal({
                 <p className="mt-2 text-xs text-gray-500">
                   Formatos recomendados: JPG o PNG. Maximo sugerido: 5 MB.
                 </p>
+                <p className="mt-1 text-xs text-primary-700">
+                  Si no seleccionas archivo, se usara imagen automatica segun marca y modelo.
+                </p>
               </div>
               <div className="w-full md:w-56">
                 <div className="h-28 w-full overflow-hidden rounded-md border border-gray-200 bg-white">
@@ -1765,7 +1774,7 @@ function NewVehicleModal({
                     <img src={photoPreviewUrl} alt="Vista previa del vehiculo" className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-gray-500">
-                      Sin imagen
+                      Selecciona marca y modelo
                     </div>
                   )}
                 </div>
