@@ -7,7 +7,7 @@ import GasolinaKPI from '../../components/flotilla/GasolinaKPI';
 import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import { createFlotillaVehiculo, fetchFlotillaAsignaciones, syncCoreAppData, updateFlotillaAsignacion, updateFlotillaVehiculo } from '../../utils/backendSync';
-import { API_ROOT, toApiAssetUrl } from '../../utils/api';
+import { toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
 const normalizeText = (value: string) =>
@@ -24,44 +24,6 @@ const getVehicleImageSeed = (brand: string, model: string) => {
     total += value.charCodeAt(i) * (i + 1);
   }
   return total;
-};
-
-const API_ORIGIN = (() => {
-  try {
-    return new URL(API_ROOT).origin;
-  } catch {
-    return '';
-  }
-})();
-
-const isTrustedVehiclePhoto = (value: string) => {
-  const raw = String(value || '').trim();
-  if (!raw) return false;
-  if (raw.startsWith('data:image/') || raw.startsWith('blob:')) return true;
-  if (raw.startsWith('/media/')) return true;
-  if (!/^https?:\/\//i.test(raw)) return false;
-  try {
-    const parsed = new URL(raw);
-    return parsed.origin === API_ORIGIN && parsed.pathname.startsWith('/media/');
-  } catch {
-    return false;
-  }
-};
-
-const resolveVehicleUploadedImage = (value?: string | null) => {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-
-  if (isTrustedVehiclePhoto(raw)) {
-    return toApiAssetUrl(raw) || raw;
-  }
-
-  const apiCandidate = toApiAssetUrl(raw);
-  if (apiCandidate && isTrustedVehiclePhoto(apiCandidate)) {
-    return apiCandidate;
-  }
-
-  return '';
 };
 
 type VehicleBodyType = 'sedan' | 'suv' | 'pickup' | 'hatchback' | 'van' | 'coupe';
