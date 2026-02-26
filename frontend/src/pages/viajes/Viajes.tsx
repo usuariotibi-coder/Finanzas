@@ -29,6 +29,7 @@ export default function Viajes() {
     : filter === 'rechazado'
       ? solicitudes.filter(s => s.status === 'rechazado' || s.status === 'cancelado')
       : solicitudes.filter(s => s.status === filter);
+  const isSingleSolicitud = filteredSolicitudes.length === 1;
 
   const statusSummary = useMemo(() => {
     const summary = {
@@ -159,7 +160,7 @@ export default function Viajes() {
       </div>
 
       {/* Lista de Solicitudes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+      <div className={`grid gap-2 ${isSingleSolicitud ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
         {filteredSolicitudes.length > 0 ? (
           filteredSolicitudes.map((solicitud) => {
             const statusIcon = getViajeStatusIcon(solicitud.status);
@@ -167,16 +168,16 @@ export default function Viajes() {
             return (
               <div
                 key={solicitud.id}
-                className="bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 hover:shadow transition-shadow"
+                className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2 sm:p-2.5 hover:shadow transition-shadow ${isSingleSolicitud ? 'max-w-3xl' : ''}`}
               >
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700">
                         {solicitud.userName.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{solicitud.userName}</p>
+                        <p className="text-xs font-semibold text-gray-900 truncate">{solicitud.userName}</p>
                         <p className="text-[11px] text-gray-500">ID: {solicitud.id}</p>
                       </div>
                     </div>
