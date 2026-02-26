@@ -795,54 +795,43 @@ export default function PMPortal() {
           {proyectos.map((proyecto) => {
             const porcentajeGastado = calcularPorcentajeGastado(proyecto.gastado, proyecto.presupuesto);
             const proyectoEstadoIcon = getProyectoEstadoIcon(proyecto.estado);
-            const nombreProyecto = (proyecto.nombre || '').trim();
+            const jobProyecto = (proyecto.codigo || '').trim();
             const clienteProyecto = (proyecto.cliente || '').trim();
             const descripcionProyecto = (proyecto.descripcion || '').trim();
-            const sameNombreCliente =
-              nombreProyecto.length > 0 &&
-              clienteProyecto.length > 0 &&
-              nombreProyecto.toLowerCase() === clienteProyecto.toLowerCase();
-            const showCliente = Boolean(clienteProyecto) && !sameNombreCliente;
-            const showDescripcion =
-              Boolean(descripcionProyecto) &&
-              descripcionProyecto.toLowerCase() !== nombreProyecto.toLowerCase() &&
-              descripcionProyecto.toLowerCase() !== clienteProyecto.toLowerCase();
+            const responsableProyecto = (proyecto.responsable || '').trim();
+            const clienteDescripcion =
+              clienteProyecto && descripcionProyecto && clienteProyecto.toLowerCase() !== descripcionProyecto.toLowerCase()
+                ? `${clienteProyecto} / ${descripcionProyecto}`
+                : clienteProyecto || descripcionProyecto || 'Sin cliente';
 
             return (
               <div key={proyecto.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
                 <div className="flex items-start justify-between mb-1">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 min-w-0">
                         <span className="text-sm">{proyectoEstadoIcon}</span>
-                        <span className="truncate">{nombreProyecto || 'Proyecto sin nombre'}</span>
+                        <span className="truncate uppercase tracking-wide">JOB {jobProyecto || 'N/A'}</span>
                       </h3>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
                         {proyecto.estado === 'activo' ? 'Activo' :
                          proyecto.estado === 'en_pausa' ? 'En Pausa' :
                          proyecto.estado === 'completado' ? 'Completado' : 'Cancelado'}
                       </span>
                     </div>
-                    <p className="text-[10px] text-gray-600">{proyecto.codigo}</p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px]">
-                      <span className="font-semibold text-gray-800">Proyecto: {nombreProyecto || 'N/A'}</span>
-                      {showCliente && (
-                        <>
-                          <span className="text-gray-400">|</span>
-                          <span className="text-gray-600">Cliente: {clienteProyecto}</span>
-                        </>
-                      )}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px]">
+                      <span className="font-medium text-gray-700">Cliente / Descripcion:</span>
+                      <span className="font-semibold text-gray-900">{clienteDescripcion}</span>
+                      <span className="text-gray-400">|</span>
+                      <span className="font-medium text-gray-700">Responsable:</span>
+                      <span className="font-semibold text-gray-900">{responsableProyecto || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
-                {showDescripcion && (
-                  <p className="text-[10px] text-gray-700 mb-1.5 line-clamp-1">{descripcionProyecto}</p>
-                )}
-
                 <div className="space-y-0.5">
                   <div>
-                    <div className="flex justify-between text-[10px] mb-1">
+                    <div className="flex justify-between text-[11px] mb-1">
                       <span className="text-gray-600">Presupuesto ejecutado</span>
                       <span className="font-semibold text-gray-900">{porcentajeGastado.toFixed(1)}%</span>
                     </div>
@@ -860,23 +849,23 @@ export default function PMPortal() {
 
                   <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-200">
                     <div>
-                      <p className="text-[10px] text-gray-500">Presupuesto</p>
-                      <p className="text-[10px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.presupuesto)}</p>
+                      <p className="text-[11px] text-gray-500">Presupuesto</p>
+                      <p className="text-[12px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.presupuesto)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-500">Gastado</p>
-                      <p className="text-[10px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.gastado)}</p>
+                      <p className="text-[11px] text-gray-500">Gastado</p>
+                      <p className="text-[12px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.gastado)}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-200">
                     <div>
-                      <p className="text-[10px] text-gray-500">Inicio</p>
-                      <p className="text-[10px] text-gray-900">{new Date(proyecto.fechaInicio).toLocaleDateString('es-MX')}</p>
+                      <p className="text-[11px] text-gray-500">Inicio</p>
+                      <p className="text-[11px] text-gray-900">{new Date(proyecto.fechaInicio).toLocaleDateString('es-MX')}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-gray-500">Fin estimado</p>
-                      <p className="text-[10px] text-gray-900">{new Date(proyecto.fechaFinEstimada).toLocaleDateString('es-MX')}</p>
+                      <p className="text-[11px] text-gray-500">Fin estimado</p>
+                      <p className="text-[11px] text-gray-900">{new Date(proyecto.fechaFinEstimada).toLocaleDateString('es-MX')}</p>
                     </div>
                   </div>
                 </div>
@@ -889,7 +878,7 @@ export default function PMPortal() {
                       setIsEditingProyecto(false);
                       setShowModalProyectoDetalle(true);
                     }}
-                    className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-[10px] font-semibold flex items-center justify-center gap-1.5"
+                    className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-[11px] font-semibold flex items-center justify-center gap-1.5"
                   >
                     <span>Ver Detalles del Proyecto</span>
                     <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
