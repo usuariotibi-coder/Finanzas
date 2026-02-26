@@ -26,6 +26,15 @@ const sortUsers = (users: AuthUser[]) =>
     return a.email.localeCompare(b.email);
   });
 
+const buildPasswordChecks = (value: string) => [
+  { label: 'Minimo 8 caracteres', ok: value.length >= 8 },
+  { label: 'Una mayuscula (A-Z)', ok: /[A-Z]/.test(value) },
+  { label: 'Una minuscula (a-z)', ok: /[a-z]/.test(value) },
+  { label: 'Un numero (0-9)', ok: /\d/.test(value) },
+  { label: 'Un simbolo (!@#$...)', ok: /[^A-Za-z0-9]/.test(value) },
+  { label: 'Sin espacios', ok: !/\s/.test(value) },
+];
+
 const formatUserError = (message: string) => {
   const normalized = message.toLowerCase();
   if (normalized.includes('csrf') || normalized.includes('token missing')) {
@@ -36,6 +45,14 @@ const formatUserError = (message: string) => {
   }
   if (normalized.includes('ya esta registrado') || normalized.includes('already exists')) {
     return 'Este correo ya esta registrado.';
+  }
+  if (
+    normalized.includes('password') ||
+    normalized.includes('contrasena') ||
+    normalized.includes('too common') ||
+    normalized.includes('too similar')
+  ) {
+    return message;
   }
   return message;
 };
@@ -64,6 +81,10 @@ export default function AdminUsuarios() {
   const [editEmail, setEditEmail] = useState('');
   const [editDepartment, setEditDepartment] = useState(initialDepartment);
   const [editPosition, setEditPosition] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editConfirmPassword, setEditConfirmPassword] = useState('');
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [showEditConfirmPassword, setShowEditConfirmPassword] = useState(false);
   const [editError, setEditError] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -72,18 +93,20 @@ export default function AdminUsuarios() {
   const isAllowedDomain = normalizedEmail.length > 0 && emailDomain === ALLOWED_EMAIL_DOMAIN;
 
   const passwordChecks = useMemo(
-    () => [
-      { label: 'Minimo 8 caracteres', ok: password.length >= 8 },
-      { label: 'Una mayuscula (A-Z)', ok: /[A-Z]/.test(password) },
-      { label: 'Una minuscula (a-z)', ok: /[a-z]/.test(password) },
-      { label: 'Un numero (0-9)', ok: /\d/.test(password) },
-      { label: 'Un simbolo (!@#$...)', ok: /[^A-Za-z0-9]/.test(password) },
-    ],
+    () => buildPasswordChecks(password),
     [password]
   );
   const passedChecks = passwordChecks.filter((check) => check.ok).length;
   const strengthScore = Math.min(5, passedChecks + (password.length >= 12 ? 1 : 0));
   const currentStrength = strengthMeta[Math.max(0, Math.min(4, strengthScore - 1))];
+
+  const editPasswordChecks = useMemo(
+    () => buildPasswordChecks(editPassword),
+    [editPassword]
+  );
+  const editPassedChecks = editPasswordChecks.filter((check) => check.ok).length;
+  const editStrengthScore = Math.min(5, editPassedChecks + (editPassword.length >= 12 ? 1 : 0));
+  const editCurrentStrength = strengthMeta[Math.max(0, Math.min(4, editStrengthScore - 1))];
 
   useEffect(() => {
     let active = true;
@@ -129,6 +152,10 @@ export default function AdminUsuarios() {
     setEditEmail(selectedUser.email);
     setEditDepartment(selectedUser.department);
     setEditPosition(selectedUser.position);
+    setEditPassword('');
+    setEditConfirmPassword('');
+    setShowEditPassword(false);
+    setShowEditConfirmPassword(false);
     setEditError('');
   };
 
@@ -138,6 +165,10 @@ export default function AdminUsuarios() {
     setEditEmail('');
     setEditDepartment(initialDepartment);
     setEditPosition('');
+    setEditPassword('');
+    setEditConfirmPassword('');
+    setShowEditPassword(false);
+    setShowEditConfirmPassword(false);
     setEditError('');
     setEditSubmitting(false);
   };
@@ -161,7 +192,7 @@ export default function AdminUsuarios() {
 
     if (passwordChecks.some((check) => !check.ok)) {
       setError(
-        'La contrasena debe tener minimo 8 caracteres e incluir mayuscula, minuscula, numero y simbolo.'
+        'La contrasena debe tener minimo 8 caracteres, incluir mayuscula, minuscula, numero, simbolo y no contener espacios.'
       );
       return;
     }
@@ -219,18 +250,53 @@ export default function AdminUsuarios() {
       return;
     }
 
+    const wantsToChangePassword = editPassword.length > 0 || editConfirmPassword.length > 0;
+    if (wantsToChangePassword) {
+      if (!editPassword || !editConfirmPassword) {
+        setEditError('Para cambiar contrasena debes completar y confirmar la nueva contrasena.');
+        return;
+      }
+      if (editPasswordChecks.some((check) => !check.ok)) {
+        setEditError(
+          'La nueva contrasena debe tener minimo 8 caracteres, incluir mayuscula, minuscula, numero, simbolo y no contener espacios.'
+        );
+        return;
+      }
+      if (editPassword !== editConfirmPassword) {
+        setEditError('Las nuevas contrasenas no coinciden.');
+        return;
+      }
+    }
+
     setEditSubmitting(true);
     try {
       await api.csrf();
-      const updatedUser = (await api.adminUpdateUser(editingUser.id, {
+      const payload: {
+        full_name: string;
+        email: string;
+        department: string;
+        position: string;
+        password?: string;
+      } = {
         full_name: editFullName.trim(),
         email: normalizedEditEmail,
         department: editDepartment,
         position: editPosition.trim(),
+      };
+      if (wantsToChangePassword && editPassword) {
+        payload.password = editPassword;
+      }
+
+      const updatedUser = (await api.adminUpdateUser(editingUser.id, {
+        ...payload,
       })) as AuthUser;
 
       setUsers((prev) => sortUsers(prev.map((item) => (item.id === updatedUser.id ? updatedUser : item))));
-      setSuccess(`Usuario actualizado: ${updatedUser.full_name}`);
+      setSuccess(
+        wantsToChangePassword
+          ? `Usuario actualizado: ${updatedUser.full_name} (contrasena renovada)`
+          : `Usuario actualizado: ${updatedUser.full_name}`
+      );
       closeEditModal();
     } catch (err) {
       setEditError(formatUserError(err instanceof Error ? err.message : 'No se pudo actualizar.'));
@@ -364,7 +430,7 @@ export default function AdminUsuarios() {
                       key={check.label}
                       className={check.ok ? 'font-medium text-emerald-700' : 'text-slate-500'}
                     >
-                      {check.ok ? '• ' : '○ '}
+                      {check.ok ? '* ' : 'o '}
                       {check.label}
                     </span>
                   ))}
@@ -411,7 +477,9 @@ export default function AdminUsuarios() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Usuarios registrados</h2>
-                <p className="text-xs text-slate-600">Editar nombre, correo, departamento y puesto.</p>
+                <p className="text-xs text-slate-600">
+                  Editar nombre, correo, departamento, puesto y cambiar contrasena.
+                </p>
               </div>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
                 {users.length}
@@ -534,6 +602,81 @@ export default function AdminUsuarios() {
                     placeholder="Ejemplo: Coordinador"
                   />
                 </div>
+
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold text-slate-700">Cambiar contrasena (opcional)</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Si lo dejas vacio, la contrasena actual del usuario se conserva.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Nueva contrasena</label>
+                  <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                    <input
+                      type={showEditPassword ? 'text' : 'password'}
+                      value={editPassword}
+                      onChange={(event) => setEditPassword(event.target.value)}
+                      className="w-full rounded-l-lg px-3 py-2.5 text-sm outline-none"
+                      placeholder="Minimo 8 caracteres"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword((prev) => !prev)}
+                      className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                    >
+                      {showEditPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Confirmar nueva contrasena</label>
+                  <div className="mt-2 flex rounded-lg border border-slate-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-200">
+                    <input
+                      type={showEditConfirmPassword ? 'text' : 'password'}
+                      value={editConfirmPassword}
+                      onChange={(event) => setEditConfirmPassword(event.target.value)}
+                      className="w-full rounded-l-lg px-3 py-2.5 text-sm outline-none"
+                      placeholder="Repite la nueva contrasena"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditConfirmPassword((prev) => !prev)}
+                      className="rounded-r-lg px-3 text-[11px] font-semibold text-primary-700 hover:bg-primary-50"
+                    >
+                      {showEditConfirmPassword ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  </div>
+                </div>
+
+                {editPassword.length > 0 && (
+                  <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold text-slate-700">Seguridad de nueva contrasena</p>
+                      <span className={`text-xs font-semibold ${editCurrentStrength.text}`}>
+                        {editCurrentStrength.label}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white shadow-inner">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${editCurrentStrength.color}`}
+                        style={{ width: `${(editStrengthScore / 5) * 100}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+                      {editPasswordChecks.map((check) => (
+                        <span
+                          key={check.label}
+                          className={check.ok ? 'font-medium text-emerald-700' : 'text-slate-500'}
+                        >
+                          {check.ok ? '* ' : 'o '}
+                          {check.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {editError && (

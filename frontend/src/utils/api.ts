@@ -163,6 +163,7 @@ export const api = {
       full_name: string;
       department: string;
       position: string;
+      password: string;
     }>
   ) =>
     apiFetch(`/auth/admin/users/${userId}/`, {

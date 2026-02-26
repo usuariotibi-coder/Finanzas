@@ -86,7 +86,7 @@ class AdminRegisterTests(APITestCase):
             'full_name': 'Nuevo Staff',
             'department': 'ensamble',
             'position': 'Tecnico',
-            'password': 'SecurePass123',
+            'password': 'SecurePass123!',
         }
 
         response = self.client.post('/api/auth/admin/register/', payload, format='json')
@@ -104,7 +104,7 @@ class AdminRegisterTests(APITestCase):
             'full_name': 'Otro Staff',
             'department': 'ensamble',
             'position': 'Tecnico',
-            'password': 'SecurePass123',
+            'password': 'SecurePass123!',
         }
 
         response = self.client.post('/api/auth/admin/register/', payload, format='json')
@@ -118,13 +118,28 @@ class AdminRegisterTests(APITestCase):
             'full_name': 'Duplicado',
             'department': 'operaciones',
             'position': 'PM',
-            'password': 'SecurePass123',
+            'password': 'SecurePass123!',
         }
 
         response = self.client.post('/api/auth/admin/register/', payload, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
+
+    def test_admin_cannot_register_weak_password(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            'email': 'weak.staff@na.scio-automation.com',
+            'full_name': 'Weak Staff',
+            'department': 'ensamble',
+            'position': 'Tecnico',
+            'password': 'weakpass',
+        }
+
+        response = self.client.post('/api/auth/admin/register/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response.data)
 
 
 class AdminUserManagementTests(APITestCase):
@@ -201,3 +216,30 @@ class AdminUserManagementTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('email', response.data)
+
+    def test_admin_can_change_user_password(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {'password': 'NuevaClave123!'}
+
+        response = self.client.patch(
+            f'/api/auth/admin/users/{self.staff_user.id}/',
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.staff_user.refresh_from_db()
+        self.assertTrue(self.staff_user.check_password(payload['password']))
+
+    def test_admin_cannot_change_user_password_to_weak_value(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {'password': '12345678'}
+
+        response = self.client.patch(
+            f'/api/auth/admin/users/{self.staff_user.id}/',
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response.data)
