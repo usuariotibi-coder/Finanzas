@@ -806,7 +806,28 @@ export default function PMPortal() {
 
             return (
               <div key={proyecto.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
-                <div className="mb-1 flex items-start gap-2">
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 min-w-0">
+                        <span className="text-sm">{proyectoEstadoIcon}</span>
+                        <span className="truncate uppercase tracking-wide">{jobProyecto || 'N/A'}</span>
+                      </h3>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
+                        {proyecto.estado === 'activo' ? 'Activo' :
+                         proyecto.estado === 'en_pausa' ? 'En Pausa' :
+                         proyecto.estado === 'completado' ? 'Completado' : 'Cancelado'}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px]">
+                      <span className="font-medium text-gray-700">Cliente / Descripcion:</span>
+                      <span className="font-semibold text-gray-900">{clienteDescripcion}</span>
+                      <span className="text-gray-400">|</span>
+                      <span className="font-medium text-gray-700">Responsable:</span>
+                      <span className="font-semibold text-gray-900">{responsableProyecto || 'N/A'}</span>
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => {
                       setProyectoSeleccionado(proyecto);
@@ -834,27 +855,6 @@ export default function PMPortal() {
                       />
                     </svg>
                   </button>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 min-w-0">
-                        <span className="text-sm">{proyectoEstadoIcon}</span>
-                        <span className="truncate uppercase tracking-wide">{jobProyecto || 'N/A'}</span>
-                      </h3>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
-                        {proyecto.estado === 'activo' ? 'Activo' :
-                         proyecto.estado === 'en_pausa' ? 'En Pausa' :
-                         proyecto.estado === 'completado' ? 'Completado' : 'Cancelado'}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px]">
-                      <span className="font-medium text-gray-700">Cliente / Descripcion:</span>
-                      <span className="font-semibold text-gray-900">{clienteDescripcion}</span>
-                      <span className="text-gray-400">|</span>
-                      <span className="font-medium text-gray-700">Responsable:</span>
-                      <span className="font-semibold text-gray-900">{responsableProyecto || 'N/A'}</span>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="space-y-0.5">
