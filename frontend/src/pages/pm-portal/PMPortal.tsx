@@ -806,8 +806,36 @@ export default function PMPortal() {
 
             return (
               <div key={proyecto.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
-                <div className="flex items-start justify-between mb-1">
-                  <div className="flex-1">
+                <div className="mb-1 flex items-start gap-2">
+                  <button
+                    onClick={() => {
+                      setProyectoSeleccionado(proyecto);
+                      setProyectoForm(proyecto);
+                      setIsEditingProyecto(false);
+                      setShowModalProyectoDetalle(true);
+                    }}
+                    type="button"
+                    aria-label="Ver detalle del proyecto"
+                    title="Ver detalle del proyecto"
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-primary-100 hover:text-primary-800"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z"
+                      />
+                    </svg>
+                  </button>
+
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 min-w-0">
                         <span className="text-sm">{proyectoEstadoIcon}</span>
@@ -868,36 +896,6 @@ export default function PMPortal() {
                       <p className="text-[11px] text-gray-900">{new Date(proyecto.fechaFinEstimada).toLocaleDateString('es-MX')}</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-1.5 pt-1.5 border-t border-gray-200">
-                  <button
-                    onClick={() => {
-                      setProyectoSeleccionado(proyecto);
-                      setProyectoForm(proyecto);
-                      setIsEditingProyecto(false);
-                      setShowModalProyectoDetalle(true);
-                    }}
-                    type="button"
-                    aria-label="Ver detalle del proyecto"
-                    title="Ver detalle del proyecto"
-                    className="ml-auto flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-primary-100 hover:text-primary-800"
-                  >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z"
-                      />
-                    </svg>
-                  </button>
                 </div>
               </div>
             );
