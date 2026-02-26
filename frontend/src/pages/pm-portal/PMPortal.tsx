@@ -789,9 +789,9 @@ export default function PMPortal() {
       </div>
 
       {/* Mis Proyectos */}
-      <div className="xl:col-span-4 h-full rounded-2xl border border-slate-200 bg-white/80 p-3 sm:p-4 shadow-sm space-y-3 flex flex-col min-h-0">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Mis Proyectos</h2>
-        <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
+      <div className="xl:col-span-4 h-full rounded-2xl border border-slate-200 bg-white/80 p-2.5 sm:p-3 shadow-sm space-y-2.5 flex flex-col min-h-0">
+        <h2 className="text-base sm:text-lg font-bold text-gray-900">Mis Proyectos</h2>
+        <div className="flex-1 min-h-0 space-y-1.5 overflow-y-auto pr-0.5">
           {proyectos.map((proyecto) => {
             const porcentajeGastado = calcularPorcentajeGastado(proyecto.gastado, proyecto.presupuesto);
             const proyectoEstadoIcon = getProyectoEstadoIcon(proyecto.estado);
@@ -805,21 +805,21 @@ export default function PMPortal() {
                 : clienteProyecto || descripcionProyecto || 'Sin cliente';
 
             return (
-              <div key={proyecto.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
-                <div className="mb-1 flex items-start justify-between gap-2">
+              <div key={proyecto.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-2.5 hover:shadow-md transition-shadow w-full">
+                <div className="mb-0.5 flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <h3 className="text-[1.05rem] font-semibold text-gray-900 flex items-center gap-1.5 min-w-0">
                         <span className="text-sm">{proyectoEstadoIcon}</span>
                         <span className="truncate uppercase tracking-wide">{jobProyecto || 'N/A'}</span>
                       </h3>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
                         {proyecto.estado === 'activo' ? 'Activo' :
                          proyecto.estado === 'en_pausa' ? 'En Pausa' :
                          proyecto.estado === 'completado' ? 'Completado' : 'Cancelado'}
                       </span>
                     </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px]">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px]">
                       <span className="font-medium text-gray-700">Cliente / Descripcion:</span>
                       <span className="font-semibold text-gray-900">{clienteDescripcion}</span>
                       <span className="text-gray-400">|</span>
@@ -838,9 +838,9 @@ export default function PMPortal() {
                     type="button"
                     aria-label="Ver detalle del proyecto"
                     title="Ver detalle del proyecto"
-                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-primary-100 hover:text-primary-800"
+                    className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-primary-100 hover:text-primary-800"
                   >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -859,7 +859,7 @@ export default function PMPortal() {
 
                 <div className="space-y-0.5">
                   <div>
-                    <div className="flex justify-between text-[11px] mb-1">
+                    <div className="flex justify-between text-[10px] mb-0.5">
                       <span className="text-gray-600">Presupuesto ejecutado</span>
                       <span className="font-semibold text-gray-900">{porcentajeGastado.toFixed(1)}%</span>
                     </div>
@@ -875,24 +875,21 @@ export default function PMPortal() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-200">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 pt-1 border-t border-gray-200">
                     <div>
-                      <p className="text-[11px] text-gray-500">Presupuesto</p>
-                      <p className="text-[12px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.presupuesto)}</p>
+                      <p className="text-[10px] text-gray-500">Presupuesto</p>
+                      <p className="text-[11px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.presupuesto)}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-gray-500">Gastado</p>
-                      <p className="text-[12px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.gastado)}</p>
+                      <p className="text-[10px] text-gray-500">Gastado</p>
+                      <p className="text-[11px] font-semibold text-gray-900">{formatProyectoMontoCompacto(proyecto.gastado)}</p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-gray-200">
                     <div>
-                      <p className="text-[11px] text-gray-500">Inicio</p>
+                      <p className="text-[10px] text-gray-500">Inicio</p>
                       <p className="text-[11px] text-gray-900">{new Date(proyecto.fechaInicio).toLocaleDateString('es-MX')}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] text-gray-500">Fin estimado</p>
+                      <p className="text-[10px] text-gray-500">Fin estimado</p>
                       <p className="text-[11px] text-gray-900">{new Date(proyecto.fechaFinEstimada).toLocaleDateString('es-MX')}</p>
                     </div>
                   </div>
