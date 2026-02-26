@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import useAuth from '../../hooks/useAuth';
 import { buildPath, getLastPath, sanitizePath, wasPageReload } from '../../utils/lastPath';
@@ -134,12 +134,6 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-sm text-neutral-600 mt-6 text-center">
-          No tienes cuenta?{' '}
-          <Link className="text-primary-600 font-semibold hover:underline" to="/registro">
-            Registrate
-          </Link>
-        </p>
       </div>
     </AuthLayout>
   );
