@@ -17,6 +17,11 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
+const toImageKeyword = (value: string) =>
+  normalizeText(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 const getVehicleImageSeed = (brand: string, model: string) => {
   const value = `${normalizeText(brand)}-${normalizeText(model)}`;
   let total = 0;
@@ -134,10 +139,22 @@ const getVehiclePlaceholderImage = (_brand: string, _model: string, color = '') 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
+const getVehicleReferenceImage = (brand: string, model: string) => {
+  const brandKeyword = toImageKeyword(brand);
+  const modelKeyword = toImageKeyword(model);
+  if (!brandKeyword || !modelKeyword) {
+    return '';
+  }
+  const seed = getVehicleImageSeed(brand, model) || 1;
+  return `https://loremflickr.com/1280/720/${brandKeyword},${modelKeyword},car?lock=${seed}`;
+};
+
 const getVehicleImageSources = (brand: string, model: string, color?: string, uploadedImage = '') => {
+  const referenceImage = getVehicleReferenceImage(brand, model);
   const placeholder = getVehiclePlaceholderImage(brand, model, color);
   const sources = [
     uploadedImage,
+    referenceImage,
     placeholder,
   ];
 
@@ -931,7 +948,7 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: Vehic
         <img
           src={vehicleImage}
           alt={`${vehicle.brand} ${vehicle.model}`}
-          className={`h-full w-full object-contain ${isPlaceholderImage ? 'bg-slate-100 p-1.5' : 'bg-slate-50 p-1'}`}
+          className={`h-full w-full ${isPlaceholderImage ? 'object-contain bg-slate-100 p-1.5' : 'object-cover bg-slate-50'}`}
           loading="lazy"
           onError={() => {
             setImageIndex((prev) => (prev < imageSources.length - 1 ? prev + 1 : prev));
@@ -1473,18 +1490,28 @@ function NewVehicleModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState(existingPhotoUrl);
   const modelOptions = formData.brand ? (brandModelOptions[formData.brand] ?? []) : [];
-  const autoPhotoPreviewUrl = useMemo(() => {
+  const autoPhotoPreviewSources = useMemo(() => {
     if (!formData.brand.trim() || !formData.model.trim()) {
-      return '';
+      return [];
     }
-    return getVehiclePlaceholderImage(formData.brand, formData.model, formData.color);
+    return getVehicleImageSources(formData.brand, formData.model, formData.color);
   }, [formData.brand, formData.model, formData.color]);
+  const previewSources = useMemo(
+    () => (existingPhotoUrl ? [existingPhotoUrl, ...autoPhotoPreviewSources] : autoPhotoPreviewSources),
+    [existingPhotoUrl, autoPhotoPreviewSources]
+  );
+  const [previewSourceIndex, setPreviewSourceIndex] = useState(0);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    setPreviewSourceIndex(0);
+  }, [previewSources, photoFile]);
+
+  useEffect(() => {
     if (!photoFile) {
-      setPhotoPreviewUrl(existingPhotoUrl || autoPhotoPreviewUrl);
+      const source = previewSources[Math.min(previewSourceIndex, previewSources.length - 1)] || '';
+      setPhotoPreviewUrl(source);
       return;
     }
     const objectUrl = URL.createObjectURL(photoFile);
@@ -1492,7 +1519,7 @@ function NewVehicleModal({
     return () => {
       URL.revokeObjectURL(objectUrl);
     };
-  }, [photoFile, existingPhotoUrl, autoPhotoPreviewUrl]);
+  }, [photoFile, previewSources, previewSourceIndex]);
 
   const yearValue = Number(formData.year);
   const yearInvalid = !formData.year || Number.isNaN(yearValue) || yearValue <= 0;
@@ -1765,13 +1792,23 @@ function NewVehicleModal({
                   Formatos recomendados: JPG o PNG. Maximo sugerido: 5 MB.
                 </p>
                 <p className="mt-1 text-xs text-primary-700">
-                  Si no seleccionas archivo, se usara imagen automatica segun marca y modelo.
+                  Si no seleccionas archivo, se usara una foto automatica de referencia por marca y modelo.
                 </p>
               </div>
               <div className="w-full md:w-56">
                 <div className="h-28 w-full overflow-hidden rounded-md border border-gray-200 bg-white">
                   {photoPreviewUrl ? (
-                    <img src={photoPreviewUrl} alt="Vista previa del vehiculo" className="h-full w-full object-cover" />
+                    <img
+                      src={photoPreviewUrl}
+                      alt="Vista previa del vehiculo"
+                      className="h-full w-full object-cover"
+                      onError={() => {
+                        if (photoFile) {
+                          return;
+                        }
+                        setPreviewSourceIndex((prev) => (prev < previewSources.length - 1 ? prev + 1 : prev));
+                      }}
+                    />
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-gray-500">
                       Selecciona marca y modelo
@@ -2177,7 +2214,7 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
             <img
               src={vehicleImage}
               alt={`${vehicle.brand} ${vehicle.model}`}
-              className={`h-full w-full object-contain ${isPlaceholderImage ? 'bg-slate-100 p-2' : 'bg-slate-50 p-1.5'}`}
+              className={`h-full w-full ${isPlaceholderImage ? 'object-contain bg-slate-100 p-2' : 'object-cover bg-slate-50'}`}
               loading="lazy"
               onError={() => {
                 setImageIndex((prev) => (prev < imageSources.length - 1 ? prev + 1 : prev));
