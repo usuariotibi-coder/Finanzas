@@ -878,11 +878,24 @@ export default function PMPortal() {
                       setIsEditingProyecto(false);
                       setShowModalProyectoDetalle(true);
                     }}
-                    className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-[11px] font-semibold flex items-center justify-center gap-1.5"
+                    type="button"
+                    aria-label="Ver detalle del proyecto"
+                    title="Ver detalle del proyecto"
+                    className="ml-auto flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-gray-700 transition-colors hover:bg-primary-100 hover:text-primary-800"
                   >
-                    <span>Ver Detalles del Proyecto</span>
-                    <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z"
+                      />
                     </svg>
                   </button>
                 </div>
