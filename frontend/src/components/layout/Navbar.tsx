@@ -11,6 +11,7 @@ import { api } from '../../utils/api';
 
 interface NavbarProps {
   onMenuClick: () => void;
+  sidebarOpen: boolean;
 }
 
 interface NotificationItem {
@@ -38,7 +39,7 @@ const buildPasswordChecks = (value: string) => [
   { label: 'Sin espacios', ok: !/\s/.test(value) },
 ];
 
-export default function Navbar({ onMenuClick }: NavbarProps) {
+export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -337,26 +338,32 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-white/95 border-b border-neutral-200 z-50 shadow-sm backdrop-blur">
+    <>
+      <nav className="fixed top-0 left-0 right-0 h-16 bg-white/95 border-b border-neutral-200 z-50 shadow-sm backdrop-blur">
       <div className="absolute inset-x-0 top-0 h-1 bg-accent-500" />
       <div className="flex items-center justify-between h-full px-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={onMenuClick}
-            className="p-2 rounded-lg hover:bg-primary-50 transition-colors"
+            className={`rounded-lg p-2 transition-all ${
+              sidebarOpen
+                ? 'bg-primary-100 text-primary-800 shadow-inner'
+                : 'text-primary-700 hover:bg-primary-50'
+            }`}
+            aria-label={sidebarOpen ? 'Ocultar menu lateral' : 'Mostrar menu lateral'}
+            aria-expanded={sidebarOpen}
           >
             <svg
-              className="w-6 h-6 text-primary-700"
+              className={`h-6 w-6 transition-transform duration-200 ${sidebarOpen ? 'rotate-90' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
+              {sidebarOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
             </svg>
           </button>
 
@@ -531,9 +538,11 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </div>
         </div>
       </div>
+      </nav>
+
       {isPasswordModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:p-6">
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/45 px-4 py-8 sm:py-10">
+          <div className="mx-auto my-8 w-full max-w-2xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:my-12 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Seguridad</p>
@@ -650,7 +659,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                 </div>
               )}
 
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:justify-end">
+              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closePasswordModal}
@@ -670,6 +679,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 }

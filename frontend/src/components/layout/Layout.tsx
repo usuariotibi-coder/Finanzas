@@ -48,7 +48,10 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="h-screen bg-neutral-50 text-primary-900 flex flex-col overflow-hidden">
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Navbar
+        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+        sidebarOpen={sidebarOpen}
+      />
 
       <div className="mt-16 flex h-[calc(100vh-4rem)] overflow-hidden">
         <Sidebar isOpen={sidebarOpen} />
