@@ -635,7 +635,7 @@ export default function UsuarioView() {
   };
 
   const handleAccionClick = (viatico: Viatico, accion: string) => {
-    if (accion === 'subir') {
+    if (accion === 'subir' || accion === 'ver') {
       setViaticoSeleccionado(viatico.id);
       setGastos([]);
       setGastoFiles({});
