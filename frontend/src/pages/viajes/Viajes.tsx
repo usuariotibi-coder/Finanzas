@@ -168,12 +168,12 @@ export default function Viajes() {
             return (
               <div
                 key={solicitud.id}
-                className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2 sm:p-2.5 hover:shadow transition-shadow ${isSingleSolicitud ? 'max-w-2xl' : ''}`}
+                className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2 sm:p-2.5 hover:shadow transition-shadow ${isSingleSolicitud ? 'max-w-xl' : ''}`}
               >
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-700">
                         {solicitud.userName.charAt(0)}
                       </div>
                       <div className="min-w-0">
@@ -181,7 +181,7 @@ export default function Viajes() {
                         <p className="text-[11px] text-gray-500">ID: {solicitud.id}</p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-0.5">
+                    <div className="flex flex-wrap items-center justify-end gap-1">
                       <StatusBadge status={solicitud.status} />
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${pmApprovalBadge(solicitud.status).color}`}
@@ -190,7 +190,7 @@ export default function Viajes() {
                       </span>
                       <button
                         onClick={() => setSelectedSolicitud(solicitud)}
-                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-900 hover:text-white"
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[9px] font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-900 hover:text-white"
                         type="button"
                       >
                         Ver detalles
@@ -198,44 +198,40 @@ export default function Viajes() {
                     </div>
                   </div>
 
-                <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-gray-600 lg:grid-cols-4">
                   <div>
                     <p className="text-[9px] uppercase tracking-wide text-gray-400">Proyecto</p>
-                    <p className="text-xs font-semibold text-gray-900">
+                    <p className="text-xs font-semibold text-gray-900 truncate">
                       {formatProyectoLabel(solicitud.proyectoNombre, solicitud.proyectoId)}
-                    </p>
-                    <p className="text-[11px] text-gray-500">
-                      {formatProyectoLabel(undefined, solicitud.proyectoId)}
                     </p>
                   </div>
                   <div>
                     <p className="text-[9px] uppercase tracking-wide text-gray-400">Destino</p>
-                    <p className="text-xs font-semibold text-gray-900 flex items-center gap-2">
+                    <p className="text-xs font-semibold text-gray-900 flex items-center gap-1">
                       <span className="text-sm">{statusIcon}</span>
                       <span className="truncate">{solicitud.destino}</span>
                     </p>
-                    <p className="text-[11px] text-gray-500">{solicitud.motivo}</p>
                   </div>
                   <div>
                     <p className="text-[9px] uppercase tracking-wide text-gray-400">Fechas</p>
                     <p className="text-xs font-semibold text-gray-900">{solicitud.fechaInicio}</p>
-                    <p className="text-[11px] text-gray-500">al {solicitud.fechaFin}</p>
+                    <p className="text-[10px] text-gray-500">al {solicitud.fechaFin}</p>
                   </div>
                   <div>
                     <p className="text-[9px] uppercase tracking-wide text-gray-400">Servicios</p>
                     <div className="flex flex-wrap gap-1">
                       {solicitud.necesitaAvion && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
                           ✈️ Avión
                         </span>
                       )}
                       {solicitud.necesitaCamion && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                           🚛 Camión
                         </span>
                       )}
                       {solicitud.necesitaHotel && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                           🏨 Hotel
                         </span>
                       )}
