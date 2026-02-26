@@ -168,11 +168,11 @@ export default function Viajes() {
             return (
               <div
                 key={solicitud.id}
-                className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2 sm:p-2.5 hover:shadow transition-shadow ${isSingleSolicitud ? 'max-w-3xl' : ''}`}
+                className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2 sm:p-2.5 hover:shadow transition-shadow ${isSingleSolicitud ? 'max-w-2xl' : ''}`}
               >
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-700">
                         {solicitud.userName.charAt(0)}
                       </div>
@@ -181,17 +181,24 @@ export default function Viajes() {
                         <p className="text-[11px] text-gray-500">ID: {solicitud.id}</p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-end gap-0.5">
                       <StatusBadge status={solicitud.status} />
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${pmApprovalBadge(solicitud.status).color}`}
                       >
                         {pmApprovalBadge(solicitud.status).label}
                       </span>
+                      <button
+                        onClick={() => setSelectedSolicitud(solicitud)}
+                        className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-900 hover:text-white"
+                        type="button"
+                      >
+                        Ver detalles
+                      </button>
                     </div>
                   </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-600">
+                <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-[11px] text-gray-600 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <p className="text-[9px] uppercase tracking-wide text-gray-400">Proyecto</p>
                     <p className="text-xs font-semibold text-gray-900">
@@ -216,7 +223,7 @@ export default function Viajes() {
                   </div>
                   <div>
                     <p className="text-[9px] uppercase tracking-wide text-gray-400">Servicios</p>
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1">
                       {solicitud.necesitaAvion && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-semibold text-sky-700">
                           ✈️ Avión
@@ -236,15 +243,6 @@ export default function Viajes() {
                   </div>
                 </div>
 
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setSelectedSolicitud(solicitud)}
-                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-900 hover:text-white"
-                    type="button"
-                  >
-                    Ver detalles
-                  </button>
-                </div>
               </div>
             </div>
             );
