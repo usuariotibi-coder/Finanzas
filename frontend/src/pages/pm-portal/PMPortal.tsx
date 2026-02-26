@@ -795,15 +795,27 @@ export default function PMPortal() {
           {proyectos.map((proyecto) => {
             const porcentajeGastado = calcularPorcentajeGastado(proyecto.gastado, proyecto.presupuesto);
             const proyectoEstadoIcon = getProyectoEstadoIcon(proyecto.estado);
+            const nombreProyecto = (proyecto.nombre || '').trim();
+            const clienteProyecto = (proyecto.cliente || '').trim();
+            const descripcionProyecto = (proyecto.descripcion || '').trim();
+            const sameNombreCliente =
+              nombreProyecto.length > 0 &&
+              clienteProyecto.length > 0 &&
+              nombreProyecto.toLowerCase() === clienteProyecto.toLowerCase();
+            const showCliente = Boolean(clienteProyecto) && !sameNombreCliente;
+            const showDescripcion =
+              Boolean(descripcionProyecto) &&
+              descripcionProyecto.toLowerCase() !== nombreProyecto.toLowerCase() &&
+              descripcionProyecto.toLowerCase() !== clienteProyecto.toLowerCase();
 
             return (
               <div key={proyecto.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
                 <div className="flex items-start justify-between mb-1">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 min-w-0">
                         <span className="text-sm">{proyectoEstadoIcon}</span>
-                        <span>{proyecto.nombre}</span>
+                        <span className="truncate">{nombreProyecto || 'Proyecto sin nombre'}</span>
                       </h3>
                       <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
                         {proyecto.estado === 'activo' ? 'Activo' :
@@ -812,11 +824,21 @@ export default function PMPortal() {
                       </span>
                     </div>
                     <p className="text-[10px] text-gray-600">{proyecto.codigo}</p>
-                    <p className="text-[10px] text-gray-600">{proyecto.cliente}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px]">
+                      <span className="font-semibold text-gray-800">Proyecto: {nombreProyecto || 'N/A'}</span>
+                      {showCliente && (
+                        <>
+                          <span className="text-gray-400">|</span>
+                          <span className="text-gray-600">Cliente: {clienteProyecto}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-gray-700 mb-1.5 line-clamp-1">{proyecto.descripcion}</p>
+                {showDescripcion && (
+                  <p className="text-[10px] text-gray-700 mb-1.5 line-clamp-1">{descripcionProyecto}</p>
+                )}
 
                 <div className="space-y-0.5">
                   <div>
@@ -867,9 +889,12 @@ export default function PMPortal() {
                       setIsEditingProyecto(false);
                       setShowModalProyectoDetalle(true);
                     }}
-                    className="w-full px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-[10px] font-medium"
+                    className="w-full px-2 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-[10px] font-semibold flex items-center justify-center gap-1.5"
                   >
-                    Ver Detalles del Proyecto
+                    <span>Ver Detalles del Proyecto</span>
+                    <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
                   </button>
                 </div>
               </div>
