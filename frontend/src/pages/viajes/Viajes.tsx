@@ -368,6 +368,10 @@ type ConfirmacionCamionDraft = { proveedor: string; confirmacion: string; costo:
 type ConfirmacionHotelDraft = { nombre: string; confirmacion: string; costo: number | '' };
 
 const normalizeConfirmaciones = <T,>(value?: T[]) => (Array.isArray(value) ? value : []);
+const allowedGestionStatuses: SolicitudViaje['status'][] = ['en_proceso', 'cancelado', 'completado'];
+const normalizeGestionStatus = (value: SolicitudViaje['status']): SolicitudViaje['status'] => (
+  allowedGestionStatuses.includes(value) ? value : 'en_proceso'
+);
 
 function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitudModalProps) {
   useEscapeKey(onClose);
@@ -377,7 +381,7 @@ function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitu
   const disableGestion = false;
   const readOnlyFieldClass = 'disabled:bg-white disabled:text-gray-700 disabled:opacity-100 disabled:cursor-default';
 
-  const [status, setStatus] = useState(solicitud.status);
+  const [status, setStatus] = useState<SolicitudViaje['status']>(normalizeGestionStatus(solicitud.status));
   const [notas, setNotas] = useState(solicitud.notas || '');
   const [statusAvion, setStatusAvion] = useState(solicitud.statusAvion || 'pendiente');
   const [statusCamion, setStatusCamion] = useState(solicitud.statusCamion || 'pendiente');
@@ -842,11 +846,9 @@ function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitu
                   disabled={disableGestion}
                   className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 ${readOnlyFieldClass}`}
                 >
-                  <option value="pendiente">Pendiente</option>
-                  <option value="en_proceso">En Proceso</option>
-                  <option value="confirmado">Confirmado</option>
-                  <option value="cancelado">Cancelado</option>
                   <option value="completado">Completado</option>
+                  <option value="cancelado">Cancelado</option>
+                  <option value="en_proceso">En Proceso</option>
                 </select>
               </div>
 
