@@ -811,7 +811,7 @@ export default function PMPortal() {
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2 min-w-0">
                         <span className="text-sm">{proyectoEstadoIcon}</span>
-                        <span className="truncate uppercase tracking-wide">JOB {jobProyecto || 'N/A'}</span>
+                        <span className="truncate uppercase tracking-wide">{jobProyecto || 'N/A'}</span>
                       </h3>
                       <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${getEstadoColor(proyecto.estado)}`}>
                         {proyecto.estado === 'activo' ? 'Activo' :
