@@ -1112,7 +1112,7 @@ export default function UsuarioView() {
           </div>
 
           {/* Lista de Viáticos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
@@ -1221,7 +1221,7 @@ export default function UsuarioView() {
                 );
               })
             ) : (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full lg:col-span-2">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full md:col-span-2 xl:col-span-4">
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
