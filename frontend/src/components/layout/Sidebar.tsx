@@ -169,7 +169,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-56 border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
+      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-52 border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
         isOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none'
       }`}
       aria-hidden={!isOpen}
