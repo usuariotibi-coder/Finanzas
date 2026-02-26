@@ -524,6 +524,7 @@ export default function UsuarioView() {
     }
     return true;
   });
+  const isSingleViatico = viaticosFiltrados.length === 1;
   const getEstadoInfo = (status: Viatico['status']) => {
     const configs = {
       pendiente: { label: 'Pendiente de Aprobación', color: 'bg-yellow-100 text-yellow-700', icon: '⏳' },
@@ -1112,7 +1113,7 @@ export default function UsuarioView() {
           </div>
 
           {/* Lista de Viáticos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className={`grid gap-2.5 ${isSingleViatico ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
@@ -1127,29 +1128,29 @@ export default function UsuarioView() {
                 const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
 
                 return (
-                  <div key={viatico.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
-                    <div className="flex flex-col gap-2">
+                  <div key={viatico.id} className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 hover:shadow transition-shadow ${isSingleViatico ? 'max-w-3xl' : ''}`}>
+                    <div className="flex flex-col gap-1.5">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-2 leading-tight">
-                            <span className="text-base">{estadoInfo.icon}</span>
+                          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
+                            <span className="text-sm">{estadoInfo.icon}</span>
                             <span className="truncate">{viatico.destino} - {proyectoLabel}</span>
                           </h3>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-gray-600">
                             <span>{formatDateOnlyMx(viatico.fechaInicio)} - {formatDateOnlyMx(viatico.fechaFin)}</span>
                             <span className="font-semibold text-gray-900">${viatico.montoAprobado?.toLocaleString() || viatico.montoSolicitado.toLocaleString()} MXN</span>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${estadoInfo.color}`}>
                           {estadoInfo.label}
                         </span>
                       </div>
 
                       <div>
-                        <p className="text-[11px] text-gray-600">
+                        <p className="text-[10px] text-gray-600">
                           Proceso actual: <span className="font-semibold text-gray-900">{procesoViatico.texto}</span>
                         </p>
-                        <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                        <div className="mt-0.5 h-1.5 w-full rounded-full bg-gray-200">
                           <div
                             className={`h-1.5 rounded-full ${procesoViatico.barra}`}
                             style={{ width: `${procesoViatico.avance}%` }}
@@ -1176,7 +1177,7 @@ export default function UsuarioView() {
                         {accionBoton.accion !== 'none' && (
                           <button
                             onClick={() => handleAccionClick(viatico, accionBoton.accion)}
-                            className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${accionBoton.color} hover:opacity-90`}
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors ${accionBoton.color} hover:opacity-90`}
                             type="button"
                           >
                             <span>{accionBoton.icon}</span>
@@ -1197,7 +1198,7 @@ export default function UsuarioView() {
                               });
                               setShowModalExtenderViaje(true);
                             }}
-                            className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
                             type="button"
                           >
                             <span>Extender Viaje</span>
@@ -1205,13 +1206,13 @@ export default function UsuarioView() {
                         )}
 
                         {extensionPendiente && (
-                          <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
                             ⏳ <span>Esperando aprobacion PM</span>
                           </span>
                         )}
 
                         {viatico.saldoRestante && viatico.saldoRestante > 0 && (
-                          <span className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-50 text-orange-700 border border-orange-200">
                             <span>Pendiente por recuperar:</span> ${viatico.saldoRestante.toLocaleString()} MXN
                           </span>
                         )}
@@ -1221,7 +1222,7 @@ export default function UsuarioView() {
                 );
               })
             ) : (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full md:col-span-2 xl:col-span-4">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full md:col-span-2 xl:col-span-3">
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
