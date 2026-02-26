@@ -162,22 +162,22 @@ export default function ProyectoSelector({
             <span className="text-sm font-medium text-gray-900">{NEW_PROJECT_LABEL}</span>
           </div>
         ) : selectedProyecto ? (
-          <div className="flex items-center space-x-2 flex-1">
+          <div className="flex flex-1 flex-col">
             {(() => {
               const selectedNombre = (selectedProyecto.nombre || '').trim();
               const selectedCliente = (selectedProyecto.cliente || '').trim();
-              const showSelectedCliente = Boolean(selectedCliente && !sameText(selectedNombre, selectedCliente));
-              const selectedTitle = selectedNombre || selectedCliente || 'Sin nombre';
+              const selectedDescripcion = selectedNombre && !sameText(selectedNombre, selectedCliente) ? selectedNombre : '';
               return (
                 <>
-                  <span className="text-xs font-semibold text-gray-600">{selectedProyecto.codigo}</span>
-                  <span className="text-sm font-medium text-gray-900">{selectedTitle}</span>
-                  {showSelectedCliente && (
-                    <span className="text-xs text-gray-500">({selectedCliente})</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-bold text-gray-900">{selectedProyecto.codigo}</span>
+                    <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getEstadoBadgeColor(selectedProyecto.estado)}`}>
+                      {getEstadoLabel(selectedProyecto.estado)}
+                    </span>
+                  </div>
+                  {selectedDescripcion && (
+                    <span className="text-xs text-gray-500 truncate">{selectedDescripcion}</span>
                   )}
-                  <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getEstadoBadgeColor(selectedProyecto.estado)}`}>
-                    {getEstadoLabel(selectedProyecto.estado)}
-                  </span>
                 </>
               );
             })()}
@@ -244,8 +244,7 @@ export default function ProyectoSelector({
                   const porcentajeUso = calcularPorcentajeUso(proyecto);
                   const nombreProyecto = (proyecto.nombre || '').trim();
                   const clienteProyecto = (proyecto.cliente || '').trim();
-                  const tituloProyecto = nombreProyecto || clienteProyecto || 'Sin nombre';
-                  const showClienteLinea = Boolean(clienteProyecto && !sameText(nombreProyecto, clienteProyecto));
+                  const descripcionProyecto = nombreProyecto && !sameText(nombreProyecto, clienteProyecto) ? nombreProyecto : '';
 
                   return (
                     <button
@@ -260,8 +259,10 @@ export default function ProyectoSelector({
                         <div className="flex-1">
                           {/* Header */}
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-xs font-bold text-gray-600">{proyecto.codigo}</span>
-                            <span className="text-sm font-semibold text-gray-900">{tituloProyecto}</span>
+                            <span className="text-sm font-bold text-gray-900">{proyecto.codigo}</span>
+                            {descripcionProyecto && (
+                              <span className="text-xs text-gray-600">{descripcionProyecto}</span>
+                            )}
                             {value === proyecto.id && (
                               <svg className="w-4 h-4 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path
@@ -272,11 +273,6 @@ export default function ProyectoSelector({
                               </svg>
                             )}
                           </div>
-
-                          {/* Cliente */}
-                          {showClienteLinea && (
-                            <p className="text-xs text-gray-600 mb-2">Cliente: {clienteProyecto}</p>
-                          )}
 
                           {/* Estado y presupuesto */}
                           <div className="flex items-center space-x-2 mb-2">
