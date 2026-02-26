@@ -24,6 +24,7 @@ interface ProyectoSelectorProps {
 
 const STORAGE_KEY = 'proyectos_data';
 const NEW_PROJECT_LABEL = 'Nuevo Proyecto';
+const sameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 function getProyectos(): Proyecto[] {
   const cached = getCachedProyectos();
@@ -162,12 +163,24 @@ export default function ProyectoSelector({
           </div>
         ) : selectedProyecto ? (
           <div className="flex items-center space-x-2 flex-1">
-            <span className="text-xs font-semibold text-gray-600">{selectedProyecto.codigo}</span>
-            <span className="text-sm font-medium text-gray-900">{selectedProyecto.nombre}</span>
-            <span className="text-xs text-gray-500">({selectedProyecto.cliente})</span>
-            <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getEstadoBadgeColor(selectedProyecto.estado)}`}>
-              {getEstadoLabel(selectedProyecto.estado)}
-            </span>
+            {(() => {
+              const selectedNombre = (selectedProyecto.nombre || '').trim();
+              const selectedCliente = (selectedProyecto.cliente || '').trim();
+              const showSelectedCliente = Boolean(selectedCliente && !sameText(selectedNombre, selectedCliente));
+              const selectedTitle = selectedNombre || selectedCliente || 'Sin nombre';
+              return (
+                <>
+                  <span className="text-xs font-semibold text-gray-600">{selectedProyecto.codigo}</span>
+                  <span className="text-sm font-medium text-gray-900">{selectedTitle}</span>
+                  {showSelectedCliente && (
+                    <span className="text-xs text-gray-500">({selectedCliente})</span>
+                  )}
+                  <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getEstadoBadgeColor(selectedProyecto.estado)}`}>
+                    {getEstadoLabel(selectedProyecto.estado)}
+                  </span>
+                </>
+              );
+            })()}
           </div>
         ) : (
           <span className="text-gray-500">Selecciona un proyecto...</span>
@@ -229,6 +242,10 @@ export default function ProyectoSelector({
                   const gastado = toSafeMonto(proyecto.gastado);
                   const disponible = calcularPresupuestoDisponible(proyecto);
                   const porcentajeUso = calcularPorcentajeUso(proyecto);
+                  const nombreProyecto = (proyecto.nombre || '').trim();
+                  const clienteProyecto = (proyecto.cliente || '').trim();
+                  const tituloProyecto = nombreProyecto || clienteProyecto || 'Sin nombre';
+                  const showClienteLinea = Boolean(clienteProyecto && !sameText(nombreProyecto, clienteProyecto));
 
                   return (
                     <button
@@ -244,7 +261,7 @@ export default function ProyectoSelector({
                           {/* Header */}
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-xs font-bold text-gray-600">{proyecto.codigo}</span>
-                            <span className="text-sm font-semibold text-gray-900">{proyecto.nombre}</span>
+                            <span className="text-sm font-semibold text-gray-900">{tituloProyecto}</span>
                             {value === proyecto.id && (
                               <svg className="w-4 h-4 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path
@@ -257,7 +274,9 @@ export default function ProyectoSelector({
                           </div>
 
                           {/* Cliente */}
-                          <p className="text-xs text-gray-600 mb-2">Cliente: {proyecto.cliente}</p>
+                          {showClienteLinea && (
+                            <p className="text-xs text-gray-600 mb-2">Cliente: {clienteProyecto}</p>
+                          )}
 
                           {/* Estado y presupuesto */}
                           <div className="flex items-center space-x-2 mb-2">
