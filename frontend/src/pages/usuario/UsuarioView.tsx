@@ -1879,7 +1879,7 @@ export default function UsuarioView() {
       {/* Modal para crear nuevo viático */}
       {showModalNuevoViatico && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
@@ -1899,34 +1899,40 @@ export default function UsuarioView() {
             </div>
 
             <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
-              {/* Proyecto - OBLIGATORIO */}
-              <ProyectoSelector
-                value={formNuevoViatico.proyectoId}
-                onChange={(proyectoId) => setFormNuevoViatico({ ...formNuevoViatico, proyectoId })}
-                required={proyectoRequeridoViatico}
-                label="Proyecto"
-                inputClassName={nuevoViaticoErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
-              />
-              {nuevoViaticoErrors.proyectoId && (
-                <p className="text-xs text-rose-600">{nuevoViaticoErrors.proyectoId}</p>
-              )}
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  {/* Proyecto - OBLIGATORIO */}
+                  <ProyectoSelector
+                    value={formNuevoViatico.proyectoId}
+                    onChange={(proyectoId) => setFormNuevoViatico({ ...formNuevoViatico, proyectoId })}
+                    required={proyectoRequeridoViatico}
+                    label="Proyecto"
+                    inputClassName={nuevoViaticoErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
+                  />
+                  {nuevoViaticoErrors.proyectoId && (
+                    <p className="text-xs text-rose-600">{nuevoViaticoErrors.proyectoId}</p>
+                  )}
+                </div>
 
-              {/* GS Activity */}
-              <GSActivitySelector
-                value={formNuevoViatico.gsActivityId}
-                onChange={(activityId, activity) =>
-                  setFormNuevoViatico((prev) => ({
-                    ...prev,
-                    gsActivityId: activityId,
-                    motivo: activityId === GS_ACTIVITY_OTHER_ID ? '' : activity.label,
-                  }))}
-                filterByCategory="travel"
-                label="Tipo de Actividad"
-                inputClassName={nuevoViaticoErrors.gsActivityId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
-              />
-              {nuevoViaticoErrors.gsActivityId && (
-                <p className="text-xs text-rose-600">{nuevoViaticoErrors.gsActivityId}</p>
-              )}
+                <div>
+                  {/* GS Activity */}
+                  <GSActivitySelector
+                    value={formNuevoViatico.gsActivityId}
+                    onChange={(activityId, activity) =>
+                      setFormNuevoViatico((prev) => ({
+                        ...prev,
+                        gsActivityId: activityId,
+                        motivo: activityId === GS_ACTIVITY_OTHER_ID ? '' : activity.label,
+                      }))}
+                    filterByCategory="travel"
+                    label="Tipo de Actividad"
+                    inputClassName={nuevoViaticoErrors.gsActivityId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
+                  />
+                  {nuevoViaticoErrors.gsActivityId && (
+                    <p className="text-xs text-rose-600">{nuevoViaticoErrors.gsActivityId}</p>
+                  )}
+                </div>
+              </div>
 
               {/* Motivo */}
               <div>
@@ -1952,6 +1958,7 @@ export default function UsuarioView() {
                 )}
               </div>
 
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Pais */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2024,6 +2031,8 @@ export default function UsuarioView() {
                   <option value="amex">AMEX</option>
                   <option value="mixto">Mixto</option>
                 </select>
+              </div>
+
               </div>
 
               {/* Fechas */}
@@ -2160,7 +2169,7 @@ export default function UsuarioView() {
       {/* Modal para solicitar vehículo (solo coches) */}
       {showModalSolicitarVehiculo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
@@ -2181,6 +2190,7 @@ export default function UsuarioView() {
             </div>
 
             <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -2210,6 +2220,9 @@ export default function UsuarioView() {
                 </select>
               </div>
 
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {/* Origen */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2300,6 +2313,8 @@ export default function UsuarioView() {
                 </div>
               </div>
 
+              </div>
+
               {/* Fechas */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -2348,7 +2363,7 @@ export default function UsuarioView() {
                       ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                       : 'border-gray-300 focus:ring-primary-500'
                   }`}
-                  rows={3}
+                  rows={2}
                   placeholder="Describe el motivo de la solicitud..."
                 />
                 {solicitarVehiculoErrors.motivo && (
@@ -2396,7 +2411,7 @@ export default function UsuarioView() {
       {/* Modal para solicitar viaje (avión, camión, hotel) */}
       {showModalSolicitarViaje && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
@@ -2420,6 +2435,7 @@ export default function UsuarioView() {
               <div className="space-y-3">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {/* Proyecto */}
                 <ProyectoSelector
                   value={formSolicitudViaje.proyectoId}
@@ -2452,6 +2468,8 @@ export default function UsuarioView() {
                   {solicitarViajeErrors.origen && (
                     <p className="mt-1 text-xs text-rose-600">{solicitarViajeErrors.origen}</p>
                   )}
+                </div>
+
                 </div>
 
                 {/* Destino */}
@@ -2530,7 +2548,7 @@ export default function UsuarioView() {
                         ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                         : 'border-gray-300 focus:ring-primary-500'
                     }`}
-                    rows={3}
+                    rows={2}
                     placeholder="Describe el motivo del viaje..."
                   />
                   {solicitarViajeErrors.motivo && (
@@ -2547,8 +2565,9 @@ export default function UsuarioView() {
                   <p className="text-xs text-rose-600">{solicitarViajeErrors.servicios}</p>
                 )}
 
+                <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-3">
                 {/* Avión */}
-                <div className="rounded-lg border border-gray-200 p-3">
+                <div className="rounded-lg border border-gray-200 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2562,7 +2581,7 @@ export default function UsuarioView() {
                     </div>
                   </label>
                   {formSolicitudViaje.necesitaAvion && (
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Detalles del Vuelo
                       </label>
@@ -2578,7 +2597,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Camión */}
-                <div className="rounded-lg border border-gray-200 p-3">
+                <div className="rounded-lg border border-gray-200 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2592,7 +2611,7 @@ export default function UsuarioView() {
                     </div>
                   </label>
                   {formSolicitudViaje.necesitaCamion && (
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Detalles del Transporte
                       </label>
@@ -2608,7 +2627,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Hotel */}
-                <div className="rounded-lg border border-gray-200 p-3">
+                <div className="rounded-lg border border-gray-200 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2622,7 +2641,7 @@ export default function UsuarioView() {
                     </div>
                   </label>
                   {formSolicitudViaje.necesitaHotel && (
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Detalles del Hospedaje
                       </label>
@@ -2635,6 +2654,7 @@ export default function UsuarioView() {
                       />
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             </div>
