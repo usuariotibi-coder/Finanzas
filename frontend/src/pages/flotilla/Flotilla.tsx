@@ -2004,12 +2004,16 @@ function AssignmentModal({
   const projectLabel = formatProyectoLabel(selectedRequest?.proyectoNombre, selectedRequest?.proyectoId);
   const requestError = showErrors && !selectedRequestId ? 'Selecciona una solicitud.' : '';
   const vehicleError = showErrors && !selectedVehicleId ? 'Selecciona un vehiculo.' : '';
+  const summaryDestination = selectedRequest?.destino?.trim() || '';
+  const summaryDestinationEmbedUrl = summaryDestination
+    ? `https://www.google.com/maps?q=${encodeURIComponent(summaryDestination)}&output=embed`
+    : '';
   const [summaryMapCoords, setSummaryMapCoords] = useState<[number, number] | null>(null);
   const [loadingSummaryMap, setLoadingSummaryMap] = useState(false);
   const [summaryMapMessage, setSummaryMapMessage] = useState('');
 
   useEffect(() => {
-    const destination = selectedRequest?.destino?.trim() || '';
+    const destination = summaryDestination;
     if (!destination) {
       setSummaryMapCoords(null);
       setSummaryMapMessage('Sin destino para mostrar en el mapa.');
@@ -2050,12 +2054,12 @@ function AssignmentModal({
           setSummaryMapMessage('Ubicacion estimada con base en la direccion.');
         } else {
           setSummaryMapCoords(null);
-          setSummaryMapMessage('No se encontro ubicacion exacta para este destino.');
+          setSummaryMapMessage('Mostrando vista aproximada del destino.');
         }
       } catch {
         if (!cancelled) {
           setSummaryMapCoords(null);
-          setSummaryMapMessage('No se pudo cargar el mapa para este destino.');
+          setSummaryMapMessage('Mostrando vista aproximada del destino.');
         }
       } finally {
         if (!cancelled) {
@@ -2068,7 +2072,7 @@ function AssignmentModal({
     return () => {
       cancelled = true;
     };
-  }, [selectedRequest?.destino]);
+  }, [summaryDestination]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -2308,6 +2312,10 @@ function AssignmentModal({
                       <div className="md:col-span-2">
                         <span className="text-slate-500">Motivo:</span> {selectedRequest.motivo}
                       </div>
+                      <div className="md:col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/70 px-2.5 py-2 text-xs">
+                        <span className="font-semibold text-slate-700">Destino final del usuario:</span>{' '}
+                        <span className="text-slate-700">{summaryDestination || 'No especificado'}</span>
+                      </div>
                     </div>
                     <div className="mt-2 rounded-xl border border-slate-200 bg-white/80 p-2.5">
                       <div className="mb-2 flex items-center justify-between">
@@ -2335,9 +2343,19 @@ function AssignmentModal({
                             />
                           </MapContainer>
                         </div>
+                      ) : summaryDestinationEmbedUrl ? (
+                        <div className="h-28 overflow-hidden rounded-lg border border-slate-200">
+                          <iframe
+                            title={`Mapa de destino ${summaryDestination}`}
+                            src={summaryDestinationEmbedUrl}
+                            className="h-full w-full"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                          />
+                        </div>
                       ) : (
                         <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
-                          No hay coordenadas disponibles para mostrar el destino en el mapa.
+                          No hay destino disponible para mostrar en el mapa.
                         </div>
                       )}
                     </div>
