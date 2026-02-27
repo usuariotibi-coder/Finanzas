@@ -2087,7 +2087,7 @@ function AssignmentModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-[0_32px_80px_-40px_rgba(15,23,42,0.8)] max-w-4xl w-full border border-slate-200/70 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-2xl shadow-[0_32px_80px_-40px_rgba(15,23,42,0.8)] max-w-[96vw] xl:max-w-6xl w-full h-[94vh] border border-slate-200/70 overflow-hidden flex flex-col">
         <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400" />
         <div className="relative px-6 pt-6 pb-5 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 overflow-hidden">
           <div className="pointer-events-none absolute -right-10 -top-12 h-24 w-24 rounded-full bg-blue-200/60 blur-3xl" />
@@ -2121,7 +2121,7 @@ function AssignmentModal({
             void handleSubmit(event);
           }}
         >
-          <div className="p-6 space-y-6 pb-28">
+          <div className="p-4 sm:p-5 space-y-4 pb-24">
             {requests.length === 0 ? (
               <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
                 No hay solicitudes pendientes de asignación.
@@ -2149,7 +2149,8 @@ function AssignmentModal({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 p-5 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">Selección</h3>
@@ -2203,7 +2204,7 @@ function AssignmentModal({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-slate-50 to-emerald-50 p-5 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-slate-50 to-emerald-50 p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">Datos de combustible</h3>
@@ -2261,7 +2262,7 @@ function AssignmentModal({
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Comentarios</label>
                       <textarea
-                        rows={3}
+                        rows={2}
                         value={comentarios}
                         onChange={(event) => setComentarios(event.target.value)}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -2269,6 +2270,7 @@ function AssignmentModal({
                       />
                     </div>
                   </div>
+                </div>
                 </div>
 
                 <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-5 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
@@ -2315,7 +2317,7 @@ function AssignmentModal({
                         </span>
                       </div>
                       {summaryMapCoords ? (
-                        <div className="h-44 overflow-hidden rounded-lg border border-slate-200">
+                        <div className="h-36 overflow-hidden rounded-lg border border-slate-200">
                           <MapContainer
                             center={summaryMapCoords}
                             zoom={14}
