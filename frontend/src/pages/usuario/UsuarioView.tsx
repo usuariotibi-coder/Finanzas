@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { CircleMarker, MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import type { LeafletMouseEvent } from 'leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
@@ -25,9 +27,27 @@ import {
   getPendingViaticoExtension,
   withPendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
+import 'leaflet/dist/leaflet.css';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
+const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
+
+type VehicleMapPoint = { lat: number; lng: number };
+
+function VehicleDestinationMapClick({
+  onSelect,
+}: {
+  onSelect: (coords: VehicleMapPoint) => void;
+}) {
+  useMapEvents({
+    click(event: LeafletMouseEvent) {
+      onSelect({ lat: event.latlng.lat, lng: event.latlng.lng });
+    },
+  });
+
+  return null;
+}
 
 const parseDateOnly = (value: string) => {
   if (!value) {
@@ -236,6 +256,10 @@ export default function UsuarioView() {
     proposito: 'operaciones' as 'operaciones' | 'visita' | 'viaje',
     requiereGasolina: false,
   });
+  const [showDestinoVehiculoMap, setShowDestinoVehiculoMap] = useState(false);
+  const [destinoVehiculoCoords, setDestinoVehiculoCoords] = useState<VehicleMapPoint | null>(null);
+  const [isResolviendoDestinoVehiculo, setIsResolviendoDestinoVehiculo] = useState(false);
+  const [destinoVehiculoMapMensaje, setDestinoVehiculoMapMensaje] = useState('');
 
   // Estado para solicitud de viaje
   const [showModalSolicitarViaje, setShowModalSolicitarViaje] = useLocalStorageState('usuario:showModalSolicitarViaje', false);
@@ -783,6 +807,43 @@ export default function UsuarioView() {
   };
 
   // Funciones para vehículos (solo coches)
+  const resetSolicitarVehiculoMapState = () => {
+    setShowDestinoVehiculoMap(false);
+    setDestinoVehiculoCoords(null);
+    setIsResolviendoDestinoVehiculo(false);
+    setDestinoVehiculoMapMensaje('');
+  };
+
+  const handleSeleccionDestinoVehiculoEnMapa = async ({ lat, lng }: VehicleMapPoint) => {
+    setDestinoVehiculoCoords({ lat, lng });
+    setIsResolviendoDestinoVehiculo(true);
+    setDestinoVehiculoMapMensaje('');
+
+    const coordenadasFallback = `Lat ${lat.toFixed(5)}, Lon ${lng.toFixed(5)}`;
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=es`
+      );
+      if (!response.ok) {
+        throw new Error('No se pudo resolver la direccion.');
+      }
+
+      const data = (await response.json()) as { display_name?: string };
+      const direccion = data.display_name
+        ? data.display_name.split(',').slice(0, 6).join(',').trim()
+        : coordenadasFallback;
+
+      setFormSolicitudVehiculo((prev) => ({ ...prev, destino: direccion }));
+      setDestinoVehiculoMapMensaje('Destino tomado del mapa.');
+    } catch {
+      setFormSolicitudVehiculo((prev) => ({ ...prev, destino: coordenadasFallback }));
+      setDestinoVehiculoMapMensaje('No se pudo resolver la direccion exacta. Se guardaron coordenadas.');
+    } finally {
+      setIsResolviendoDestinoVehiculo(false);
+    }
+  };
+
   const handleSolicitarVehiculo = async () => {
     if (!formSolicitudVehiculo.proyectoId || !formSolicitudVehiculo.origen || !formSolicitudVehiculo.destino || !formSolicitudVehiculo.motivo || !formSolicitudVehiculo.fechaInicio) {
       setShowSolicitarVehiculoErrors(true);
@@ -815,6 +876,7 @@ export default function UsuarioView() {
       showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
 
       setShowModalSolicitarVehiculo(false);
+      resetSolicitarVehiculoMapState();
       setFormSolicitudVehiculo({
         proyectoId: '',
         origen: '',
@@ -1040,6 +1102,7 @@ export default function UsuarioView() {
                   <button
                     onClick={() => {
                       setShowSolicitarVehiculoErrors(false);
+                      resetSolicitarVehiculoMapState();
                       setShowModalSolicitarVehiculo(true);
                     }}
                     className="w-full sm:w-auto px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center gap-1 text-[11px]"
@@ -2104,6 +2167,7 @@ export default function UsuarioView() {
                   onClick={() => {
                     setShowModalSolicitarVehiculo(false);
                     setShowSolicitarVehiculoErrors(false);
+                    resetSolicitarVehiculoMapState();
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -2184,6 +2248,54 @@ export default function UsuarioView() {
                 {solicitarVehiculoErrors.destino && (
                   <p className="mt-1 text-xs text-rose-600">{solicitarVehiculoErrors.destino}</p>
                 )}
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDestinoVehiculoMap((prev) => !prev)}
+                    className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    {showDestinoVehiculoMap ? 'Ocultar mapa' : 'Seleccionar en mapa'}
+                  </button>
+                  {showDestinoVehiculoMap && (
+                    <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2">
+                      <p className="text-[11px] text-gray-600">
+                        Haz clic en el mapa para seleccionar el destino.
+                      </p>
+                      <div className="mt-2 h-56 overflow-hidden rounded-md border border-gray-200">
+                        <MapContainer
+                          center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
+                          zoom={destinoVehiculoCoords ? 13 : 5}
+                          scrollWheelZoom={true}
+                          className="h-full w-full"
+                        >
+                          <TileLayer
+                            attribution='&copy; OpenStreetMap contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <VehicleDestinationMapClick onSelect={handleSeleccionDestinoVehiculoEnMapa} />
+                          {destinoVehiculoCoords && (
+                            <CircleMarker
+                              center={[destinoVehiculoCoords.lat, destinoVehiculoCoords.lng]}
+                              radius={8}
+                              pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+                            />
+                          )}
+                        </MapContainer>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
+                        {isResolviendoDestinoVehiculo && <span>Resolviendo dirección...</span>}
+                        {!isResolviendoDestinoVehiculo && destinoVehiculoMapMensaje && (
+                          <span className="text-blue-700">{destinoVehiculoMapMensaje}</span>
+                        )}
+                        {destinoVehiculoCoords && (
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-700">
+                            {destinoVehiculoCoords.lat.toFixed(5)}, {destinoVehiculoCoords.lng.toFixed(5)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Fechas */}
@@ -2262,6 +2374,7 @@ export default function UsuarioView() {
                 onClick={() => {
                   setShowModalSolicitarVehiculo(false);
                   setShowSolicitarVehiculoErrors(false);
+                  resetSolicitarVehiculoMapState();
                 }}
                 className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
               >
