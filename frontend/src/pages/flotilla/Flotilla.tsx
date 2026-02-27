@@ -677,12 +677,17 @@ export default function Flotilla() {
                 </button>
                 <button
                   onClick={() => setShowAssignmentForm(true)}
-                  className="px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
+                  className="relative px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
                   <span>Asignar Vehiculo</span>
+                  {solicitudesPendientes.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-[18px] text-center font-semibold shadow">
+                      {solicitudesPendientes.length > 99 ? '99+' : solicitudesPendientes.length}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setShowNewVehicleForm(true)}
