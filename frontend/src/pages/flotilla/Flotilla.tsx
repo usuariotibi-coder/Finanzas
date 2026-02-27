@@ -2086,10 +2086,10 @@ function AssignmentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-[0_32px_80px_-40px_rgba(15,23,42,0.8)] max-w-[96vw] xl:max-w-6xl w-full h-[94vh] border border-slate-200/70 overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 z-50">
+      <div className="bg-white rounded-2xl shadow-[0_32px_80px_-40px_rgba(15,23,42,0.8)] max-w-[98vw] 2xl:max-w-7xl w-full h-[96vh] border border-slate-200/70 overflow-hidden flex flex-col">
         <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400" />
-        <div className="relative px-6 pt-6 pb-5 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 overflow-hidden">
+        <div className="relative px-5 pt-4 pb-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 overflow-hidden">
           <div className="pointer-events-none absolute -right-10 -top-12 h-24 w-24 rounded-full bg-blue-200/60 blur-3xl" />
           <div className="pointer-events-none absolute -left-16 -bottom-10 h-24 w-24 rounded-full bg-indigo-200/50 blur-3xl" />
           <div className="flex items-start justify-between gap-4">
@@ -2100,8 +2100,8 @@ function AssignmentModal({
                 </svg>
               </div>
               <div>
-                <h2 className="text-2xl font-semibold text-slate-900">Asignar Vehículo</h2>
-                <p className="text-sm text-slate-600">Relaciona una solicitud pendiente con un vehículo disponible.</p>
+                <h2 className="text-xl font-semibold text-slate-900">Asignar Vehículo</h2>
+                <p className="text-xs text-slate-600">Relaciona una solicitud pendiente con un vehículo disponible.</p>
               </div>
             </div>
             <button
@@ -2121,15 +2121,15 @@ function AssignmentModal({
             void handleSubmit(event);
           }}
         >
-          <div className="p-4 sm:p-5 space-y-4 pb-24">
+          <div className="p-3 sm:p-4 space-y-3 pb-16">
             {requests.length === 0 ? (
               <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
                 No hay solicitudes pendientes de asignación.
               </div>
             ) : (
               <>
-                <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm transition-shadow hover:shadow-md">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm transition-shadow hover:shadow-md">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">Progreso de asignación</h3>
                       <p className="text-xs text-slate-500">Completa los pasos para guardar la asignación.</p>
@@ -2139,26 +2139,26 @@ function AssignmentModal({
                       <span className="rounded-full bg-emerald-50 text-emerald-700 px-3 py-1">Disponibles: {vehicles.length}</span>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-semibold">
+                  <div className="mt-3 grid grid-cols-3 gap-1.5 text-[11px] font-semibold">
                     <div className="rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-center">1 Selección</div>
                     <div className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-center">2 Combustible</div>
                     <div className="rounded-full bg-indigo-100 text-indigo-700 px-3 py-1 text-center">3 Resumen</div>
                   </div>
-                  <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                     <div className="h-full w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50 p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">Selección</h3>
                       <p className="text-xs text-slate-500">Elige la solicitud y el vehículo disponibles.</p>
                     </div>
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">Paso 1</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Solicitud pendiente</label>
                       <select
@@ -2204,15 +2204,15 @@ function AssignmentModal({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-slate-50 to-emerald-50 p-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="flex items-center justify-between mb-4">
+                <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-slate-50 to-emerald-50 p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900">Datos de combustible</h3>
                       <p className="text-xs text-slate-500">Completa tag, método y monto de la solicitud.</p>
                     </div>
                     <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">Paso 2</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Tag</label>
                       <select
@@ -2259,10 +2259,10 @@ function AssignmentModal({
                         placeholder="Monto"
                       />
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-3">
                       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Comentarios</label>
                       <textarea
-                        rows={2}
+                        rows={1}
                         value={comentarios}
                         onChange={(event) => setComentarios(event.target.value)}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -2273,8 +2273,8 @@ function AssignmentModal({
                 </div>
                 </div>
 
-                <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-5 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-3 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-semibold text-slate-900">Resumen de solicitud</h3>
                     <span className="text-xs text-slate-500">Vista previa</span>
                   </div>
@@ -2309,7 +2309,7 @@ function AssignmentModal({
                         <span className="text-slate-500">Motivo:</span> {selectedRequest.motivo}
                       </div>
                     </div>
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-white/80 p-3">
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-white/80 p-2.5">
                       <div className="mb-2 flex items-center justify-between">
                         <p className="text-xs font-semibold text-slate-700">Mapa del destino</p>
                         <span className="text-[11px] text-slate-500">
@@ -2317,7 +2317,7 @@ function AssignmentModal({
                         </span>
                       </div>
                       {summaryMapCoords ? (
-                        <div className="h-36 overflow-hidden rounded-lg border border-slate-200">
+                        <div className="h-28 overflow-hidden rounded-lg border border-slate-200">
                           <MapContainer
                             center={summaryMapCoords}
                             zoom={14}
@@ -2345,12 +2345,12 @@ function AssignmentModal({
                   ) : (
                     <p className="text-sm text-slate-500">Selecciona una solicitud para ver los detalles.</p>
                   )}
-                  <div className="mt-4 border-t border-slate-200 pt-4">
-                    <div className="flex items-center justify-between mb-3">
+                  <div className="mt-3 border-t border-slate-200 pt-3">
+                    <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-semibold text-slate-900">Resumen de combustible</h4>
                       <span className="text-xs text-slate-500">Vista rápida</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                       <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
                         <p className="text-slate-500">Tag</p>
                         <p className="text-sm font-semibold text-slate-900">{selectedTag || 'Sin seleccionar'}</p>
@@ -2366,7 +2366,7 @@ function AssignmentModal({
                         </p>
                       </div>
                     </div>
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-white/80 p-3 text-xs">
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-white/80 p-2.5 text-xs">
                       <p className="text-slate-500">Comentarios</p>
                       <p className="text-sm text-slate-700">{comentarios || 'Sin comentarios'}</p>
                     </div>
@@ -2376,7 +2376,7 @@ function AssignmentModal({
             )}
           </div>
 
-          <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 backdrop-blur px-6 py-4">
+          <div className="sticky bottom-0 z-10 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-2.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-slate-500 hidden sm:block">Confirma la asignación antes de guardar.</p>
               <div className="flex items-center gap-3">
