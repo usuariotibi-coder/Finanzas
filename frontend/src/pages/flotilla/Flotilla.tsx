@@ -455,12 +455,27 @@ export default function Flotilla() {
     window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
   };
 
-  const handleAssignVehicle = async (requestId: string, vehicleId: string, vehiculoLabel: string) => {
+  const handleAssignVehicle = async (
+    requestId: string,
+    vehicleId: string,
+    vehiculoLabel: string,
+    options?: {
+      checklistRecepcion?: VehicleConditionChecklist;
+      comentarios?: string;
+    }
+  ) => {
     try {
-      const persisted = await updateFlotillaAsignacion(requestId, {
+      const updatePayload: Partial<VehicleAssignment> = {
         vehicleId,
         status: 'asignado',
-      });
+      };
+      if (options?.checklistRecepcion) {
+        updatePayload.checklistRecepcion = options.checklistRecepcion;
+      }
+      if (options?.comentarios?.trim()) {
+        updatePayload.incidentes = [options.comentarios.trim()];
+      }
+      const persisted = await updateFlotillaAsignacion(requestId, updatePayload);
 
       const hasAssignment = assignments.some((assignment) => assignment.id === persisted.id);
       const updatedAssignments = hasAssignment
@@ -677,12 +692,17 @@ export default function Flotilla() {
                 </button>
                 <button
                   onClick={() => setShowAssignmentForm(true)}
-                  className="px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
+                  className="relative px-2 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                   </svg>
                   <span>Asignar Vehiculo</span>
+                  {solicitudesPendientes.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-[18px] text-center font-semibold shadow">
+                      {solicitudesPendientes.length > 99 ? '99+' : solicitudesPendientes.length}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setShowNewVehicleForm(true)}
@@ -1950,7 +1970,15 @@ function AssignmentModal({
 }: {
   vehicles: Vehicle[];
   requests: VehicleAssignment[];
-  onAssign: (requestId: string, vehicleId: string, vehiculoLabel: string) => Promise<void> | void;
+  onAssign: (
+    requestId: string,
+    vehicleId: string,
+    vehiculoLabel: string,
+    options?: {
+      checklistRecepcion?: VehicleConditionChecklist;
+      comentarios?: string;
+    }
+  ) => Promise<void> | void;
   onClose: () => void;
 }) {
   useEscapeKey(onClose);
@@ -1960,6 +1988,15 @@ function AssignmentModal({
   const [selectedFuelSource, setSelectedFuelSource] = useState('');
   const [solicitudGasolina, setSolicitudGasolina] = useState('');
   const [comentarios, setComentarios] = useState('');
+  const [estadoCarroceria, setEstadoCarroceria] = useState<'bueno' | 'regular' | 'malo'>('bueno');
+  const [estadoLlantas, setEstadoLlantas] = useState<'bueno' | 'regular' | 'malo'>('bueno');
+  const [estadoMotor, setEstadoMotor] = useState<'bueno' | 'regular' | 'malo'>('bueno');
+  const [estadoFrenos, setEstadoFrenos] = useState<'bueno' | 'regular' | 'malo'>('bueno');
+  const [estadoLuces, setEstadoLuces] = useState<'bueno' | 'regular' | 'malo'>('bueno');
+  const [estadoLimpieza, setEstadoLimpieza] = useState<'bueno' | 'regular' | 'malo'>('bueno');
+  const [nivelCombustible, setNivelCombustible] = useState<VehicleConditionChecklist['nivelCombustible']>('1/2');
+  const [kitSeguridadCompleto, setKitSeguridadCompleto] = useState(true);
+  const [observacionesVehiculo, setObservacionesVehiculo] = useState('');
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -1976,9 +2013,42 @@ function AssignmentModal({
       return;
     }
     const label = selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model} - ${selectedVehicle.plates}` : '';
+    const checklistRecepcion: VehicleConditionChecklist = {
+      exterior: {
+        carroceria: estadoCarroceria,
+        pintura: estadoCarroceria,
+        llantas: estadoLlantas,
+        cristales: estadoCarroceria,
+        espejos: estadoCarroceria,
+      },
+      interior: {
+        asientos: estadoLimpieza,
+        tablero: estadoLimpieza,
+        tapiceria: estadoLimpieza,
+        limpieza: estadoLimpieza,
+      },
+      mecanico: {
+        motor: estadoMotor,
+        frenos: estadoFrenos,
+        luces: estadoLuces,
+        aire_acondicionado: estadoMotor,
+      },
+      accesorios: {
+        gato: kitSeguridadCompleto,
+        llave_cruz: kitSeguridadCompleto,
+        triangulo_seguridad: kitSeguridadCompleto,
+        extintor: kitSeguridadCompleto,
+        llanta_refaccion: kitSeguridadCompleto,
+      },
+      nivelCombustible,
+      observaciones: [observacionesVehiculo.trim(), comentarios.trim()].filter(Boolean).join(' | ') || undefined,
+    };
     setSubmitting(true);
     try {
-      await onAssign(selectedRequestId, selectedVehicleId, label);
+      await onAssign(selectedRequestId, selectedVehicleId, label, {
+        checklistRecepcion,
+        comentarios: observacionesVehiculo,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -1986,7 +2056,7 @@ function AssignmentModal({
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-[0_32px_80px_-40px_rgba(15,23,42,0.8)] max-w-4xl w-full border border-slate-200/70 overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-white rounded-2xl shadow-[0_32px_80px_-40px_rgba(15,23,42,0.8)] max-w-[96vw] xl:max-w-6xl w-full h-[94vh] border border-slate-200/70 overflow-hidden flex flex-col">
         <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400" />
         <div className="relative px-6 pt-6 pb-5 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 overflow-hidden">
           <div className="pointer-events-none absolute -right-10 -top-12 h-24 w-24 rounded-full bg-blue-200/60 blur-3xl" />
@@ -2020,7 +2090,7 @@ function AssignmentModal({
             void handleSubmit(event);
           }}
         >
-          <div className="p-6 space-y-6 pb-28">
+          <div className="p-4 sm:p-5 space-y-4 pb-24">
             {requests.length === 0 ? (
               <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
                 No hay solicitudes pendientes de asignación.
@@ -2038,13 +2108,14 @@ function AssignmentModal({
                       <span className="rounded-full bg-emerald-50 text-emerald-700 px-3 py-1">Disponibles: {vehicles.length}</span>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-semibold">
-                    <div className="rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-center">1 Selección</div>
-                    <div className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-center">2 Combustible</div>
-                    <div className="rounded-full bg-indigo-100 text-indigo-700 px-3 py-1 text-center">3 Resumen</div>
+                    <div className="mt-4 grid grid-cols-4 gap-2 text-xs font-semibold">
+                      <div className="rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-center">1 Selección</div>
+                      <div className="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-center">2 Combustible</div>
+                      <div className="rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-center">3 Estado</div>
+                      <div className="rounded-full bg-indigo-100 text-indigo-700 px-3 py-1 text-center">4 Resumen</div>
                   </div>
                   <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
+                    <div className="h-full w-3/4 bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
                   </div>
                 </div>
 
@@ -2170,6 +2241,124 @@ function AssignmentModal({
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-white via-slate-50 to-amber-50 p-5 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">Estado del vehículo</h3>
+                      <p className="text-xs text-slate-500">Responde estas preguntas rápidas antes de asignar.</p>
+                    </div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-600">Paso 3</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Carrocería</label>
+                      <select
+                        value={estadoCarroceria}
+                        onChange={(event) => setEstadoCarroceria(event.target.value as 'bueno' | 'regular' | 'malo')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="bueno">Bueno</option>
+                        <option value="regular">Regular</option>
+                        <option value="malo">Malo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Llantas</label>
+                      <select
+                        value={estadoLlantas}
+                        onChange={(event) => setEstadoLlantas(event.target.value as 'bueno' | 'regular' | 'malo')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="bueno">Bueno</option>
+                        <option value="regular">Regular</option>
+                        <option value="malo">Malo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Motor</label>
+                      <select
+                        value={estadoMotor}
+                        onChange={(event) => setEstadoMotor(event.target.value as 'bueno' | 'regular' | 'malo')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="bueno">Bueno</option>
+                        <option value="regular">Regular</option>
+                        <option value="malo">Malo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Frenos</label>
+                      <select
+                        value={estadoFrenos}
+                        onChange={(event) => setEstadoFrenos(event.target.value as 'bueno' | 'regular' | 'malo')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="bueno">Bueno</option>
+                        <option value="regular">Regular</option>
+                        <option value="malo">Malo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Luces</label>
+                      <select
+                        value={estadoLuces}
+                        onChange={(event) => setEstadoLuces(event.target.value as 'bueno' | 'regular' | 'malo')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="bueno">Bueno</option>
+                        <option value="regular">Regular</option>
+                        <option value="malo">Malo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Limpieza interior</label>
+                      <select
+                        value={estadoLimpieza}
+                        onChange={(event) => setEstadoLimpieza(event.target.value as 'bueno' | 'regular' | 'malo')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="bueno">Bueno</option>
+                        <option value="regular">Regular</option>
+                        <option value="malo">Malo</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Nivel de combustible</label>
+                      <select
+                        value={nivelCombustible}
+                        onChange={(event) => setNivelCombustible(event.target.value as VehicleConditionChecklist['nivelCombustible'])}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="1/4">1/4</option>
+                        <option value="1/2">1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="lleno">Lleno</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Kit de seguridad</label>
+                      <select
+                        value={kitSeguridadCompleto ? 'si' : 'no'}
+                        onChange={(event) => setKitSeguridadCompleto(event.target.value === 'si')}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      >
+                        <option value="si">Completo</option>
+                        <option value="no">Incompleto</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Observaciones del vehículo</label>
+                      <input
+                        type="text"
+                        value={observacionesVehiculo}
+                        onChange={(event) => setObservacionesVehiculo(event.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white/90 text-slate-900 shadow-sm transition focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        placeholder="Ej. rayón en puerta trasera"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-white via-slate-50 to-indigo-50 p-5 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-semibold text-slate-900">Resumen de solicitud</h3>
@@ -2226,6 +2415,26 @@ function AssignmentModal({
                         <p className="text-slate-500">Monto</p>
                         <p className="text-sm font-semibold text-slate-900">
                           {solicitudGasolina ? formatCurrency(Number(solicitudGasolina)) : '$0.00'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+                        <p className="text-slate-500">Estado general</p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Carrocería: {estadoCarroceria} | Llantas: {estadoLlantas}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+                        <p className="text-slate-500">Mecánico</p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Motor: {estadoMotor} | Frenos: {estadoFrenos}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-white/80 p-3">
+                        <p className="text-slate-500">Seguridad y combustible</p>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Kit: {kitSeguridadCompleto ? 'Completo' : 'Incompleto'} | Nivel: {nivelCombustible}
                         </p>
                       </div>
                     </div>
