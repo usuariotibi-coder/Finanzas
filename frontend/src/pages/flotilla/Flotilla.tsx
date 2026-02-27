@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import useAuth from '../../hooks/useAuth';
+import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Vehicle, VehicleAssignment, VehicleAlert, CargaGasolina, MaintenanceRecord, VehicleConditionChecklist } from '../../types';
@@ -9,6 +10,7 @@ import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExc
 import { createFlotillaVehiculo, fetchFlotillaAsignaciones, syncCoreAppData, updateFlotillaAsignacion, updateFlotillaVehiculo } from '../../utils/backendSync';
 import { toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
+import 'leaflet/dist/leaflet.css';
 
 const normalizeText = (value: string) =>
   value
@@ -16,6 +18,35 @@ const normalizeText = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+
+const parseCoordinatesFromText = (value: string): [number, number] | null => {
+  const text = value.trim();
+  if (!text) {
+    return null;
+  }
+
+  const latLonPattern = /Lat\s*(-?\d+(?:\.\d+)?)\s*,\s*Lon\s*(-?\d+(?:\.\d+)?)/i;
+  const latLonMatch = text.match(latLonPattern);
+  if (latLonMatch) {
+    const lat = Number(latLonMatch[1]);
+    const lon = Number(latLonMatch[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      return [lat, lon];
+    }
+  }
+
+  const decimalPairPattern = /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/;
+  const decimalPairMatch = text.match(decimalPairPattern);
+  if (decimalPairMatch) {
+    const lat = Number(decimalPairMatch[1]);
+    const lon = Number(decimalPairMatch[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+      return [lat, lon];
+    }
+  }
+
+  return null;
+};
 
 const getVehicleFallbackImage = (brand: string, model: string) => {
   const title = `${brand} ${model}`.trim() || 'Vehiculo';
@@ -1973,6 +2004,71 @@ function AssignmentModal({
   const projectLabel = formatProyectoLabel(selectedRequest?.proyectoNombre, selectedRequest?.proyectoId);
   const requestError = showErrors && !selectedRequestId ? 'Selecciona una solicitud.' : '';
   const vehicleError = showErrors && !selectedVehicleId ? 'Selecciona un vehiculo.' : '';
+  const [summaryMapCoords, setSummaryMapCoords] = useState<[number, number] | null>(null);
+  const [loadingSummaryMap, setLoadingSummaryMap] = useState(false);
+  const [summaryMapMessage, setSummaryMapMessage] = useState('');
+
+  useEffect(() => {
+    const destination = selectedRequest?.destino?.trim() || '';
+    if (!destination) {
+      setSummaryMapCoords(null);
+      setSummaryMapMessage('Sin destino para mostrar en el mapa.');
+      setLoadingSummaryMap(false);
+      return;
+    }
+
+    const fromText = parseCoordinatesFromText(destination);
+    if (fromText) {
+      setSummaryMapCoords(fromText);
+      setSummaryMapMessage('Ubicacion tomada del destino registrado.');
+      setLoadingSummaryMap(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingSummaryMap(true);
+    setSummaryMapMessage('Buscando ubicacion del destino...');
+
+    const resolveMapLocation = async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=es&q=${encodeURIComponent(destination)}`
+        );
+        if (!response.ok) {
+          throw new Error('No se pudo buscar la ubicacion.');
+        }
+        const data = (await response.json()) as Array<{ lat?: string; lon?: string }>;
+        if (cancelled) {
+          return;
+        }
+
+        const first = data[0];
+        const lat = Number(first?.lat);
+        const lon = Number(first?.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          setSummaryMapCoords([lat, lon]);
+          setSummaryMapMessage('Ubicacion estimada con base en la direccion.');
+        } else {
+          setSummaryMapCoords(null);
+          setSummaryMapMessage('No se encontro ubicacion exacta para este destino.');
+        }
+      } catch {
+        if (!cancelled) {
+          setSummaryMapCoords(null);
+          setSummaryMapMessage('No se pudo cargar el mapa para este destino.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingSummaryMap(false);
+        }
+      }
+    };
+
+    void resolveMapLocation();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedRequest?.destino]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -2181,6 +2277,7 @@ function AssignmentModal({
                     <span className="text-xs text-slate-500">Vista previa</span>
                   </div>
                   {selectedRequest ? (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
                       <div>
                         <span className="text-slate-500">Usuario:</span> {selectedRequest.userName}
@@ -2210,6 +2307,39 @@ function AssignmentModal({
                         <span className="text-slate-500">Motivo:</span> {selectedRequest.motivo}
                       </div>
                     </div>
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-white/80 p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-700">Mapa del destino</p>
+                        <span className="text-[11px] text-slate-500">
+                          {loadingSummaryMap ? 'Cargando...' : summaryMapMessage}
+                        </span>
+                      </div>
+                      {summaryMapCoords ? (
+                        <div className="h-44 overflow-hidden rounded-lg border border-slate-200">
+                          <MapContainer
+                            center={summaryMapCoords}
+                            zoom={14}
+                            scrollWheelZoom={true}
+                            className="h-full w-full"
+                          >
+                            <TileLayer
+                              attribution='&copy; OpenStreetMap contributors'
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
+                            <CircleMarker
+                              center={summaryMapCoords}
+                              radius={8}
+                              pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+                            />
+                          </MapContainer>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-xs text-slate-500">
+                          No hay coordenadas disponibles para mostrar el destino en el mapa.
+                        </div>
+                      )}
+                    </div>
+                    </>
                   ) : (
                     <p className="text-sm text-slate-500">Selecciona una solicitud para ver los detalles.</p>
                   )}
