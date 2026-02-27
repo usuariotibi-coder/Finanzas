@@ -1113,7 +1113,7 @@ export default function UsuarioView() {
           </div>
 
           {/* Lista de Viáticos */}
-          <div className={`grid gap-2.5 ${isSingleViatico ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className={`grid gap-2.5 ${isSingleViatico ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
