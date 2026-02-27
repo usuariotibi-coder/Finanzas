@@ -541,7 +541,7 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
       </nav>
 
       {isPasswordModalOpen && (
-        <div className="fixed inset-0 z-[70] overflow-y-auto bg-black/45 px-4 py-8 sm:py-10">
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-900/55 px-2 py-6 backdrop-blur-sm sm:px-4 sm:py-8">
           <div className="mx-auto my-8 w-full max-w-2xl rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xl sm:my-12 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>

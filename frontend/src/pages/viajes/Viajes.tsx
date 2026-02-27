@@ -455,9 +455,9 @@ function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitu
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 px-6 py-4 border-b border-gray-200 bg-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Detalles de Solicitud - {solicitud.id}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -468,7 +468,7 @@ function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitu
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="px-5 py-3 space-y-4">
           {/* Información General */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Información General</h3>
@@ -884,7 +884,7 @@ function DetallesSolicitudModal({ solicitud, onClose, onSave }: DetallesSolicitu
           </div>
         </div>
 
-        <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 bg-white flex justify-end space-x-3">
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <button
             onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"

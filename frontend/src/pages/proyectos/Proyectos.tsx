@@ -614,7 +614,7 @@ export default function Proyectos() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 py-8">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={cerrarModal}></div>
+            <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm transition-opacity" onClick={cerrarModal}></div>
 
             <div className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[94vh] overflow-y-auto">
               <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">

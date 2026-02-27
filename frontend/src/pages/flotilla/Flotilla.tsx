@@ -1550,7 +1550,7 @@ function FinalizarAsignacionModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <button
             type="button"
             onClick={onClose}
@@ -2452,9 +2452,9 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
   const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
-      <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white shadow-xl">
-        <div className="sticky top-0 border-b border-gray-200 bg-white px-4 py-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Detalles del Vehículo</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -2627,7 +2627,7 @@ function DetalleVehiculoModal({ vehicle, assignments, alerts, onClose }: Detalle
           )}
         </div>
 
-        <div className="sticky bottom-0 flex justify-end border-t border-gray-200 bg-white px-4 py-3">
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <button
             onClick={onClose}
             className="rounded-lg bg-primary-600 px-4 py-1.5 text-sm text-white hover:bg-primary-700"

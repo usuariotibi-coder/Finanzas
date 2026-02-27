@@ -1880,7 +1880,7 @@ export default function UsuarioView() {
       {showModalNuevoViatico && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
-            <div className="sticky top-0 z-10 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Nuevo Viático</h2>
                 <button
@@ -2699,8 +2699,8 @@ export default function UsuarioView() {
       )}
 
       {showVehicleReturnSuccess && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full">
             <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-700">

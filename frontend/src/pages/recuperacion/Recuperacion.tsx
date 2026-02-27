@@ -610,10 +610,10 @@ function MontoGastadoModal({
         aria-hidden="true"
       />
       <div
-        className="relative bg-white rounded-lg shadow-xl max-w-lg w-full"
+        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Registrar monto gastado</h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -624,7 +624,7 @@ function MontoGastadoModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 space-y-4">
+        <div className="px-5 py-3 space-y-3">
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
             <p className="text-slate-600">Viatico:</p>
             <p className="font-medium text-slate-900">{viatico.motivo}</p>
@@ -681,7 +681,7 @@ function MontoGastadoModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <button
             onClick={onClose}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
@@ -724,7 +724,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
         className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Recuperar Saldo</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -735,7 +735,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="px-5 py-3 space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold text-gray-900 mb-3">Resumen del Viático</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -797,7 +797,7 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
           </div>
         </div>
 
-        <div className="p-6 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <button
             onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
@@ -846,7 +846,7 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
         className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Información del Viático</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -857,7 +857,7 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="px-5 py-3 space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg">
             <h3 className="font-semibold text-gray-900 mb-3">Resumen del Viático</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">

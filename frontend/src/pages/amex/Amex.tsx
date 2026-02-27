@@ -880,8 +880,8 @@ export default function Amex() {
 
       {/* Modal de Exportación */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Exportar a Excel</h3>
             <p className="text-sm text-gray-600 mb-6">
               Se exportará el reporte AMEX del período <strong>{period.label}</strong>
@@ -895,7 +895,7 @@ export default function Amex() {
                 Fecha, Tarjeta, Titular, Comercio, Categoría, Montos, País, Cuenta Contable, Proyecto, Factura y Estado.
               </p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex gap-2">
               <button
                 onClick={() => setShowExportModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
@@ -1220,10 +1220,10 @@ export default function Amex() {
             aria-hidden="true"
           />
           <div
-            className="relative bg-white rounded-lg shadow-xl max-w-md w-full"
+            className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="px-6 py-4 border-b border-gray-200">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Factura del Ticket</h3>
                 <button
@@ -1237,7 +1237,7 @@ export default function Amex() {
               </div>
             </div>
 
-            <div className="px-6 py-4 space-y-4">
+            <div className="px-5 py-3 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Folio de Factura</label>
                 <input
@@ -1251,7 +1251,7 @@ export default function Amex() {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+            <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
               <button
                 onClick={() => setShowFacturaModal(false)}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"

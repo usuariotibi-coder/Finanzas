@@ -1360,7 +1360,7 @@ export default function PMPortal() {
 
               return (
             <>
-              <div className="sticky top-0 z-10 p-5 border-b border-gray-200 bg-white">
+              <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   {isEditingProyecto ? (
@@ -1594,4 +1594,3 @@ export default function PMPortal() {
     </div>
   );
 }
-

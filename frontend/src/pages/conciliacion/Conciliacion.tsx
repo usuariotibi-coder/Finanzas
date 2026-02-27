@@ -1203,7 +1203,7 @@ function SubirFacturaModal({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <button
             onClick={onClose}
             disabled={saving}

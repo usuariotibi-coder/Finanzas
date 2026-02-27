@@ -586,9 +586,9 @@ function ConfirmacionDispersionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-[95vw] sm:max-w-3xl max-h-[94vh] overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -606,7 +606,7 @@ function ConfirmacionDispersionModal({
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="px-4 py-3 space-y-4 sm:px-5">
           {/* Status Banner */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center gap-3">
@@ -795,7 +795,7 @@ function ConfirmacionDispersionModal({
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+        <div className="sticky bottom-0 flex flex-col gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
           <button
             onClick={onClose}
             className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
