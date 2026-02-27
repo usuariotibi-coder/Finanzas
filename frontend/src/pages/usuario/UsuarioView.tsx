@@ -524,7 +524,6 @@ export default function UsuarioView() {
     }
     return true;
   });
-  const isSingleViatico = viaticosFiltrados.length === 1;
   const getEstadoInfo = (status: Viatico['status']) => {
     const configs = {
       pendiente: { label: 'Pendiente de Aprobación', color: 'bg-yellow-100 text-yellow-700', icon: '⏳' },
@@ -1112,8 +1111,11 @@ export default function UsuarioView() {
             </div>
           </div>
 
-          {/* Lista de Viáticos */}
-          <div className={`grid gap-2.5 ${isSingleViatico ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-4' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Viáticos</h2>
+              {/* Lista de Viáticos */}
+              <div className="grid gap-2.5 grid-cols-1">
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
@@ -1244,9 +1246,11 @@ export default function UsuarioView() {
                 )}
               </div>
             )}
-          </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+            <div className="xl:col-span-2">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
             {/* Sección de Vehículos Asignados */}
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Vehículos</h2>
@@ -1523,6 +1527,8 @@ export default function UsuarioView() {
                 </div>
               )}
             </div>
+          </div>
+          </div>
           </div>
           </div>
         </>
