@@ -1881,7 +1881,7 @@ export default function UsuarioView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Nuevo Viático</h2>
                 <button
@@ -1898,7 +1898,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5">
+            <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
               {/* Proyecto - OBLIGATORIO */}
               <ProyectoSelector
                 value={formNuevoViatico.proyectoId}
@@ -2027,7 +2027,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha de Inicio <span className="text-red-500">*</span>
@@ -2073,7 +2073,7 @@ export default function UsuarioView() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Alimentos (MXN) <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Desayunos ($150)</label>
                     <input
@@ -2123,7 +2123,7 @@ export default function UsuarioView() {
                 {nuevoViaticoErrors.alimentos && (
                   <p className="mt-2 text-xs text-rose-600">{nuevoViaticoErrors.alimentos}</p>
                 )}
-                <div className="mt-3 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                <div className="mt-2.5 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5">
                   <span className="text-sm text-gray-600">Total estimado</span>
                   <span className="text-lg font-semibold text-gray-900">
                     ${totalAlimentos.toLocaleString()}
@@ -2132,19 +2132,19 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={() => {
                   setShowModalNuevoViatico(false);
                   setShowNuevoViaticoErrors(false);
                 }}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCrearNuevoViatico}
-                className={`w-full sm:w-auto px-4 py-2 rounded-lg text-sm ${
+                className={`w-full sm:w-auto px-4 py-1.5 rounded-lg text-sm ${
                   isFormValid
                     ? 'bg-primary-600 text-white hover:bg-primary-700'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
@@ -2162,7 +2162,7 @@ export default function UsuarioView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Vehículo (Coche)</h2>
                 <button
@@ -2180,7 +2180,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5">
+            <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -2263,7 +2263,7 @@ export default function UsuarioView() {
                       <p className="text-[11px] text-gray-600">
                         Haz clic en el mapa para seleccionar el destino.
                       </p>
-                      <div className="mt-2 h-56 overflow-hidden rounded-md border border-gray-200">
+                      <div className="mt-2 h-48 overflow-hidden rounded-md border border-gray-200">
                         <MapContainer
                           center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
                           zoom={destinoVehiculoCoords ? 13 : 5}
@@ -2301,7 +2301,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha de Inicio <span className="text-red-500">*</span>
@@ -2371,20 +2371,20 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={() => {
                   setShowModalSolicitarVehiculo(false);
                   setShowSolicitarVehiculoErrors(false);
                   resetSolicitarVehiculoMapState();
                 }}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSolicitarVehiculo}
-                className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                className="w-full sm:w-auto px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
               >
                 Solicitar Vehículo
               </button>
@@ -2398,7 +2398,7 @@ export default function UsuarioView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Viaje</h2>
                 <button
@@ -2415,9 +2415,9 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3 sm:px-5">
+            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-2.5 sm:px-5">
               {/* Información General */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
                 {/* Proyecto */}
@@ -2476,7 +2476,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Fechas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Fecha de Inicio <span className="text-red-500">*</span>
@@ -2540,7 +2540,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Servicios Requeridos */}
-              <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div className="space-y-3 border-t border-gray-200 pt-3">
                 <h3 className="text-md font-semibold text-gray-900">Servicios Requeridos</h3>
                 <p className="text-sm text-gray-600">Selecciona los servicios que necesitas (al menos uno)</p>
                 {solicitarViajeErrors.servicios && (
@@ -2548,7 +2548,7 @@ export default function UsuarioView() {
                 )}
 
                 {/* Avión */}
-                <div className="border border-gray-200 rounded-lg p-4">
+                <div className="rounded-lg border border-gray-200 p-3">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2578,7 +2578,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Camión */}
-                <div className="border border-gray-200 rounded-lg p-4">
+                <div className="rounded-lg border border-gray-200 p-3">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2608,7 +2608,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Hotel */}
-                <div className="border border-gray-200 rounded-lg p-4">
+                <div className="rounded-lg border border-gray-200 p-3">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2639,19 +2639,19 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={() => {
                   setShowModalSolicitarViaje(false);
                   setShowSolicitarViajeErrors(false);
                 }}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSolicitarViaje}
-                className="w-full sm:w-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                className="w-full sm:w-auto px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
               >
                 Solicitar Viaje
               </button>
@@ -2749,9 +2749,9 @@ export default function UsuarioView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="flex max-h-[94vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Extender Viaje</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Extender Viaje</h2>
                 <button
                   onClick={resetExtensionState}
                   className="text-gray-400 hover:text-gray-600"
@@ -2763,9 +2763,9 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-3">
+            <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
               {/* Información del viático */}
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="rounded-lg bg-gray-50 p-3">
                 <p className="text-sm text-gray-600">Viático</p>
                 <p className="font-semibold text-gray-900">{viaticoParaExtender.destino}</p>
                 <p className="text-sm text-gray-600 mt-2">Fecha fin actual</p>
@@ -2774,7 +2774,7 @@ export default function UsuarioView() {
 
               {/* Nueva fecha fin */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Nueva Fecha de Fin <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -2861,10 +2861,10 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur sm:flex-row sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={resetExtensionState}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
+                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
               >
                 Cancelar
               </button>
@@ -2876,7 +2876,7 @@ export default function UsuarioView() {
                   !nuevaFechaFin ||
                   (extensionMinDate ? nuevaFechaFin < extensionMinDate : nuevaFechaFin <= viaticoParaExtender.fechaFin)
                 }
-                className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-4 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {isSavingExtension ? 'Guardando...' : extensionPendienteModal ? 'Pendiente de aprobacion PM' : 'Solicitar Extension'}
               </button>
