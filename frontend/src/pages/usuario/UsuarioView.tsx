@@ -1879,7 +1879,8 @@ export default function UsuarioView() {
       {/* Modal para crear nuevo viático */}
       {showModalNuevoViatico && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+          <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Nuevo Viático</h2>
@@ -1897,7 +1898,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-5 py-3 space-y-3">
+            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5">
               {/* Proyecto - OBLIGATORIO */}
               <ProyectoSelector
                 value={formNuevoViatico.proyectoId}
@@ -2159,7 +2160,8 @@ export default function UsuarioView() {
       {/* Modal para solicitar vehículo (solo coches) */}
       {showModalSolicitarVehiculo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+          <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Vehículo (Coche)</h2>
@@ -2178,7 +2180,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-5 py-3 space-y-3">
+            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5">
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -2394,7 +2396,8 @@ export default function UsuarioView() {
       {/* Modal para solicitar viaje (avión, camión, hotel) */}
       {showModalSolicitarViaje && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto">
+          <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Viaje</h2>
@@ -2412,7 +2415,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-5 py-3 space-y-4">
+            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3 sm:px-5">
               {/* Información General */}
               <div className="space-y-4">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
@@ -2700,7 +2703,8 @@ export default function UsuarioView() {
 
       {showVehicleReturnSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-700">
@@ -2743,7 +2747,8 @@ export default function UsuarioView() {
       {/* Modal Extender Viaje */}
       {showModalExtenderViaje && viaticoParaExtender && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full max-h-[94vh] overflow-y-auto">
+          <div className="flex max-h-[94vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Extender Viaje</h2>
@@ -2758,7 +2763,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-5 py-3 space-y-3">
+            <div className="flex-1 space-y-3 overflow-y-auto px-5 py-3">
               {/* Información del viático */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Viático</p>
