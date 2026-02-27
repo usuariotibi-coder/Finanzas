@@ -2909,11 +2909,11 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
   const combustibleError = errors?.combustible;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white z-10">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white rounded-xl shadow-xl max-w-5xl w-full max-h-[92vh] overflow-y-auto">
+        <div className="sticky top-0 px-4 sm:px-5 py-3 border-b border-gray-200 bg-white z-10">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">{title}</h2>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">{title}</h2>
             <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2922,17 +2922,17 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 py-4 space-y-6">
+        <div className="px-4 sm:px-5 py-3 space-y-4">
           {/* Kilometraje */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Kilometraje <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               value={km}
               onChange={(e) => setKm(Number(e.target.value))}
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
+              className={`w-full px-3 py-1.5 text-sm border rounded-lg focus:ring-2 ${
                 kmError
                   ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                   : 'border-gray-300 focus:ring-primary-500'
@@ -2948,13 +2948,13 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Checklist - Exterior */}
           <div>
-            <h3 className="text-md font-semibold text-gray-900 mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
               Exterior {requireAllFields && <span className="text-red-500">*</span>}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.entries(checklist.exterior).map(([key, value]) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                  <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
                     {key.replace('_', ' ')}
                   </label>
                   <select
@@ -2963,7 +2963,7 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                       ...checklist,
                       exterior: { ...checklist.exterior, [key]: e.target.value as 'bueno' | 'regular' | 'malo' }
                     })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     required={requireAllFields}
                   >
                     <option value="bueno">Bueno</option>
@@ -2977,13 +2977,13 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Checklist - Interior */}
           <div>
-            <h3 className="text-md font-semibold text-gray-900 mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
               Interior {requireAllFields && <span className="text-red-500">*</span>}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.entries(checklist.interior).map(([key, value]) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                  <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
                     {key.replace('_', ' ')}
                   </label>
                   <select
@@ -2992,7 +2992,7 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                       ...checklist,
                       interior: { ...checklist.interior, [key]: e.target.value as 'bueno' | 'regular' | 'malo' }
                     })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     required={requireAllFields}
                   >
                     <option value="bueno">Bueno</option>
@@ -3006,13 +3006,13 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Checklist - Mecánico */}
           <div>
-            <h3 className="text-md font-semibold text-gray-900 mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
               Mecánico {requireAllFields && <span className="text-red-500">*</span>}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.entries(checklist.mecanico).map(([key, value]) => (
                 <div key={key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                  <label className="block text-xs font-medium text-gray-700 mb-1 capitalize">
                     {key.replace('_', ' ')}
                   </label>
                   <select
@@ -3021,7 +3021,7 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                       ...checklist,
                       mecanico: { ...checklist.mecanico, [key]: e.target.value as 'bueno' | 'regular' | 'malo' }
                     })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                     required={requireAllFields}
                   >
                     <option value="bueno">Bueno</option>
@@ -3035,10 +3035,10 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Checklist - Accesorios */}
           <div>
-            <h3 className="text-md font-semibold text-gray-900 mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
               Accesorios {requireAllFields && <span className="text-red-500">*</span>}
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
               {Object.entries(checklist.accesorios).map(([key, value]) => (
                 <label key={key} className="flex items-center space-x-2">
                   <input
@@ -3048,9 +3048,9 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                       ...checklist,
                       accesorios: { ...checklist.accesorios, [key]: e.target.checked }
                     })}
-                    className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                    className="w-3.5 h-3.5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                   />
-                  <span className="text-sm text-gray-700 capitalize">{key.replace('_', ' ')}</span>
+                  <span className="text-xs text-gray-700 capitalize">{key.replace('_', ' ')}</span>
                 </label>
               ))}
             </div>
@@ -3058,13 +3058,13 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Nivel de Combustible */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Nivel de Combustible {requireAllFields && <span className="text-red-500">*</span>}
             </label>
             <select
               value={checklist.nivelCombustible}
               onChange={(e) => setChecklist({ ...checklist, nivelCombustible: e.target.value as '1/4' | '1/2' | '3/4' | 'lleno' })}
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
+              className={`w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 ${
                 combustibleError
                   ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'
                   : 'border-gray-300 focus:ring-primary-500'
@@ -3083,23 +3083,23 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Fotos (hasta 3) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Fotos (hasta 3) {requireAllFields && <span className="text-red-500">*</span>}
             </label>
-            <p className="text-xs text-gray-500 mb-3">Estas fotos se usan aleatoriamente en la portada de la cita.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <p className="text-xs text-gray-500 mb-2">Estas fotos se usan aleatoriamente en la portada de la cita.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[1, 2, 3, 4].map((index) => (
                 <label
                   key={index}
-                  className={`aspect-square border-2 border-dashed rounded-lg hover:border-primary-500 cursor-pointer transition-colors flex flex-col items-center justify-center ${
+                  className={`aspect-[4/3] border-2 border-dashed rounded-lg hover:border-primary-500 cursor-pointer transition-colors flex flex-col items-center justify-center ${
                     fotoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
-                  <svg className="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-xs text-gray-500 text-center px-2">Agregar foto</span>
+                  <span className="text-[11px] text-gray-500 text-center px-2">Agregar foto</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -3119,29 +3119,29 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
 
           {/* Observaciones */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Observaciones
             </label>
             <textarea
               value={checklist.observaciones}
               onChange={(e) => setChecklist({ ...checklist, observaciones: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              rows={3}
+              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows={2}
               placeholder="Notas adicionales sobre el estado del vehículo..."
             />
           </div>
         </div>
 
-        <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+        <div className="sticky bottom-0 px-4 sm:px-5 py-3 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
           <button
             onClick={onCancel}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+            className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
           >
             Cancelar
           </button>
           <button
             onClick={onSubmit}
-            className="w-full sm:w-auto px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
+            className="w-full sm:w-auto px-4 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm"
           >
             Confirmar
           </button>
