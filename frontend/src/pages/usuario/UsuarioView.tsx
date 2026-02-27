@@ -1113,7 +1113,7 @@ export default function UsuarioView() {
           </div>
 
           {/* Lista de Viáticos */}
-          <div className={`grid gap-2.5 ${isSingleViatico ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className={`grid gap-2.5 ${isSingleViatico ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'}`}>
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
@@ -1128,7 +1128,7 @@ export default function UsuarioView() {
                 const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
 
                 return (
-                  <div key={viatico.id} className={`w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 hover:shadow transition-shadow ${isSingleViatico ? 'max-w-3xl' : ''}`}>
+                  <div key={viatico.id} className="w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 hover:shadow transition-shadow">
                     <div className="flex flex-col gap-1.5">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
