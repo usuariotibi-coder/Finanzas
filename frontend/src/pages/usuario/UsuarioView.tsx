@@ -1878,8 +1878,8 @@ export default function UsuarioView() {
 
       {/* Modal para crear nuevo viático */}
       {showModalNuevoViatico && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
             <div className="sticky top-0 z-10 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Nuevo Viático</h2>
@@ -1897,7 +1897,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-6 py-4 space-y-4">
+            <div className="px-4 sm:px-5 py-3 space-y-3">
               {/* Proyecto - OBLIGATORIO */}
               <ProyectoSelector
                 value={formNuevoViatico.proyectoId}
@@ -2131,7 +2131,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={() => {
                   setShowModalNuevoViatico(false);
@@ -2158,9 +2158,9 @@ export default function UsuarioView() {
 
       {/* Modal para solicitar vehículo (solo coches) */}
       {showModalSolicitarVehiculo && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Vehículo (Coche)</h2>
                 <button
@@ -2178,7 +2178,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-6 py-4 space-y-4">
+            <div className="px-4 sm:px-5 py-3 space-y-3">
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -2369,7 +2369,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={() => {
                   setShowModalSolicitarVehiculo(false);
@@ -2393,9 +2393,9 @@ export default function UsuarioView() {
 
       {/* Modal para solicitar viaje (avión, camión, hotel) */}
       {showModalSolicitarViaje && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Viaje</h2>
                 <button
@@ -2412,7 +2412,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-6 py-4 space-y-6">
+            <div className="px-4 sm:px-5 py-3 space-y-4">
               {/* Información General */}
               <div className="space-y-4">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
@@ -2636,7 +2636,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
                 onClick={() => {
                   setShowModalSolicitarViaje(false);
@@ -2742,9 +2742,9 @@ export default function UsuarioView() {
 
       {/* Modal Extender Viaje */}
       {showModalExtenderViaje && viaticoParaExtender && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="px-6 py-4 border-b border-gray-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full max-h-[94vh] overflow-y-auto">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Extender Viaje</h2>
                 <button
@@ -2758,7 +2758,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-6 py-4 space-y-4">
+            <div className="px-5 py-3 space-y-3">
               {/* Información del viático */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Viático</p>
@@ -2856,7 +2856,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur sm:flex-row sm:justify-end">
               <button
                 onClick={resetExtensionState}
                 className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"

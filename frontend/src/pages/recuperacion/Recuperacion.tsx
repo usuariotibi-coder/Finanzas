@@ -603,9 +603,9 @@ function MontoGastadoModal({
     : viatico.saldoRestante ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-transparent"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -714,14 +714,14 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-transparent"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">
@@ -836,14 +836,14 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
   const syncBadge = getSyncStatusBadge(viatico.efectifintechStatus);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-transparent"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="p-6 border-b border-gray-200 sticky top-0 bg-white">

@@ -450,9 +450,9 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">Nueva Solicitud de Viático</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -737,9 +737,9 @@ function StatusModal({ viatico, onClose }: StatusModalProps) {
   const montoGastadoKpi = getViaticoGastadoKpi(viatico);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 z-10 p-6 border-b border-gray-200 bg-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">Informacion del viatico</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -894,6 +894,5 @@ function StatusModal({ viatico, onClose }: StatusModalProps) {
     </div>
   );
 }
-
 
 

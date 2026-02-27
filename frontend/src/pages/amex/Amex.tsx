@@ -914,17 +914,17 @@ export default function Amex() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="absolute inset-0 bg-transparent"
             onClick={closeAddModal}
             aria-hidden="true"
           />
           <div
-            className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="sticky top-0 px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-gray-900">Agregar Ticket AMEX</h2>
                 <button
@@ -1191,7 +1191,7 @@ export default function Amex() {
               </div>
             </div>
 
-            <div className="sticky bottom-0 px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur sm:flex-row sm:justify-end">
               <button
                 onClick={() => {
                   closeAddModal();
@@ -1213,9 +1213,9 @@ export default function Amex() {
       )}
 
       {showFacturaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="absolute inset-0 bg-transparent"
             onClick={() => setShowFacturaModal(false)}
             aria-hidden="true"
           />

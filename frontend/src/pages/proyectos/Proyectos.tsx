@@ -616,14 +616,14 @@ export default function Proyectos() {
           <div className="flex items-center justify-center min-h-screen px-4 py-8">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={cerrarModal}></div>
 
-            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[94vh] overflow-y-auto">
+              <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {modoEdicion ? 'Editar Proyecto' : 'Nuevo Proyecto'}
                 </h3>
               </div>
 
-              <div className="px-4 sm:px-6 py-4">
+              <div className="px-4 sm:px-5 py-3">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -771,7 +771,7 @@ export default function Proyectos() {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 px-4 sm:px-6 py-4 border-t border-gray-200 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+              <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
                 <button
                   onClick={cerrarModal}
                   className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
@@ -792,4 +792,3 @@ export default function Proyectos() {
     </div>
   );
 }
-
