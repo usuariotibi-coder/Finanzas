@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleMarker, MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import { CircleMarker, MapContainer, TileLayer, Tooltip, useMapEvents } from 'react-leaflet';
 import type { LeafletMouseEvent } from 'leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
@@ -33,6 +33,8 @@ import 'leaflet/dist/leaflet.css';
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
+const VEHICLE_DESTINATION_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const VEHICLE_DESTINATION_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
 
 type VehicleMapPoint = { lat: number; lng: number };
 
@@ -2327,8 +2329,8 @@ export default function UsuarioView() {
                           className="h-full w-full"
                         >
                           <TileLayer
-                            attribution='&copy; OpenStreetMap contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution={VEHICLE_DESTINATION_TILE_ATTRIBUTION}
+                            url={VEHICLE_DESTINATION_TILE_URL}
                           />
                           <VehicleDestinationMapClick onSelect={handleSeleccionDestinoVehiculoEnMapa} />
                           {destinoVehiculoCoords && (
@@ -2336,7 +2338,16 @@ export default function UsuarioView() {
                               center={[destinoVehiculoCoords.lat, destinoVehiculoCoords.lng]}
                               radius={8}
                               pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-                            />
+                            >
+                              <Tooltip direction="top" offset={[0, -6]} opacity={0.95}>
+                                <div className="text-xs">
+                                  <p className="font-semibold text-slate-900">Destino seleccionado</p>
+                                  <p className="text-slate-700">
+                                    {formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
+                                  </p>
+                                </div>
+                              </Tooltip>
+                            </CircleMarker>
                           )}
                         </MapContainer>
                       </div>
@@ -2471,7 +2482,16 @@ export default function UsuarioView() {
               </button>
             </div>
             <div className="flex-1 p-3 sm:p-4">
-              <div className="h-full overflow-hidden rounded-xl border border-slate-200">
+              <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                <span className="font-semibold text-slate-900">Destino actual:</span>{' '}
+                {formSolicitudVehiculo.destino || 'Selecciona un punto en el mapa'}
+                {destinoVehiculoCoords && (
+                  <span className="ml-2 rounded bg-white px-1.5 py-0.5 text-slate-600">
+                    {destinoVehiculoCoords.lat.toFixed(5)}, {destinoVehiculoCoords.lng.toFixed(5)}
+                  </span>
+                )}
+              </div>
+              <div className="h-[calc(100%-2.2rem)] overflow-hidden rounded-xl border border-slate-200">
                 <MapContainer
                   center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
                   zoom={destinoVehiculoCoords ? 13 : 5}
@@ -2479,8 +2499,8 @@ export default function UsuarioView() {
                   className="h-full w-full"
                 >
                   <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution={VEHICLE_DESTINATION_TILE_ATTRIBUTION}
+                    url={VEHICLE_DESTINATION_TILE_URL}
                   />
                   <VehicleDestinationMapClick onSelect={handleSeleccionDestinoVehiculoEnMapa} />
                   {destinoVehiculoCoords && (
@@ -2488,7 +2508,16 @@ export default function UsuarioView() {
                       center={[destinoVehiculoCoords.lat, destinoVehiculoCoords.lng]}
                       radius={9}
                       pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-                    />
+                    >
+                      <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent>
+                        <div className="text-xs">
+                          <p className="font-semibold text-slate-900">Destino seleccionado</p>
+                          <p className="text-slate-700">
+                            {formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
+                          </p>
+                        </div>
+                      </Tooltip>
+                    </CircleMarker>
                   )}
                 </MapContainer>
               </div>
