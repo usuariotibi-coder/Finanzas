@@ -971,7 +971,6 @@ export default function UsuarioView() {
       const persisted = await updateFlotillaAsignacion(assignment.id, {
         kmInicial,
         checklistRecepcion: { ...checklistRecepcion, foto: fotoRecepcion?.name },
-        fotoOdometroInicial: fotoRecepcion?.name,
         status: 'activo',
       });
 
@@ -1005,7 +1004,6 @@ export default function UsuarioView() {
       const persisted = await updateFlotillaAsignacion(assignment.id, {
         kmFinal,
         checklistEntrega: { ...checklistEntrega, foto: fotoEntrega?.name },
-        fotoOdometroFinal: fotoEntrega.name,
         fechaFin: new Date().toISOString().split('T')[0],
         status: 'completado',
       });
@@ -2936,13 +2934,29 @@ interface VehicleChecklistModalProps {
   requireAllFields?: boolean;
 }
 
-function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto: _foto, setFoto, errors, onSubmit, onCancel, requireAllFields = false }: VehicleChecklistModalProps) {
+function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto, setFoto, errors, onSubmit, onCancel, requireAllFields = false }: VehicleChecklistModalProps) {
   useEscapeKey(onCancel);
   const [kmInput, setKmInput] = useState<string>(km > 0 ? String(km) : '');
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const [selectedPhotoSlot, setSelectedPhotoSlot] = useState<number>(1);
 
   useEffect(() => {
     setKmInput(km > 0 ? String(km) : '');
   }, [km]);
+
+  useEffect(() => {
+    if (!foto) {
+      setPhotoPreviewUrl(null);
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(foto);
+    setPhotoPreviewUrl(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [foto]);
 
   const kmError = errors?.km;
   const fotoError = errors?.foto;
@@ -3108,30 +3122,47 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                 </label>
                 <p className="mb-2 text-[11px] text-slate-500">Agrega evidencia visual del estado.</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {[1, 2, 3, 4].map((index) => (
+                  {[1, 2, 3].map((index) => (
                     <label
                       key={index}
                       className={`flex aspect-[5/3] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
                         fotoError ? 'border-rose-300 bg-rose-50' : 'border-slate-300 bg-slate-50 hover:border-primary-500 hover:bg-slate-100'
                       }`}
                     >
-                      <svg className="mb-1 h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="px-1 text-[11px] text-slate-500">Agregar foto</span>
+                      {index === selectedPhotoSlot && photoPreviewUrl ? (
+                        <>
+                          <img
+                            src={photoPreviewUrl}
+                            alt="Vista previa"
+                            className="h-full w-full rounded-md object-cover"
+                          />
+                          <span className="mt-1 px-1 text-[11px] text-slate-600">Cambiar foto</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="mb-1 h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="px-1 text-[11px] text-slate-500">Agregar foto</span>
+                        </>
+                      )}
                       <input
                         type="file"
                         accept="image/*"
                         onChange={(event) => {
                           const selected = event.target.files?.[0] || null;
                           setFoto(selected);
+                          if (selected) {
+                            setSelectedPhotoSlot(index);
+                          }
                         }}
                         className="hidden"
                       />
                     </label>
                   ))}
                 </div>
+                {foto && <p className="mt-2 text-[11px] text-slate-500">Foto seleccionada: {foto.name}</p>}
                 {fotoError && <p className="mt-2 text-xs text-rose-600">{fotoError}</p>}
               </div>
             </div>

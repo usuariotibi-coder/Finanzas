@@ -531,7 +531,6 @@ export default function Flotilla() {
         fechaFin: new Date().toISOString().split('T')[0],
         status: 'completado',
         checklistEntrega,
-        fotoOdometroFinal: checklistEntrega.foto || '',
       });
 
       const updatedAssignments = assignments.map((assignment) => (
