@@ -1,5 +1,7 @@
-﻿from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from accounts.models import Role
 from accounts.permissions import IsAdminOrFinanceOrReadOnly
@@ -45,6 +47,33 @@ class VehicleAssignmentViewSet(viewsets.ModelViewSet):
             serializer.save(user=payload_user or request_user)
         else:
             serializer.save(user=request_user)
+
+    @action(detail=True, methods=['post'], url_path='upload-entrega-fotos')
+    def upload_entrega_fotos(self, request, pk=None):
+        assignment = self.get_object()
+        fotos = request.FILES.getlist('fotos')
+        if not fotos:
+            return Response({'detail': 'No se recibieron fotos para la entrega.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        checklist = assignment.checklist_entrega if isinstance(assignment.checklist_entrega, dict) else {}
+        foto_names = [str(item).strip() for item in checklist.get('fotos', []) if str(item).strip()]
+        foto_paths = [str(item).strip() for item in checklist.get('fotosUrls', []) if str(item).strip()]
+
+        for foto in fotos:
+            if not foto:
+                continue
+            assignment.foto_odometro_final = foto
+            assignment.save()
+            stored_name = assignment.foto_odometro_final.name
+            if stored_name:
+                foto_paths.append(stored_name)
+                foto_names.append(foto.name)
+
+        checklist['fotos'] = foto_names[-3:]
+        checklist['fotosUrls'] = foto_paths[-3:]
+        assignment.checklist_entrega = checklist
+        assignment.save()
+        return Response(VehicleAssignmentSerializer(assignment).data)
 
 
 class VehicleAlertViewSet(viewsets.ModelViewSet):

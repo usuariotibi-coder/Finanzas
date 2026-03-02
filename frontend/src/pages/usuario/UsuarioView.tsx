@@ -16,6 +16,7 @@ import {
   createViatico,
   fetchFlotillaAsignaciones,
   syncCoreAppData,
+  uploadFlotillaEntregaFotos,
   updateFlotillaAsignacion,
   updateViatico,
 } from '../../utils/backendSync';
@@ -1007,7 +1008,7 @@ export default function UsuarioView() {
     }
 
     try {
-      const persisted = await updateFlotillaAsignacion(assignment.id, {
+      let persisted = await updateFlotillaAsignacion(assignment.id, {
         kmFinal,
         checklistEntrega: {
           ...checklistEntrega,
@@ -1019,6 +1020,10 @@ export default function UsuarioView() {
         fechaFin: new Date().toISOString().split('T')[0],
         status: 'completado',
       });
+
+      if (fotoEntrega.length > 0) {
+        persisted = await uploadFlotillaEntregaFotos(assignment.id, fotoEntrega);
+      }
 
       const updatedAssignments = vehicleAssignments.map((item) => (
         item.id === persisted.id ? { ...item, ...persisted } : item

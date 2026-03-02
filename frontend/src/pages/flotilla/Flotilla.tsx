@@ -7,7 +7,14 @@ import type { Vehicle, VehicleAssignment, VehicleAlert, CargaGasolina, Maintenan
 import GasolinaKPI from '../../components/flotilla/GasolinaKPI';
 import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
-import { createFlotillaVehiculo, fetchFlotillaAsignaciones, syncCoreAppData, updateFlotillaAsignacion, updateFlotillaVehiculo } from '../../utils/backendSync';
+import {
+  createFlotillaVehiculo,
+  fetchFlotillaAsignaciones,
+  syncCoreAppData,
+  updateFlotillaAsignacion,
+  updateFlotillaVehiculo,
+  uploadFlotillaEntregaFotos,
+} from '../../utils/backendSync';
 import { toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import 'leaflet/dist/leaflet.css';
@@ -548,15 +555,20 @@ export default function Flotilla() {
   const handleFinalizarAsignacion = async (
     assignmentId: string,
     kmFinal: number,
-    checklistEntrega: VehicleConditionChecklist
+    checklistEntrega: VehicleConditionChecklist,
+    fotosEntrega: File[]
   ) => {
     try {
-      const persisted = await updateFlotillaAsignacion(assignmentId, {
+      let persisted = await updateFlotillaAsignacion(assignmentId, {
         kmFinal,
         fechaFin: new Date().toISOString().split('T')[0],
         status: 'completado',
         checklistEntrega,
       });
+
+      if (fotosEntrega.length > 0) {
+        persisted = await uploadFlotillaEntregaFotos(assignmentId, fotosEntrega);
+      }
 
       const updatedAssignments = assignments.map((assignment) => (
         assignment.id === assignmentId ? { ...assignment, ...persisted } : assignment
@@ -1035,7 +1047,9 @@ export default function Flotilla() {
           assignment={selectedAssignment}
           vehicle={selectedAssignmentVehicle}
           onClose={handleCloseFinalizarModal}
-          onFinalize={(kmFinal, checklistEntrega) => handleFinalizarAsignacion(selectedAssignment.id, kmFinal, checklistEntrega)}
+          onFinalize={(kmFinal, checklistEntrega, fotosEntrega) =>
+            handleFinalizarAsignacion(selectedAssignment.id, kmFinal, checklistEntrega, fotosEntrega)
+          }
         />
       )}
 
@@ -1348,11 +1362,20 @@ function RevisionEntregaModal({
   const [comentariosLiberacion, setComentariosLiberacion] = useState(checklist?.liberacionEntrega?.comentarios || '');
   const [submitting, setSubmitting] = useState(false);
   const entregaLiberada = isEntregaLiberada(assignment);
-  const fotosEntrega = checklist?.fotos?.length
+  const fotosNombres = checklist?.fotos?.length
     ? checklist.fotos
     : checklist?.foto
     ? [checklist.foto]
     : [];
+  const fotosPaths = checklist?.fotosUrls?.length
+    ? checklist.fotosUrls
+    : assignment.fotoOdometroFinal
+    ? [assignment.fotoOdometroFinal]
+    : [];
+  const fotosEntrega = Array.from({ length: Math.max(fotosNombres.length, fotosPaths.length) }, (_, index) => ({
+    nombre: fotosNombres[index] || fotosPaths[index] || `Foto ${index + 1}`,
+    path: fotosPaths[index] || '',
+  }));
   const vehiculoLabel = vehicle
     ? `${vehicle.brand} ${vehicle.model} (${vehicle.plates})`
     : assignment.vehiculoLabel || 'Vehiculo sin asignar';
@@ -1471,15 +1494,34 @@ function RevisionEntregaModal({
               <div className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Fotos reportadas</p>
                 {fotosEntrega.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {fotosEntrega.map((foto, index) => (
-                      <span key={`${foto}-${index}`} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
-                        {foto}
-                      </span>
-                    ))}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {fotosEntrega.map((foto, index) => {
+                      const fotoUrl = toApiAssetUrl(foto.path);
+                      return (
+                        <div key={`${foto.nombre}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                          {fotoUrl ? (
+                            <a href={fotoUrl} target="_blank" rel="noreferrer" className="block">
+                              <img
+                                src={fotoUrl}
+                                alt={foto.nombre}
+                                className="h-28 w-full rounded-md border border-slate-200 object-cover"
+                                loading="lazy"
+                              />
+                            </a>
+                          ) : (
+                            <div className="flex h-28 items-center justify-center rounded-md border border-dashed border-slate-300 bg-white text-xs text-slate-500">
+                              Sin vista previa
+                            </div>
+                          )}
+                          <p className="mt-1 truncate text-xs text-slate-700" title={foto.nombre}>
+                            {foto.nombre}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500">El usuario no capturo nombres de foto en el checklist.</p>
+                  <p className="text-sm text-slate-500">El usuario no subio fotos en esta entrega.</p>
                 )}
               </div>
             </>
@@ -1538,11 +1580,11 @@ function FinalizarAsignacionModal({
   assignment: VehicleAssignment;
   vehicle: Vehicle | null;
   onClose: () => void;
-  onFinalize: (kmFinal: number, checklistEntrega: VehicleConditionChecklist) => Promise<void> | void;
+  onFinalize: (kmFinal: number, checklistEntrega: VehicleConditionChecklist, fotosEntrega: File[]) => Promise<void> | void;
 }) {
   useEscapeKey(onClose);
   const [kmFinal, setKmFinal] = useState<string>(assignment.kmFinal ? String(assignment.kmFinal) : '');
-  const [fotoEntrega, setFotoEntrega] = useState<File | null>(null);
+  const [fotosEntrega, setFotosEntrega] = useState<(File | null)[]>([null, null, null]);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checklistEntrega, setChecklistEntrega] = useState<VehicleConditionChecklist>(
@@ -1602,20 +1644,22 @@ function FinalizarAsignacionModal({
       : ''
     : '';
   const fuelError = showErrors && !checklistEntrega.nivelCombustible ? 'Selecciona el nivel de combustible.' : '';
-  const fotoError = showErrors && !fotoEntrega ? 'Agrega al menos una foto.' : '';
+  const fotosSeleccionadas = fotosEntrega.filter((file): file is File => Boolean(file));
+  const fotoError = showErrors && fotosSeleccionadas.length === 0 ? 'Agrega al menos una foto.' : '';
 
   const handleSubmit = async () => {
     setShowErrors(true);
-    if (kmFinalInvalid || kmFinalValue < assignment.kmInicial || !checklistEntrega.nivelCombustible || !fotoEntrega) {
+    if (kmFinalInvalid || kmFinalValue < assignment.kmInicial || !checklistEntrega.nivelCombustible || fotosSeleccionadas.length === 0) {
       return;
     }
     const checklistToSave = {
       ...checklistEntrega,
-      foto: fotoEntrega?.name,
+      foto: fotosSeleccionadas[0]?.name,
+      fotos: fotosSeleccionadas.map((file) => file.name),
     };
     setSubmitting(true);
     try {
-      await onFinalize(kmFinalValue, checklistToSave);
+      await onFinalize(kmFinalValue, checklistToSave, fotosSeleccionadas);
     } finally {
       setSubmitting(false);
     }
@@ -1809,9 +1853,9 @@ function FinalizarAsignacionModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Fotos (minimo 1) *</label>
-            <p className="text-xs text-gray-500 mb-3">Agrega evidencia del estado del vehiculo.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((index) => (
+            <p className="text-xs text-gray-500 mb-3">Agrega evidencia del estado del vehiculo (hasta 3 fotos).</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {fotosEntrega.map((foto, index) => (
                 <label
                   key={index}
                   className={`aspect-square border-2 border-dashed rounded-lg hover:border-primary-500 cursor-pointer transition-colors flex flex-col items-center justify-center ${
@@ -1822,13 +1866,22 @@ function FinalizarAsignacionModal({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a1 1 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-xs text-gray-500 text-center px-2">Agregar foto</span>
+                  <span className="text-xs text-gray-500 text-center px-2">{foto ? 'Cambiar foto' : 'Agregar foto'}</span>
+                  {foto && (
+                    <span className="mt-1 max-w-[90%] truncate px-2 text-[11px] text-gray-600" title={foto.name}>
+                      {foto.name}
+                    </span>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
                       const selected = e.target.files?.[0] || null;
-                      setFotoEntrega(selected);
+                      setFotosEntrega((prev) => {
+                        const next = [...prev];
+                        next[index] = selected;
+                        return next;
+                      });
                     }}
                     className="hidden"
                   />

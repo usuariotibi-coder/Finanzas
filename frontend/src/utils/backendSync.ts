@@ -916,6 +916,23 @@ export const updateFlotillaAsignacion = async (
   return mapVehicleAssignmentFromApi(data);
 };
 
+export const uploadFlotillaEntregaFotos = async (
+  id: string,
+  fotos: File[]
+): Promise<VehicleAssignment> => {
+  const body = new FormData();
+  fotos.slice(0, 3).forEach((foto) => {
+    if (foto) {
+      body.append('fotos', foto);
+    }
+  });
+  const data = (await apiFetch(`/flotilla/asignaciones/${id}/upload-entrega-fotos/`, {
+    method: 'POST',
+    body,
+  })) as RawRecord;
+  return mapVehicleAssignmentFromApi(data);
+};
+
 export const createDispersion = async (payload: {
   viaticoId: string;
   monto: number;
