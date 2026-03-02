@@ -79,6 +79,20 @@ function MapClickCapture({ onSelect }: { onSelect: (coords: LatLngPoint) => void
   return null;
 }
 
+function MapZoomWatcher({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMapEvents({
+    zoomend() {
+      onZoomChange(map.getZoom());
+    },
+  });
+
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
+
+  return null;
+}
+
 const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
   const toRad = (value: number) => (value * Math.PI) / 180;
   const earthRadiusMeters = 6_371_000;
@@ -221,6 +235,7 @@ export default function LeafletDestinationMap({
     [marker?.lat, marker?.lng, center.lat, center.lng]
   );
   const activeZoom = marker ? defaultZoom : fallbackZoom;
+  const [currentZoom, setCurrentZoom] = useState(activeZoom);
 
   const baseLayer = useMemo(() => {
     switch (mapMode) {
@@ -252,6 +267,10 @@ export default function LeafletDestinationMap({
         };
     }
   }, [mapMode]);
+
+  useEffect(() => {
+    setCurrentZoom(activeZoom);
+  }, [activeZoom, marker?.lat, marker?.lng, center.lat, center.lng]);
 
   useEffect(() => {
     const anchor = marker ?? center;
@@ -312,6 +331,7 @@ export default function LeafletDestinationMap({
         className="h-full w-full"
       >
         <MapViewportSync center={activeCenter} zoom={activeZoom} />
+        <MapZoomWatcher onZoomChange={setCurrentZoom} />
         <TileLayer
           key={baseLayer.key}
           attribution={baseLayer.attribution}
@@ -337,12 +357,6 @@ export default function LeafletDestinationMap({
               maxNativeZoom={20}
               {...TILE_LAYER_SMOOTH_PROPS}
             />
-            <TileLayer
-              attribution={ESRI_TILE_ATTRIBUTION}
-              url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-              maxNativeZoom={16}
-              {...TILE_LAYER_SMOOTH_PROPS}
-            />
           </>
         ) : null}
         {onMapClick ? <MapClickCapture onSelect={onMapClick} /> : null}
@@ -360,7 +374,8 @@ export default function LeafletDestinationMap({
             </Tooltip>
           </CircleMarker>
         ) : null}
-        {nearbyPlaces.map((place) => (
+        {currentZoom >= 12 &&
+          nearbyPlaces.map((place) => (
           <CircleMarker
             key={`${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}`}
             center={[place.lat, place.lng]}
@@ -371,7 +386,7 @@ export default function LeafletDestinationMap({
               <span className="text-[10px] font-semibold text-slate-800">{place.name}</span>
             </Tooltip>
           </CircleMarker>
-        ))}
+          ))}
       </MapContainer>
     </div>
   );
