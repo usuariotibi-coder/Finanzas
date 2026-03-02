@@ -1416,7 +1416,7 @@ function RevisionEntregaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-      <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div className="max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <div>
@@ -1431,7 +1431,7 @@ function RevisionEntregaModal({
           </div>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="space-y-3 p-3">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div><span className="text-slate-500">Vehiculo:</span> <span className="font-medium text-slate-900">{vehiculoLabel}</span></div>
@@ -1494,29 +1494,33 @@ function RevisionEntregaModal({
               <div className="rounded-xl border border-slate-200 bg-white p-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Fotos reportadas</p>
                 {fotosEntrega.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="flex flex-wrap gap-2">
                     {fotosEntrega.map((foto, index) => {
                       const fotoUrl = toApiAssetUrl(foto.path);
                       return (
-                        <div key={`${foto.nombre}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                        <a
+                          key={`${foto.nombre}-${index}`}
+                          href={fotoUrl || undefined}
+                          target={fotoUrl ? '_blank' : undefined}
+                          rel={fotoUrl ? 'noreferrer' : undefined}
+                          className="flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-2 text-xs text-slate-700"
+                        >
                           {fotoUrl ? (
-                            <a href={fotoUrl} target="_blank" rel="noreferrer" className="block">
-                              <img
-                                src={fotoUrl}
-                                alt={foto.nombre}
-                                className="h-28 w-full rounded-md border border-slate-200 object-cover"
-                                loading="lazy"
-                              />
-                            </a>
+                            <img
+                              src={fotoUrl}
+                              alt={foto.nombre}
+                              className="h-7 w-7 rounded-full border border-slate-200 object-cover"
+                              loading="lazy"
+                            />
                           ) : (
-                            <div className="flex h-28 items-center justify-center rounded-md border border-dashed border-slate-300 bg-white text-xs text-slate-500">
-                              Sin vista previa
-                            </div>
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-slate-300 bg-white text-[10px] text-slate-500">
+                              N/A
+                            </span>
                           )}
-                          <p className="mt-1 truncate text-xs text-slate-700" title={foto.nombre}>
+                          <span className="max-w-52 truncate" title={foto.nombre}>
                             {foto.nombre}
-                          </p>
-                        </div>
+                          </span>
+                        </a>
                       );
                     })}
                   </div>
@@ -1584,7 +1588,7 @@ function FinalizarAsignacionModal({
 }) {
   useEscapeKey(onClose);
   const [kmFinal, setKmFinal] = useState<string>(assignment.kmFinal ? String(assignment.kmFinal) : '');
-  const [fotosEntrega, setFotosEntrega] = useState<(File | null)[]>([null, null, null]);
+  const [fotoEntrega, setFotoEntrega] = useState<File | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checklistEntrega, setChecklistEntrega] = useState<VehicleConditionChecklist>(
@@ -1644,22 +1648,21 @@ function FinalizarAsignacionModal({
       : ''
     : '';
   const fuelError = showErrors && !checklistEntrega.nivelCombustible ? 'Selecciona el nivel de combustible.' : '';
-  const fotosSeleccionadas = fotosEntrega.filter((file): file is File => Boolean(file));
-  const fotoError = showErrors && fotosSeleccionadas.length === 0 ? 'Agrega al menos una foto.' : '';
+  const fotoError = showErrors && !fotoEntrega ? 'Agrega al menos una foto.' : '';
 
   const handleSubmit = async () => {
     setShowErrors(true);
-    if (kmFinalInvalid || kmFinalValue < assignment.kmInicial || !checklistEntrega.nivelCombustible || fotosSeleccionadas.length === 0) {
+    if (kmFinalInvalid || kmFinalValue < assignment.kmInicial || !checklistEntrega.nivelCombustible || !fotoEntrega) {
       return;
     }
     const checklistToSave = {
       ...checklistEntrega,
-      foto: fotosSeleccionadas[0]?.name,
-      fotos: fotosSeleccionadas.map((file) => file.name),
+      foto: fotoEntrega?.name,
+      fotos: fotoEntrega ? [fotoEntrega.name] : [],
     };
     setSubmitting(true);
     try {
-      await onFinalize(kmFinalValue, checklistToSave, fotosSeleccionadas);
+      await onFinalize(kmFinalValue, checklistToSave, fotoEntrega ? [fotoEntrega] : []);
     } finally {
       setSubmitting(false);
     }
@@ -1853,9 +1856,9 @@ function FinalizarAsignacionModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Fotos (minimo 1) *</label>
-            <p className="text-xs text-gray-500 mb-3">Agrega evidencia del estado del vehiculo (hasta 3 fotos).</p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {fotosEntrega.map((foto, index) => (
+            <p className="text-xs text-gray-500 mb-3">Agrega evidencia del estado del vehiculo.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[1, 2, 3, 4].map((index) => (
                 <label
                   key={index}
                   className={`aspect-square border-2 border-dashed rounded-lg hover:border-primary-500 cursor-pointer transition-colors flex flex-col items-center justify-center ${
@@ -1866,22 +1869,13 @@ function FinalizarAsignacionModal({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a1 1 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-xs text-gray-500 text-center px-2">{foto ? 'Cambiar foto' : 'Agregar foto'}</span>
-                  {foto && (
-                    <span className="mt-1 max-w-[90%] truncate px-2 text-[11px] text-gray-600" title={foto.name}>
-                      {foto.name}
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-500 text-center px-2">Agregar foto</span>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
                       const selected = e.target.files?.[0] || null;
-                      setFotosEntrega((prev) => {
-                        const next = [...prev];
-                        next[index] = selected;
-                        return next;
-                      });
+                      setFotoEntrega(selected);
                     }}
                     className="hidden"
                   />
