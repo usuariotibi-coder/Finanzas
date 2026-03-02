@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleMarker, MapContainer, TileLayer, Tooltip, useMapEvents } from 'react-leaflet';
+import { CircleMarker, LayersControl, MapContainer, TileLayer, Tooltip, useMapEvents } from 'react-leaflet';
 import type { LeafletMouseEvent } from 'leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
@@ -33,10 +33,19 @@ import 'leaflet/dist/leaflet.css';
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
-const VEHICLE_DESTINATION_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const VEHICLE_DESTINATION_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+const VEHICLE_DESTINATION_OSM_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+const VEHICLE_DESTINATION_CARTO_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
+const VEHICLE_DESTINATION_ESRI_ATTRIBUTION =
+  'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
 
 type VehicleMapPoint = { lat: number; lng: number };
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 type VehicleDestinationDetails = {
   poi?: string;
   road?: string;
@@ -45,6 +54,7 @@ type VehicleDestinationDetails = {
   state?: string;
   postcode?: string;
   country?: string;
+  nearbyPlaces?: string[];
 };
 
 function VehicleDestinationMapClick({
@@ -59,6 +69,192 @@ function VehicleDestinationMapClick({
   });
 
   return null;
+}
+
+const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const earthRadiusMeters = 6_371_000;
+  const dLat = toRad(toLat - fromLat);
+  const dLng = toRad(toLng - fromLng);
+  const lat1 = toRad(fromLat);
+  const lat2 = toRad(toLat);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+  return earthRadiusMeters * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
+type OverpassElement = {
+  lat?: number;
+  lon?: number;
+  center?: { lat?: number; lon?: number };
+  tags?: Record<string, string | undefined>;
+};
+
+const getOverpassElementPoint = (element: OverpassElement): VehicleMapPoint | null => {
+  if (Number.isFinite(element.lat) && Number.isFinite(element.lon)) {
+    return { lat: Number(element.lat), lng: Number(element.lon) };
+  }
+  if (Number.isFinite(element.center?.lat) && Number.isFinite(element.center?.lon)) {
+    return { lat: Number(element.center?.lat), lng: Number(element.center?.lon) };
+  }
+  return null;
+};
+
+const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]> => {
+  const overpassQuery = `
+[out:json][timeout:8];
+(
+  node(around:220,${lat},${lng})["name"]["amenity"];
+  node(around:220,${lat},${lng})["name"]["shop"];
+  node(around:220,${lat},${lng})["name"]["office"];
+  node(around:220,${lat},${lng})["name"]["tourism"];
+  node(around:220,${lat},${lng})["name"]["leisure"];
+  way(around:220,${lat},${lng})["name"]["amenity"];
+  way(around:220,${lat},${lng})["name"]["shop"];
+  way(around:220,${lat},${lng})["name"]["office"];
+  way(around:220,${lat},${lng})["name"]["tourism"];
+  way(around:220,${lat},${lng})["name"]["leisure"];
+);
+out center 30;
+`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+
+  try {
+    const response = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: `data=${encodeURIComponent(overpassQuery)}`,
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = (await response.json()) as { elements?: OverpassElement[] };
+    const unique = new Set<string>();
+    const ranked = (data.elements ?? [])
+      .map((element) => {
+        const name = element.tags?.name?.trim() || '';
+        const point = getOverpassElementPoint(element);
+        if (!name || !point) {
+          return null;
+        }
+        return {
+          name,
+          distance: getDistanceMeters(lat, lng, point.lat, point.lng),
+        };
+      })
+      .filter((item): item is { name: string; distance: number } => Boolean(item))
+      .filter((item) => item.distance <= 500)
+      .sort((a, b) => a.distance - b.distance)
+      .filter((item) => {
+        const normalizedName = normalizeText(item.name);
+        if (!normalizedName || unique.has(normalizedName)) {
+          return false;
+        }
+        unique.add(normalizedName);
+        return true;
+      })
+      .slice(0, 3)
+      .map((item) => item.name);
+
+    return ranked;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+function VehicleDestinationLayeredMap({
+  center,
+  selectedPoint,
+  destinationText,
+  destinationDetails,
+  onSelect,
+  compact = false,
+}: {
+  center: [number, number];
+  selectedPoint: VehicleMapPoint | null;
+  destinationText: string;
+  destinationDetails: VehicleDestinationDetails | null;
+  onSelect: (coords: VehicleMapPoint) => void;
+  compact?: boolean;
+}) {
+  const selectedCenter: [number, number] = selectedPoint ? [selectedPoint.lat, selectedPoint.lng] : center;
+  const tooltipText =
+    destinationDetails?.poi ||
+    destinationDetails?.road ||
+    destinationText ||
+    (selectedPoint ? `${selectedPoint.lat.toFixed(5)}, ${selectedPoint.lng.toFixed(5)}` : 'Destino seleccionado');
+
+  return (
+    <MapContainer
+      center={selectedCenter}
+      zoom={selectedPoint ? (compact ? 15 : 17) : 5}
+      minZoom={4}
+      maxZoom={20}
+      scrollWheelZoom={true}
+      className="h-full w-full"
+    >
+      <LayersControl position="topright" collapsed={compact}>
+        <LayersControl.BaseLayer checked name="Calles + lugares">
+          <TileLayer
+            attribution={VEHICLE_DESTINATION_CARTO_ATTRIBUTION}
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            subdomains={['a', 'b', 'c', 'd']}
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Calles clasico">
+          <TileLayer
+            attribution={VEHICLE_DESTINATION_OSM_ATTRIBUTION}
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Satelite">
+          <TileLayer
+            attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.Overlay checked name="Etiquetas (calles/lugares)">
+          <TileLayer
+            attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
+            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+          />
+        </LayersControl.Overlay>
+      </LayersControl>
+      <VehicleDestinationMapClick onSelect={onSelect} />
+      {selectedPoint && (
+        <CircleMarker
+          center={[selectedPoint.lat, selectedPoint.lng]}
+          radius={compact ? 8 : 9}
+          pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+        >
+          <Tooltip direction="top" offset={[0, compact ? -6 : -8]} opacity={0.95} permanent={!compact}>
+            <div className="text-xs">
+              <p className="font-semibold text-slate-900">Destino seleccionado</p>
+              <p className="text-slate-700">{tooltipText}</p>
+              {(destinationDetails?.city || destinationDetails?.state) && (
+                <p className="text-slate-600">
+                  {[destinationDetails.city, destinationDetails.state].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {destinationDetails?.nearbyPlaces?.length ? (
+                <p className="text-slate-600">{destinationDetails.nearbyPlaces.slice(0, 2).join(' | ')}</p>
+              ) : null}
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      )}
+    </MapContainer>
+  );
 }
 
 const parseDateOnly = (value: string) => {
@@ -866,9 +1062,11 @@ export default function UsuarioView() {
       const state = address.state;
       const postcode = address.postcode;
       const country = address.country;
+      const nearbyPlaces = await fetchNearbyPlaceNames(lat, lng);
+      const resolvedPoi = poi || nearbyPlaces[0];
 
       const direccion = [
-        poi,
+        resolvedPoi,
         road,
         neighborhood,
         city,
@@ -881,13 +1079,14 @@ export default function UsuarioView() {
 
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: direccion }));
       setDestinoVehiculoDetalles({
-        poi,
+        poi: resolvedPoi,
         road,
         neighborhood,
         city,
         state,
         postcode,
         country,
+        nearbyPlaces,
       });
       setDestinoVehiculoMapMensaje('Destino tomado del mapa.');
     } catch {
@@ -2368,40 +2567,18 @@ export default function UsuarioView() {
                       <p className="text-[11px] text-gray-600">
                         Haz clic en el mapa para seleccionar el destino.
                       </p>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Capas: usa el icono en la esquina superior derecha del mapa.
+                      </p>
                       <div className="mt-2 h-48 overflow-hidden rounded-md border border-gray-200">
-                        <MapContainer
-                          center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
-                          zoom={destinoVehiculoCoords ? 13 : 5}
-                          scrollWheelZoom={true}
-                          className="h-full w-full"
-                        >
-                          <TileLayer
-                            attribution={VEHICLE_DESTINATION_TILE_ATTRIBUTION}
-                            url={VEHICLE_DESTINATION_TILE_URL}
-                          />
-                          <VehicleDestinationMapClick onSelect={handleSeleccionDestinoVehiculoEnMapa} />
-                          {destinoVehiculoCoords && (
-                            <CircleMarker
-                              center={[destinoVehiculoCoords.lat, destinoVehiculoCoords.lng]}
-                              radius={8}
-                              pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-                            >
-                              <Tooltip direction="top" offset={[0, -6]} opacity={0.95}>
-                                <div className="text-xs">
-                                  <p className="font-semibold text-slate-900">Destino seleccionado</p>
-                                  <p className="text-slate-700">
-                                    {destinoVehiculoDetalles?.poi || destinoVehiculoDetalles?.road || formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
-                                  </p>
-                                  {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
-                                    <p className="text-slate-600">
-                                      {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
-                                    </p>
-                                  )}
-                                </div>
-                              </Tooltip>
-                            </CircleMarker>
-                          )}
-                        </MapContainer>
+                        <VehicleDestinationLayeredMap
+                          center={VEHICLE_DESTINATION_MAP_CENTER}
+                          selectedPoint={destinoVehiculoCoords}
+                          destinationText={formSolicitudVehiculo.destino}
+                          destinationDetails={destinoVehiculoDetalles}
+                          onSelect={handleSeleccionDestinoVehiculoEnMapa}
+                          compact
+                        />
                       </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
                         {isResolviendoDestinoVehiculo && <span>Resolviendo dirección...</span>}
@@ -2423,6 +2600,11 @@ export default function UsuarioView() {
                             Punto: {destinoVehiculoDetalles.poi}
                           </span>
                         )}
+                        {destinoVehiculoDetalles?.nearbyPlaces?.length ? (
+                          <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">
+                            Negocios cercanos: {destinoVehiculoDetalles.nearbyPlaces.join(' | ')}
+                          </span>
+                        ) : null}
                         {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
                           <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-700">
                             Zona: {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
@@ -2564,6 +2746,11 @@ export default function UsuarioView() {
                   {destinoVehiculoDetalles?.poi && (
                     <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">Empresa/Punto: {destinoVehiculoDetalles.poi}</span>
                   )}
+                  {destinoVehiculoDetalles?.nearbyPlaces?.length ? (
+                    <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
+                      Negocios cercanos: {destinoVehiculoDetalles.nearbyPlaces.join(' | ')}
+                    </span>
+                  ) : null}
                   {(destinoVehiculoDetalles?.neighborhood || destinoVehiculoDetalles?.city) && (
                     <span className="rounded bg-violet-50 px-1.5 py-0.5 text-violet-700">
                       Zona: {[destinoVehiculoDetalles.neighborhood, destinoVehiculoDetalles.city].filter(Boolean).join(', ')}
@@ -2579,40 +2766,17 @@ export default function UsuarioView() {
                   )}
                 </div>
               </div>
+              <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
+                Capas visibles: esquina superior derecha del mapa. Puedes alternar entre "Calles + lugares", "Calles clasico", "Satelite" y "Etiquetas".
+              </div>
               <div className="mt-2 flex-1 overflow-hidden rounded-xl border border-slate-200">
-                <MapContainer
-                  center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
-                  zoom={destinoVehiculoCoords ? 13 : 5}
-                  scrollWheelZoom={true}
-                  className="h-full w-full"
-                >
-                  <TileLayer
-                    attribution={VEHICLE_DESTINATION_TILE_ATTRIBUTION}
-                    url={VEHICLE_DESTINATION_TILE_URL}
-                  />
-                  <VehicleDestinationMapClick onSelect={handleSeleccionDestinoVehiculoEnMapa} />
-                  {destinoVehiculoCoords && (
-                    <CircleMarker
-                      center={[destinoVehiculoCoords.lat, destinoVehiculoCoords.lng]}
-                      radius={9}
-                      pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-                    >
-                      <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent>
-                        <div className="text-xs">
-                          <p className="font-semibold text-slate-900">Destino seleccionado</p>
-                          <p className="text-slate-700">
-                            {destinoVehiculoDetalles?.poi || destinoVehiculoDetalles?.road || formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
-                          </p>
-                          {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
-                            <p className="text-slate-600">
-                              {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
-                            </p>
-                          )}
-                        </div>
-                      </Tooltip>
-                    </CircleMarker>
-                  )}
-                </MapContainer>
+                <VehicleDestinationLayeredMap
+                  center={VEHICLE_DESTINATION_MAP_CENTER}
+                  selectedPoint={destinoVehiculoCoords}
+                  destinationText={formSolicitudVehiculo.destino}
+                  destinationDetails={destinoVehiculoDetalles}
+                  onSelect={handleSeleccionDestinoVehiculoEnMapa}
+                />
               </div>
             </div>
           </div>
