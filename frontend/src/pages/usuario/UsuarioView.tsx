@@ -26,7 +26,7 @@ import {
   getPendingViaticoExtension,
   withPendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
-import GoogleDestinationMap from '../../components/common/GoogleDestinationMap';
+import LeafletDestinationMap from '../../components/common/LeafletDestinationMap';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
@@ -174,7 +174,7 @@ function VehicleDestinationLayeredMap({
     (selectedPoint ? `${selectedPoint.lat.toFixed(5)}, ${selectedPoint.lng.toFixed(5)}` : '');
 
   return (
-    <GoogleDestinationMap
+    <LeafletDestinationMap
       center={mapCenter}
       marker={selectedPoint}
       markerTitle={markerTitle}
@@ -2497,7 +2497,7 @@ export default function UsuarioView() {
                         Haz clic en el mapa para seleccionar el destino.
                       </p>
                       <p className="mt-1 text-[11px] text-slate-500">
-                        Usa el selector de Google Maps para cambiar entre Mapa, Satelite, Hibrido y Relieve.
+                        Usa el selector superior del mapa: Mapa, Satelite, Hibrido y Relieve.
                       </p>
                       <div className="mt-2 h-48 overflow-hidden rounded-md border border-gray-200">
                         <VehicleDestinationLayeredMap
@@ -2696,7 +2696,7 @@ export default function UsuarioView() {
                 </div>
               </div>
               <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
-                Selector Google Maps: cambia entre Mapa, Satelite, Hibrido (satelite con calles y lugares) y Relieve.
+                Vista tipo Google: cambia entre Mapa, Satelite, Hibrido (satelite con calles y lugares) y Relieve.
               </div>
               <div className="mt-2 flex-1 overflow-hidden rounded-xl border border-slate-200">
                 <VehicleDestinationLayeredMap

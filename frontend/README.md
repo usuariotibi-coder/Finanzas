@@ -20,14 +20,6 @@ VITE_API_URL=http://localhost:8000
 
 Puedes agregarlo en `.env` del frontend.
 
-Para los mapas estilo Google Maps (calles, satelite, hibrido y lugares), agrega tambien:
-
-```bash
-VITE_GOOGLE_MAPS_API_KEY=tu_api_key_de_google_maps
-```
-
-Recomendado: copia `frontend/.env.example` a `frontend/.env` y llena la llave.
-
 ## Modulos y pantallas
 
 Rutas principales definidas en `frontend/src/App.tsx`:

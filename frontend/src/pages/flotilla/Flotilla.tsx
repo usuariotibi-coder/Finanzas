@@ -5,7 +5,7 @@ import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Vehicle, VehicleAssignment, VehicleAlert, CargaGasolina, MaintenanceRecord, VehicleConditionChecklist } from '../../types';
 import GasolinaKPI from '../../components/flotilla/GasolinaKPI';
 import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
-import GoogleDestinationMap from '../../components/common/GoogleDestinationMap';
+import LeafletDestinationMap from '../../components/common/LeafletDestinationMap';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import {
   createFlotillaVehiculo,
@@ -57,17 +57,20 @@ const parseCoordinatesFromText = (value: string): [number, number] | null => {
 interface DestinationLayeredMapProps {
   coords: [number, number];
   destinationLabel: string;
+  compact?: boolean;
 }
 
-function DestinationLayeredMap({ coords, destinationLabel }: DestinationLayeredMapProps) {
+function DestinationLayeredMap({ coords, destinationLabel, compact = false }: DestinationLayeredMapProps) {
   const tooltipText = destinationLabel || 'Destino seleccionado';
 
   return (
-    <GoogleDestinationMap
+    <LeafletDestinationMap
       center={{ lat: coords[0], lng: coords[1] }}
       marker={{ lat: coords[0], lng: coords[1] }}
       markerTitle="Destino seleccionado"
       markerSubtitle={tooltipText}
+      showModeControl={!compact}
+      defaultZoom={compact ? 15 : 17}
     />
   );
 }
@@ -2755,7 +2758,7 @@ function AssignmentModal({
                         </div>
                       </div>
                       <p className="mb-1 text-[11px] text-slate-500">
-                        Selector Google Maps: Mapa, Satelite, Hibrido y Relieve.
+                        Vista tipo Google: usa el selector del mapa para Mapa, Satelite, Hibrido y Relieve.
                       </p>
                       {!showExpandedMap ? (
                         summaryMapCoords ? (
@@ -2763,6 +2766,7 @@ function AssignmentModal({
                             <DestinationLayeredMap
                               coords={summaryMapCoords}
                               destinationLabel={summaryDestination}
+                              compact
                             />
                           </div>
                         ) : summaryDestinationEmbedUrl ? (
