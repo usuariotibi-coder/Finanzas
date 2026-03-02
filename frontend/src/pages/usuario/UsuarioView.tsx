@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleMarker, LayersControl, MapContainer, TileLayer, Tooltip, useMapEvents } from 'react-leaflet';
-import type { LeafletMouseEvent } from 'leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
@@ -28,16 +26,11 @@ import {
   getPendingViaticoExtension,
   withPendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
-import 'leaflet/dist/leaflet.css';
+import GoogleDestinationMap from '../../components/common/GoogleDestinationMap';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
-const VEHICLE_DESTINATION_OSM_ATTRIBUTION = '&copy; OpenStreetMap contributors';
-const VEHICLE_DESTINATION_CARTO_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
-const VEHICLE_DESTINATION_ESRI_ATTRIBUTION =
-  'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
-const VEHICLE_TILE_LAYER_SMOOTH_PROPS = { keepBuffer: 8, updateWhenZooming: false as const };
 
 type VehicleMapPoint = { lat: number; lng: number };
 const normalizeText = (value: string) =>
@@ -57,20 +50,6 @@ type VehicleDestinationDetails = {
   country?: string;
   nearbyPlaces?: string[];
 };
-
-function VehicleDestinationMapClick({
-  onSelect,
-}: {
-  onSelect: (coords: VehicleMapPoint) => void;
-}) {
-  useMapEvents({
-    click(event: LeafletMouseEvent) {
-      onSelect({ lat: event.latlng.lat, lng: event.latlng.lng });
-    },
-  });
-
-  return null;
-}
 
 const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
   const toRad = (value: number) => (value * Math.PI) / 180;
@@ -188,85 +167,22 @@ function VehicleDestinationLayeredMap({
   onSelect: (coords: VehicleMapPoint) => void;
   compact?: boolean;
 }) {
-  const selectedCenter: [number, number] = selectedPoint ? [selectedPoint.lat, selectedPoint.lng] : center;
-  const tooltipText =
-    destinationDetails?.poi ||
-    destinationDetails?.road ||
+  const mapCenter = selectedPoint ?? { lat: center[0], lng: center[1] };
+  const markerTitle = destinationDetails?.poi || destinationDetails?.road || 'Destino seleccionado';
+  const markerSubtitle =
     destinationText ||
-    (selectedPoint ? `${selectedPoint.lat.toFixed(5)}, ${selectedPoint.lng.toFixed(5)}` : 'Destino seleccionado');
+    (selectedPoint ? `${selectedPoint.lat.toFixed(5)}, ${selectedPoint.lng.toFixed(5)}` : '');
 
   return (
-    <MapContainer
-      center={selectedCenter}
-      zoom={selectedPoint ? (compact ? 15 : 17) : 5}
-      minZoom={4}
-      maxZoom={20}
-      scrollWheelZoom={true}
-      fadeAnimation={false}
-      className="h-full w-full"
-    >
-      <LayersControl position="topright" collapsed={compact}>
-        <LayersControl.BaseLayer checked name="Calles + lugares">
-          <TileLayer
-            attribution={VEHICLE_DESTINATION_CARTO_ATTRIBUTION}
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            subdomains={['a', 'b', 'c', 'd']}
-            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Calles clasico">
-          <TileLayer
-            attribution={VEHICLE_DESTINATION_OSM_ATTRIBUTION}
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Satelite">
-          <TileLayer
-            attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.Overlay checked name="Calles sobre satelite">
-          <TileLayer
-            attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
-            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
-          />
-        </LayersControl.Overlay>
-        <LayersControl.Overlay checked name="Etiquetas (calles/lugares)">
-          <TileLayer
-            attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
-            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
-          />
-        </LayersControl.Overlay>
-      </LayersControl>
-      <VehicleDestinationMapClick onSelect={onSelect} />
-      {selectedPoint && (
-        <CircleMarker
-          center={[selectedPoint.lat, selectedPoint.lng]}
-          radius={compact ? 8 : 9}
-          pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-        >
-          <Tooltip direction="top" offset={[0, compact ? -6 : -8]} opacity={0.95} permanent={!compact}>
-            <div className="text-xs">
-              <p className="font-semibold text-slate-900">Destino seleccionado</p>
-              <p className="text-slate-700">{tooltipText}</p>
-              {(destinationDetails?.city || destinationDetails?.state) && (
-                <p className="text-slate-600">
-                  {[destinationDetails.city, destinationDetails.state].filter(Boolean).join(', ')}
-                </p>
-              )}
-              {destinationDetails?.nearbyPlaces?.length ? (
-                <p className="text-slate-600">{destinationDetails.nearbyPlaces.slice(0, 2).join(' | ')}</p>
-              ) : null}
-            </div>
-          </Tooltip>
-        </CircleMarker>
-      )}
-    </MapContainer>
+    <GoogleDestinationMap
+      center={mapCenter}
+      marker={selectedPoint}
+      markerTitle={markerTitle}
+      markerSubtitle={markerSubtitle}
+      defaultZoom={compact ? 15 : 17}
+      fallbackZoom={5}
+      onMapClick={onSelect}
+    />
   );
 }
 
@@ -2581,7 +2497,7 @@ export default function UsuarioView() {
                         Haz clic en el mapa para seleccionar el destino.
                       </p>
                       <p className="mt-1 text-[11px] text-slate-500">
-                        Capas: usa el icono en la esquina superior derecha del mapa.
+                        Usa el selector de Google Maps para cambiar entre Mapa, Satelite, Hibrido y Relieve.
                       </p>
                       <div className="mt-2 h-48 overflow-hidden rounded-md border border-gray-200">
                         <VehicleDestinationLayeredMap
@@ -2780,7 +2696,7 @@ export default function UsuarioView() {
                 </div>
               </div>
               <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
-                Capas visibles: esquina superior derecha del mapa. Puedes alternar entre "Calles + lugares", "Calles clasico", "Satelite", "Calles sobre satelite" y "Etiquetas".
+                Selector Google Maps: cambia entre Mapa, Satelite, Hibrido (satelite con calles y lugares) y Relieve.
               </div>
               <div className="mt-2 flex-1 overflow-hidden rounded-xl border border-slate-200">
                 <VehicleDestinationLayeredMap

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import useAuth from '../../hooks/useAuth';
-import { CircleMarker, LayersControl, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Vehicle, VehicleAssignment, VehicleAlert, CargaGasolina, MaintenanceRecord, VehicleConditionChecklist } from '../../types';
 import GasolinaKPI from '../../components/flotilla/GasolinaKPI';
 import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
+import GoogleDestinationMap from '../../components/common/GoogleDestinationMap';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import {
   createFlotillaVehiculo,
@@ -17,7 +17,6 @@ import {
 } from '../../utils/backendSync';
 import { toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
-import 'leaflet/dist/leaflet.css';
 
 const normalizeText = (value: string) =>
   value
@@ -55,79 +54,21 @@ const parseCoordinatesFromText = (value: string): [number, number] | null => {
   return null;
 };
 
-const OSM_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors';
-const CARTO_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
-const ESRI_IMAGERY_ATTRIBUTION =
-  'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
-const MAP_TILE_SMOOTH_PROPS = { keepBuffer: 8, updateWhenZooming: false as const };
-
 interface DestinationLayeredMapProps {
   coords: [number, number];
   destinationLabel: string;
-  compact?: boolean;
 }
 
-function DestinationLayeredMap({ coords, destinationLabel, compact = false }: DestinationLayeredMapProps) {
+function DestinationLayeredMap({ coords, destinationLabel }: DestinationLayeredMapProps) {
   const tooltipText = destinationLabel || 'Destino seleccionado';
 
   return (
-    <MapContainer
-      center={coords}
-      zoom={compact ? 15 : 17}
-      minZoom={4}
-      maxZoom={20}
-      scrollWheelZoom={true}
-      fadeAnimation={false}
-      className="h-full w-full"
-    >
-      <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="Mapa detallado">
-          <TileLayer
-            attribution={CARTO_TILE_ATTRIBUTION}
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            subdomains={['a', 'b', 'c', 'd']}
-            {...MAP_TILE_SMOOTH_PROPS}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Mapa clasico">
-          <TileLayer
-            attribution={OSM_TILE_ATTRIBUTION}
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            {...MAP_TILE_SMOOTH_PROPS}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="Satelite">
-          <TileLayer
-            attribution={ESRI_IMAGERY_ATTRIBUTION}
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            {...MAP_TILE_SMOOTH_PROPS}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.Overlay checked name="Calles sobre satelite">
-          <TileLayer
-            attribution={ESRI_IMAGERY_ATTRIBUTION}
-            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-            {...MAP_TILE_SMOOTH_PROPS}
-          />
-        </LayersControl.Overlay>
-        <LayersControl.Overlay checked name="Etiquetas de lugares">
-          <TileLayer
-            attribution={ESRI_IMAGERY_ATTRIBUTION}
-            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-            {...MAP_TILE_SMOOTH_PROPS}
-          />
-        </LayersControl.Overlay>
-      </LayersControl>
-      <CircleMarker
-        center={coords}
-        radius={8}
-        pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-      >
-        <Tooltip permanent={!compact} direction="top" offset={[0, -8]}>
-          {tooltipText}
-        </Tooltip>
-      </CircleMarker>
-    </MapContainer>
+    <GoogleDestinationMap
+      center={{ lat: coords[0], lng: coords[1] }}
+      marker={{ lat: coords[0], lng: coords[1] }}
+      markerTitle="Destino seleccionado"
+      markerSubtitle={tooltipText}
+    />
   );
 }
 
@@ -2813,13 +2754,15 @@ function AssignmentModal({
                           </button>
                         </div>
                       </div>
+                      <p className="mb-1 text-[11px] text-slate-500">
+                        Selector Google Maps: Mapa, Satelite, Hibrido y Relieve.
+                      </p>
                       {!showExpandedMap ? (
                         summaryMapCoords ? (
                           <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
                             <DestinationLayeredMap
                               coords={summaryMapCoords}
                               destinationLabel={summaryDestination}
-                              compact
                             />
                           </div>
                         ) : summaryDestinationEmbedUrl ? (
