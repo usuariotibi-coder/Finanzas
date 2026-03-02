@@ -1223,7 +1223,7 @@ function AssignmentCard({
   const statusIcon = getAssignmentStatusIcon(assignment.status);
   const isCompleted = assignment.status === 'completado';
   const entregaLiberada = isEntregaLiberada(assignment);
-  const canReviewEntrega = isCompleted && Boolean(assignment.checklistEntrega);
+  const canReviewEntrega = isCompleted;
   const statusBadge = (() => {
     switch (assignment.status) {
       case 'solicitado':
