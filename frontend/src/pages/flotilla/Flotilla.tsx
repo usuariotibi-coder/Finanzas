@@ -349,6 +349,9 @@ const getVehicleStatusLabel = (status: Vehicle['status']) => {
   return 'De Baja';
 };
 
+const isEntregaLiberada = (assignment: VehicleAssignment) =>
+  Boolean(assignment.checklistEntrega?.liberacionEntrega?.validada);
+
 
 
 
@@ -382,6 +385,7 @@ export default function Flotilla() {
   const [maintenanceHistory] = useLocalStorageState<MaintenanceRecord[]>('flotilla:maintenanceHistory', []);
   const [assignments, setAssignments] = useState<VehicleAssignment[]>(getVehicleAssignments);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [showRevisionEntregaModal, setShowRevisionEntregaModal] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
 
   useEscapeKey(() => setShowExportModal(false), showExportModal);
@@ -520,6 +524,16 @@ export default function Flotilla() {
     setSelectedAssignmentId(null);
   };
 
+  const handleOpenRevisionEntregaModal = (assignmentId: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setShowRevisionEntregaModal(true);
+  };
+
+  const handleCloseRevisionEntregaModal = () => {
+    setShowRevisionEntregaModal(false);
+    setSelectedAssignmentId(null);
+  };
+
   const handleFinalizarAsignacion = async (
     assignmentId: string,
     kmFinal: number,
@@ -541,6 +555,41 @@ export default function Flotilla() {
       handleCloseFinalizarModal();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo finalizar la asignacion.');
+    }
+  };
+
+  const handleValidarLiberacionEntrega = async (
+    assignmentId: string,
+    comentarios: string
+  ) => {
+    const assignment = assignments.find((item) => item.id === assignmentId);
+    if (!assignment || !assignment.checklistEntrega) {
+      return;
+    }
+
+    try {
+      const nextChecklistEntrega: VehicleConditionChecklist = {
+        ...assignment.checklistEntrega,
+        liberacionEntrega: {
+          validada: true,
+          validadaPor: user?.full_name || 'Administrador',
+          validadaEn: new Date().toISOString(),
+          comentarios: comentarios.trim() || undefined,
+        },
+      };
+
+      const persisted = await updateFlotillaAsignacion(assignmentId, {
+        checklistEntrega: nextChecklistEntrega,
+      });
+
+      const updatedAssignments = assignments.map((item) => (
+        item.id === assignmentId ? { ...item, ...persisted } : item
+      ));
+      saveAssignments(updatedAssignments);
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      handleCloseRevisionEntregaModal();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo validar la liberacion de entrega.');
     }
   };
   const handleScheduleService = (alertId: string) => {
@@ -802,6 +851,7 @@ export default function Flotilla() {
                           assignment={assignment}
                           vehicles={vehiclesWithStatus}
                           onFinalize={() => handleOpenFinalizarModal(assignment.id)}
+                          onReviewEntrega={() => handleOpenRevisionEntregaModal(assignment.id)}
                         />
                       ))}
                     </div>
@@ -818,6 +868,7 @@ export default function Flotilla() {
                             assignment={assignment}
                             vehicles={vehiclesWithStatus}
                             onFinalize={() => handleOpenFinalizarModal(assignment.id)}
+                            onReviewEntrega={() => handleOpenRevisionEntregaModal(assignment.id)}
                           />
                         ))}
                       </div>
@@ -960,6 +1011,15 @@ export default function Flotilla() {
           vehicle={selectedAssignmentVehicle}
           onClose={handleCloseFinalizarModal}
           onFinalize={(kmFinal, checklistEntrega) => handleFinalizarAsignacion(selectedAssignment.id, kmFinal, checklistEntrega)}
+        />
+      )}
+
+      {showRevisionEntregaModal && selectedAssignment && (
+        <RevisionEntregaModal
+          assignment={selectedAssignment}
+          vehicle={selectedAssignmentVehicle}
+          onClose={handleCloseRevisionEntregaModal}
+          onValidate={(comentarios) => handleValidarLiberacionEntrega(selectedAssignment.id, comentarios)}
         />
       )}
     </div>
@@ -1149,10 +1209,12 @@ function AssignmentCard({
   assignment,
   vehicles,
   onFinalize,
+  onReviewEntrega,
 }: {
   assignment: VehicleAssignment;
   vehicles: Vehicle[];
   onFinalize: () => void;
+  onReviewEntrega: () => void;
 }) {
   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
   const vehicleLabel = vehicle
@@ -1160,6 +1222,8 @@ function AssignmentCard({
     : assignment.vehiculoLabel || 'Vehiculo pendiente de asignacion';
   const statusIcon = getAssignmentStatusIcon(assignment.status);
   const isCompleted = assignment.status === 'completado';
+  const entregaLiberada = isEntregaLiberada(assignment);
+  const canReviewEntrega = isCompleted && Boolean(assignment.checklistEntrega);
   const statusBadge = (() => {
     switch (assignment.status) {
       case 'solicitado':
@@ -1195,6 +1259,15 @@ function AssignmentCard({
               <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusBadge.color}`}>
                 {statusBadge.label}
               </span>
+              {isCompleted && (
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  entregaLiberada
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {entregaLiberada ? 'Liberacion validada' : 'Pendiente liberacion'}
+                </span>
+              )}
               <p className="text-[11px] text-gray-600 truncate">Asignado a: {assignment.userName}</p>
             </div>
           </div>
@@ -1217,11 +1290,216 @@ function AssignmentCard({
               Finalizar
             </button>
           )}
+          {canReviewEntrega && (
+            <button
+              onClick={onReviewEntrega}
+              className="mt-1.5 inline-flex items-center justify-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200"
+            >
+              Revisar entrega
+            </button>
+          )}
         </div>
       </div>
       <p className="mt-1.5 text-[10px] text-gray-500 truncate">
         {assignment.motivo} - Desde {formatDate(assignment.fechaInicio)}
       </p>
+    </div>
+  );
+}
+
+function RevisionEntregaModal({
+  assignment,
+  vehicle,
+  onClose,
+  onValidate,
+}: {
+  assignment: VehicleAssignment;
+  vehicle: Vehicle | null;
+  onClose: () => void;
+  onValidate: (comentarios: string) => Promise<void> | void;
+}) {
+  useEscapeKey(onClose);
+  const checklist = assignment.checklistEntrega;
+  const [comentariosLiberacion, setComentariosLiberacion] = useState(checklist?.liberacionEntrega?.comentarios || '');
+  const [submitting, setSubmitting] = useState(false);
+  const entregaLiberada = isEntregaLiberada(assignment);
+  const fotosEntrega = checklist?.fotos?.length
+    ? checklist.fotos
+    : checklist?.foto
+    ? [checklist.foto]
+    : [];
+  const vehiculoLabel = vehicle
+    ? `${vehicle.brand} ${vehicle.model} (${vehicle.plates})`
+    : assignment.vehiculoLabel || 'Vehiculo sin asignar';
+
+  const getConditionBadgeClass = (value: 'bueno' | 'regular' | 'malo') => {
+    if (value === 'bueno') return 'bg-emerald-100 text-emerald-700';
+    if (value === 'regular') return 'bg-amber-100 text-amber-700';
+    return 'bg-rose-100 text-rose-700';
+  };
+
+  const renderConditionSection = (
+    title: string,
+    values: Record<string, 'bueno' | 'regular' | 'malo'>
+  ) => (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {Object.entries(values).map(([key, value]) => (
+          <div key={`${title}-${key}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5">
+            <span className="text-xs text-slate-700 capitalize">{key.replace('_', ' ')}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${getConditionBadgeClass(value)}`}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const handleValidate = async () => {
+    setSubmitting(true);
+    try {
+      await onValidate(comentariosLiberacion);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+      <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Revision de entrega</h2>
+              <p className="text-xs text-slate-500">Validacion para liberacion del vehiculo.</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 transition-colors hover:text-slate-600">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div><span className="text-slate-500">Vehiculo:</span> <span className="font-medium text-slate-900">{vehiculoLabel}</span></div>
+              <div><span className="text-slate-500">Usuario:</span> <span className="font-medium text-slate-900">{assignment.userName}</span></div>
+              <div><span className="text-slate-500">KM inicial:</span> <span className="font-medium text-slate-900">{assignment.kmInicial.toLocaleString()}</span></div>
+              <div><span className="text-slate-500">KM final:</span> <span className="font-medium text-slate-900">{assignment.kmFinal?.toLocaleString() || 'Sin captura'}</span></div>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                entregaLiberada ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {entregaLiberada ? 'Liberacion validada' : 'Pendiente de liberacion'}
+              </span>
+              {checklist?.liberacionEntrega?.validadaPor && (
+                <span className="text-xs text-slate-600">
+                  Validado por {checklist.liberacionEntrega.validadaPor}
+                  {checklist.liberacionEntrega.validadaEn ? ` (${formatDate(checklist.liberacionEntrega.validadaEn)})` : ''}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {checklist ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                {renderConditionSection('Exterior', checklist.exterior)}
+                {renderConditionSection('Interior', checklist.interior)}
+                {renderConditionSection('Mecanico', checklist.mecanico)}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Accesorios</p>
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                    {Object.entries(checklist.accesorios).map(([key, value]) => (
+                      <div key={`accesorio-${key}`} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5">
+                        <span className="text-xs text-slate-700 capitalize">{key.replace('_', ' ')}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          value ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                        }`}>
+                          {value ? 'Si' : 'No'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Captura del usuario</p>
+                  <p className="text-sm text-slate-700">
+                    <span className="text-slate-500">Combustible:</span> {checklist.nivelCombustible || 'Sin captura'}
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500">Observaciones</p>
+                  <p className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5 text-sm text-slate-700">
+                    {checklist.observaciones?.trim() || 'Sin observaciones.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Fotos reportadas</p>
+                {fotosEntrega.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {fotosEntrega.map((foto, index) => (
+                      <span key={`${foto}-${index}`} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+                        {foto}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">El usuario no capturo nombres de foto en el checklist.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+              Esta asignacion no tiene checklist de entrega capturado por el usuario.
+            </div>
+          )}
+
+          {!entregaLiberada && checklist && (
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+                Comentarios de validacion (opcional)
+              </label>
+              <textarea
+                value={comentariosLiberacion}
+                onChange={(event) => setComentariosLiberacion(event.target.value)}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+                rows={3}
+                placeholder="Ej. Se reviso fisicamente y coincide con la entrega reportada."
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur sm:flex-row sm:justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Cerrar
+          </button>
+          {!entregaLiberada && checklist && (
+            <button
+              onClick={() => {
+                void handleValidate();
+              }}
+              disabled={submitting}
+              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {submitting ? 'Validando...' : 'Validar liberacion'}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

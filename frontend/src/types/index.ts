@@ -311,6 +311,12 @@ export interface VehicleConditionChecklist {
   nivelCombustible: '1/4' | '1/2' | '3/4' | 'lleno';
   foto?: string;  // Foto opcional
   fotos?: string[];
+  liberacionEntrega?: {
+    validada: boolean;
+    validadaPor?: string;
+    validadaEn?: string;
+    comentarios?: string;
+  };
   observaciones?: string;
 }
 
