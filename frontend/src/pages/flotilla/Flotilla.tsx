@@ -882,7 +882,7 @@ export default function Flotilla() {
 
         <div className="p-3">
           {activeTab === 'vehiculos' && (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(300px,360px))]">
               {vehiclesWithStatus.map((vehicle) => (
                 <VehicleCard
                   key={vehicle.id}
@@ -1207,7 +1207,7 @@ function VehicleCard({ vehicle, onVerDetalles, onVerHistorial, onEditar }: Vehic
   const isPlaceholderImage = vehicleImage.startsWith('data:image/svg+xml');
 
   return (
-    <div className="mx-auto w-full max-w-[360px] overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
+    <div className="w-full overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-lg">
       {/* Imagen del Vehículo */}
       <div className="relative h-24 bg-gray-200">
         <img
