@@ -16,6 +16,13 @@ type NearbyPlacePoint = {
   lng: number;
 };
 
+type BoundsBox = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+};
+
 interface LeafletDestinationMapProps {
   center: LatLngPoint;
   marker?: LatLngPoint | null;
@@ -62,16 +69,36 @@ function MapClickCapture({ onSelect }: { onSelect: (coords: LatLngPoint) => void
   return null;
 }
 
-function MapZoomWatcher({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+function MapViewWatcher({
+  onZoomChange,
+  onBoundsChange,
+}: {
+  onZoomChange: (zoom: number) => void;
+  onBoundsChange: (bounds: BoundsBox) => void;
+}) {
+  const emitState = (mapInstance: ReturnType<typeof useMapEvents>) => {
+    const bounds = mapInstance.getBounds();
+    onZoomChange(mapInstance.getZoom());
+    onBoundsChange({
+      north: bounds.getNorth(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      west: bounds.getWest(),
+    });
+  };
+
   const map = useMapEvents({
+    moveend() {
+      emitState(map);
+    },
     zoomend() {
-      onZoomChange(map.getZoom());
+      emitState(map);
     },
   });
 
   useEffect(() => {
-    onZoomChange(map.getZoom());
-  }, [map, onZoomChange]);
+    emitState(map);
+  }, [map]);
 
   return null;
 }
@@ -89,6 +116,8 @@ export default function LeafletDestinationMap({
 }: LeafletDestinationMapProps) {
   const [mapMode, setMapMode] = useState<MapMode>(initialMode);
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlacePoint[]>([]);
+  const [isLoadingNearbyPlaces, setIsLoadingNearbyPlaces] = useState(false);
+  const [mapBounds, setMapBounds] = useState<BoundsBox | null>(null);
   const activeCenter = useMemo<[number, number]>(
     () => (marker ? [marker.lat, marker.lng] : [center.lat, center.lng]),
     [marker?.lat, marker?.lng, center.lat, center.lng]
@@ -131,6 +160,18 @@ export default function LeafletDestinationMap({
     setCurrentZoom(activeZoom);
   }, [activeZoom, marker?.lat, marker?.lng, center.lat, center.lng]);
 
+  const visibleNearbyPlaces = useMemo(() => {
+    if (!mapBounds) {
+      return nearbyPlaces;
+    }
+    return nearbyPlaces.filter((place) => (
+      place.lat <= mapBounds.north &&
+      place.lat >= mapBounds.south &&
+      place.lng <= mapBounds.east &&
+      place.lng >= mapBounds.west
+    ));
+  }, [nearbyPlaces, mapBounds]);
+
   useEffect(() => {
     const anchor = marker ?? center;
     if (!anchor) {
@@ -138,16 +179,18 @@ export default function LeafletDestinationMap({
       return;
     }
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+    setIsLoadingNearbyPlaces(true);
 
-    void fetchNearbyPlaces(anchor.lat, anchor.lng, 18, controller.signal)
+    void fetchNearbyPlaces(anchor.lat, anchor.lng, 60, controller.signal)
       .then((places) => {
         setNearbyPlaces(places.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng })));
       })
       .catch(() => {
-        setNearbyPlaces([]);
+        // Preserve the previous labels if a network timeout occurs.
       })
       .finally(() => {
+        setIsLoadingNearbyPlaces(false);
         window.clearTimeout(timeoutId);
       });
 
@@ -184,13 +227,14 @@ export default function LeafletDestinationMap({
         center={activeCenter}
         zoom={activeZoom}
         minZoom={4}
-        maxZoom={18}
+        maxZoom={20}
+        preferCanvas={true}
         scrollWheelZoom={true}
         fadeAnimation={false}
         className="h-full w-full"
       >
         <MapViewportSync center={activeCenter} zoom={activeZoom} />
-        <MapZoomWatcher onZoomChange={setCurrentZoom} />
+        <MapViewWatcher onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} />
         <TileLayer
           key={baseLayer.key}
           attribution={baseLayer.attribution}
@@ -201,14 +245,6 @@ export default function LeafletDestinationMap({
         />
         {mapMode === 'hibrido' || mapMode === 'satelite' ? (
           <>
-            {mapMode === 'hibrido' ? (
-              <TileLayer
-                attribution={ESRI_TILE_ATTRIBUTION}
-                url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
-                maxNativeZoom={16}
-                {...TILE_LAYER_SMOOTH_PROPS}
-              />
-            ) : null}
             <TileLayer
               attribution={CARTO_TILE_ATTRIBUTION}
               url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
@@ -234,7 +270,7 @@ export default function LeafletDestinationMap({
           </CircleMarker>
         ) : null}
         {currentZoom >= 12 &&
-          nearbyPlaces.map((place) => (
+          visibleNearbyPlaces.map((place) => (
           <CircleMarker
             key={`${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}`}
             center={[place.lat, place.lng]}
@@ -247,6 +283,23 @@ export default function LeafletDestinationMap({
           </CircleMarker>
           ))}
       </MapContainer>
+      {currentZoom >= 12 && visibleNearbyPlaces.length > 0 ? (
+        <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
+          <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
+          <div className="space-y-0.5">
+            {visibleNearbyPlaces.slice(0, 12).map((place) => (
+              <p key={`list:${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`} className="text-[10px] text-slate-700">
+                {place.name}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {currentZoom >= 12 && !isLoadingNearbyPlaces && visibleNearbyPlaces.length === 0 ? (
+        <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] rounded-md border border-slate-300 bg-white/95 px-2 py-1 shadow">
+          <p className="text-[10px] text-slate-700">No hay nombres OSM en esta zona.</p>
+        </div>
+      ) : null}
     </div>
   );
 }

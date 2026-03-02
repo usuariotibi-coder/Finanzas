@@ -3,6 +3,7 @@ from __future__ import annotations
 from math import atan2, cos, radians, sin, sqrt
 import json
 import time
+import unicodedata
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -28,12 +29,8 @@ HTTP_HEADERS = {
 
 
 def normalize_text(value: str) -> str:
-    return (
-        str(value or '')
-        .strip()
-        .lower()
-        .translate(str.maketrans('áéíóúüñ', 'aeiouun'))
-    )
+    normalized = unicodedata.normalize('NFD', str(value or '').strip().lower())
+    return ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
 
 
 def is_likely_business_name(name: str) -> bool:
@@ -67,13 +64,13 @@ def _http_post_form_json(url: str, form_data: dict[str, str], timeout_seconds: i
 
 
 def fetch_overpass_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    radius_meters = 1800
+    radius_meters = 3200
     query = f"""
 [out:json][timeout:10];
 (
   nwr(around:{radius_meters},{lat},{lng})["name"];
 );
-out center 250;
+out center 900;
 """
     endpoints = (
         'https://overpass-api.de/api/interpreter',
@@ -144,7 +141,7 @@ out center 250;
             continue
 
         distance = get_distance_meters(lat, lng, point_lat, point_lng)
-        if distance > 2500:
+        if distance > 6000:
             continue
 
         seen_names.add(normalized)
@@ -163,12 +160,12 @@ out center 250;
 
 
 def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    delta = 0.03
+    delta = 0.05
     left = lng - delta
     right = lng + delta
     top = lat + delta
     bottom = lat - delta
-    queries = ('parque industrial', 'planta', 'fabrica', 'bodega', 'empresa')
+    queries = ('parque industrial', 'empresa')
     places: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
 
@@ -224,7 +221,10 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
     if cache_entry and now - cache_entry[0] < NEARBY_PLACES_CACHE_TTL_SECONDS:
         return cache_entry[1]
 
-    merged = fetch_overpass_places(lat, lng) + fetch_nominatim_places(lat, lng)
+    overpass_places = fetch_overpass_places(lat, lng)
+    # Skip expensive fallback when Overpass already returns enough nearby business names.
+    nominatim_places = fetch_nominatim_places(lat, lng) if len(overpass_places) < max(8, min(limit, 20)) else []
+    merged = overpass_places + nominatim_places
     deduped: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
     for place in sorted(merged, key=lambda item: float(item['score'])):

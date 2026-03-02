@@ -68,13 +68,13 @@ const toNearbyPlace = (value: unknown): NearbyPlace | null => {
 };
 
 const fetchNearbyPlacesFromOverpassFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const radiusMeters = 1800;
+  const radiusMeters = 3200;
   const query = `
 [out:json][timeout:10];
 (
   nwr(around:${radiusMeters},${lat},${lng})["name"];
 );
-out center 250;
+out center 900;
 `;
   const endpoints = [
     'https://overpass-api.de/api/interpreter',
@@ -152,7 +152,7 @@ out center 250;
         return null;
       }
       const distance = getDistanceMeters(lat, lng, latValue, lngValue);
-      if (distance > 2500) {
+      if (distance > 6000) {
         return null;
       }
       const item: ScoredPlace = {
@@ -174,7 +174,7 @@ out center 250;
 };
 
 export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const safeLimit = Math.max(1, Math.min(limit, 50));
+  const safeLimit = Math.max(1, Math.min(limit, 100));
   const url = `${API_BASE}/geocode/nearby-places/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&limit=${safeLimit}`;
 
   try {
