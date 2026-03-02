@@ -2758,7 +2758,7 @@ function AssignmentModal({
                         </div>
                       </div>
                       <p className="mb-1 text-[11px] text-slate-500">
-                        Vista tipo Google: usa el selector del mapa para Mapa, Satelite, Hibrido y Relieve.
+                        Vista tipo Google: usa el selector para Mapa, Satelite, Hibrido y Relieve. En Satelite/Hibrido se muestran etiquetas de lugares.
                       </p>
                       {!showExpandedMap ? (
                         summaryMapCoords ? (

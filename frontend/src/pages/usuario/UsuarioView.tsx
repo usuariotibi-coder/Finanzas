@@ -84,43 +84,64 @@ const getOverpassElementPoint = (element: OverpassElement): VehicleMapPoint | nu
 };
 
 const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]> => {
+  const radiusMeters = 450;
   const overpassQuery = `
 [out:json][timeout:8];
 (
-  node(around:220,${lat},${lng})["name"]["amenity"];
-  node(around:220,${lat},${lng})["name"]["shop"];
-  node(around:220,${lat},${lng})["name"]["office"];
-  node(around:220,${lat},${lng})["name"]["tourism"];
-  node(around:220,${lat},${lng})["name"]["leisure"];
-  way(around:220,${lat},${lng})["name"]["amenity"];
-  way(around:220,${lat},${lng})["name"]["shop"];
-  way(around:220,${lat},${lng})["name"]["office"];
-  way(around:220,${lat},${lng})["name"]["tourism"];
-  way(around:220,${lat},${lng})["name"]["leisure"];
+  node(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["shop"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["office"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["brand"];
+  way(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["shop"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["office"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["brand"];
+  relation(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["shop"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["office"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["brand"];
 );
-out center 30;
+out center 60;
 `;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 7000);
 
   try {
-    const response = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      },
-      body: `data=${encodeURIComponent(overpassQuery)}`,
-      signal: controller.signal,
-    });
-    if (!response.ok) {
+    const overpassEndpoints = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+    ];
+    let data: { elements?: OverpassElement[] } | null = null;
+
+    for (const endpoint of overpassEndpoints) {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        },
+        body: `data=${encodeURIComponent(overpassQuery)}`,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        continue;
+      }
+      data = (await response.json()) as { elements?: OverpassElement[] };
+      break;
+    }
+    if (!data) {
       return [];
     }
 
-    const data = (await response.json()) as { elements?: OverpassElement[] };
     const unique = new Set<string>();
     const ranked = (data.elements ?? [])
       .map((element) => {
-        const name = element.tags?.name?.trim() || '';
+        const name = (element.tags?.name || element.tags?.brand || element.tags?.operator || '').trim();
         const point = getOverpassElementPoint(element);
         if (!name || !point) {
           return null;
@@ -131,7 +152,7 @@ out center 30;
         };
       })
       .filter((item): item is { name: string; distance: number } => Boolean(item))
-      .filter((item) => item.distance <= 500)
+      .filter((item) => item.distance <= 900)
       .sort((a, b) => a.distance - b.distance)
       .filter((item) => {
         const normalizedName = normalizeText(item.name);
@@ -141,7 +162,7 @@ out center 30;
         unique.add(normalizedName);
         return true;
       })
-      .slice(0, 3)
+      .slice(0, 5)
       .map((item) => item.name);
 
     return ranked;
@@ -977,14 +998,23 @@ export default function UsuarioView() {
         address?: Record<string, string | undefined>;
       };
       const address = data.address ?? {};
-      const poi =
-        data.name ||
-        address.amenity ||
-        address.shop ||
-        address.office ||
-        address.tourism ||
-        address.leisure ||
-        address.building;
+      const displayNameMain = data.display_name?.split(',')[0]?.trim() || '';
+      const poiCandidates = [
+        data.name,
+        address.amenity,
+        address.shop,
+        address.office,
+        address.tourism,
+        address.leisure,
+        address.commercial,
+        address.industrial,
+        address.retail,
+        address.building,
+        displayNameMain,
+      ]
+        .map((value) => (value || '').trim())
+        .filter(Boolean);
+      const poi = poiCandidates[0];
       const road = address.road || address.pedestrian || address.footway || address.path || address.highway;
       const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet;
       const city = address.city || address.town || address.village || address.municipality || address.county;
@@ -2497,7 +2527,7 @@ export default function UsuarioView() {
                         Haz clic en el mapa para seleccionar el destino.
                       </p>
                       <p className="mt-1 text-[11px] text-slate-500">
-                        Usa el selector superior del mapa: Mapa, Satelite, Hibrido y Relieve.
+                        Usa el selector superior del mapa: Mapa, Satelite, Hibrido y Relieve. En Satelite/Hibrido se muestran etiquetas de lugares.
                       </p>
                       <div className="mt-2 h-48 overflow-hidden rounded-md border border-gray-200">
                         <VehicleDestinationLayeredMap

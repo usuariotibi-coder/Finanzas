@@ -71,6 +71,7 @@ export default function LeafletDestinationMap({
           attribution: CARTO_TILE_ATTRIBUTION,
           url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
           subdomains: ['a', 'b', 'c', 'd'] as string[],
+          maxNativeZoom: 20,
         };
       case 'relieve':
         return {
@@ -78,6 +79,7 @@ export default function LeafletDestinationMap({
           attribution: ESRI_TILE_ATTRIBUTION,
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
           subdomains: 'abc',
+          maxNativeZoom: 16,
         };
       case 'satelite':
       case 'hibrido':
@@ -87,6 +89,7 @@ export default function LeafletDestinationMap({
           attribution: ESRI_TILE_ATTRIBUTION,
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           subdomains: 'abc',
+          maxNativeZoom: 19,
         };
     }
   }, [mapMode]);
@@ -118,7 +121,7 @@ export default function LeafletDestinationMap({
         center={activeCenter}
         zoom={activeZoom}
         minZoom={4}
-        maxZoom={20}
+        maxZoom={19}
         scrollWheelZoom={true}
         fadeAnimation={false}
         className="h-full w-full"
@@ -129,18 +132,30 @@ export default function LeafletDestinationMap({
           attribution={baseLayer.attribution}
           url={baseLayer.url}
           subdomains={baseLayer.subdomains}
+          maxNativeZoom={baseLayer.maxNativeZoom}
           {...TILE_LAYER_SMOOTH_PROPS}
         />
-        {mapMode === 'hibrido' ? (
+        {mapMode === 'hibrido' || mapMode === 'satelite' ? (
           <>
+            {mapMode === 'hibrido' ? (
+              <TileLayer
+                attribution={ESRI_TILE_ATTRIBUTION}
+                url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+                maxNativeZoom={16}
+                {...TILE_LAYER_SMOOTH_PROPS}
+              />
+            ) : null}
             <TileLayer
-              attribution={ESRI_TILE_ATTRIBUTION}
-              url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+              attribution={CARTO_TILE_ATTRIBUTION}
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+              subdomains={['a', 'b', 'c', 'd']}
+              maxNativeZoom={20}
               {...TILE_LAYER_SMOOTH_PROPS}
             />
             <TileLayer
               attribution={ESRI_TILE_ATTRIBUTION}
               url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              maxNativeZoom={16}
               {...TILE_LAYER_SMOOTH_PROPS}
             />
           </>
