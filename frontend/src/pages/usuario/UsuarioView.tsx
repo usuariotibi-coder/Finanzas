@@ -33,10 +33,19 @@ import 'leaflet/dist/leaflet.css';
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
-const VEHICLE_DESTINATION_TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const VEHICLE_DESTINATION_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
+const VEHICLE_DESTINATION_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const VEHICLE_DESTINATION_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors';
 
 type VehicleMapPoint = { lat: number; lng: number };
+type VehicleDestinationDetails = {
+  poi?: string;
+  road?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+};
 
 function VehicleDestinationMapClick({
   onSelect,
@@ -262,6 +271,7 @@ export default function UsuarioView() {
   const [showDestinoVehiculoMap, setShowDestinoVehiculoMap] = useState(false);
   const [showDestinoVehiculoMapExpanded, setShowDestinoVehiculoMapExpanded] = useState(false);
   const [destinoVehiculoCoords, setDestinoVehiculoCoords] = useState<VehicleMapPoint | null>(null);
+  const [destinoVehiculoDetalles, setDestinoVehiculoDetalles] = useState<VehicleDestinationDetails | null>(null);
   const [isResolviendoDestinoVehiculo, setIsResolviendoDestinoVehiculo] = useState(false);
   const [destinoVehiculoMapMensaje, setDestinoVehiculoMapMensaje] = useState('');
 
@@ -816,6 +826,7 @@ export default function UsuarioView() {
     setShowDestinoVehiculoMap(false);
     setShowDestinoVehiculoMapExpanded(false);
     setDestinoVehiculoCoords(null);
+    setDestinoVehiculoDetalles(null);
     setIsResolviendoDestinoVehiculo(false);
     setDestinoVehiculoMapMensaje('');
   };
@@ -835,15 +846,53 @@ export default function UsuarioView() {
         throw new Error('No se pudo resolver la direccion.');
       }
 
-      const data = (await response.json()) as { display_name?: string };
-      const direccion = data.display_name
-        ? data.display_name.split(',').slice(0, 6).join(',').trim()
-        : coordenadasFallback;
+      const data = (await response.json()) as {
+        display_name?: string;
+        name?: string;
+        address?: Record<string, string | undefined>;
+      };
+      const address = data.address ?? {};
+      const poi =
+        data.name ||
+        address.amenity ||
+        address.shop ||
+        address.office ||
+        address.tourism ||
+        address.leisure ||
+        address.building;
+      const road = address.road || address.pedestrian || address.footway || address.path || address.highway;
+      const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet;
+      const city = address.city || address.town || address.village || address.municipality || address.county;
+      const state = address.state;
+      const postcode = address.postcode;
+      const country = address.country;
+
+      const direccion = [
+        poi,
+        road,
+        neighborhood,
+        city,
+        state,
+        postcode,
+        country,
+      ]
+        .filter((part): part is string => Boolean(part && part.trim()))
+        .join(', ') || data.display_name?.split(',').slice(0, 7).join(',').trim() || coordenadasFallback;
 
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: direccion }));
+      setDestinoVehiculoDetalles({
+        poi,
+        road,
+        neighborhood,
+        city,
+        state,
+        postcode,
+        country,
+      });
       setDestinoVehiculoMapMensaje('Destino tomado del mapa.');
     } catch {
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: coordenadasFallback }));
+      setDestinoVehiculoDetalles(null);
       setDestinoVehiculoMapMensaje('No se pudo resolver la direccion exacta. Se guardaron coordenadas.');
     } finally {
       setIsResolviendoDestinoVehiculo(false);
@@ -2343,8 +2392,13 @@ export default function UsuarioView() {
                                 <div className="text-xs">
                                   <p className="font-semibold text-slate-900">Destino seleccionado</p>
                                   <p className="text-slate-700">
-                                    {formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
+                                    {destinoVehiculoDetalles?.poi || destinoVehiculoDetalles?.road || formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
                                   </p>
+                                  {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
+                                    <p className="text-slate-600">
+                                      {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
+                                    </p>
+                                  )}
                                 </div>
                               </Tooltip>
                             </CircleMarker>
@@ -2359,6 +2413,21 @@ export default function UsuarioView() {
                         {destinoVehiculoCoords && (
                           <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-700">
                             {destinoVehiculoCoords.lat.toFixed(5)}, {destinoVehiculoCoords.lng.toFixed(5)}
+                          </span>
+                        )}
+                        {destinoVehiculoDetalles?.road && (
+                          <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
+                            Calle: {destinoVehiculoDetalles.road}
+                          </span>
+                        )}
+                        {destinoVehiculoDetalles?.poi && (
+                          <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                            Punto: {destinoVehiculoDetalles.poi}
+                          </span>
+                        )}
+                        {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
+                          <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-700">
+                            Zona: {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
                           </span>
                         )}
                       </div>
@@ -2481,7 +2550,7 @@ export default function UsuarioView() {
                 </svg>
               </button>
             </div>
-            <div className="flex-1 p-3 sm:p-4">
+            <div className="flex h-full flex-col p-3 sm:p-4">
               <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                 <span className="font-semibold text-slate-900">Destino actual:</span>{' '}
                 {formSolicitudVehiculo.destino || 'Selecciona un punto en el mapa'}
@@ -2490,8 +2559,29 @@ export default function UsuarioView() {
                     {destinoVehiculoCoords.lat.toFixed(5)}, {destinoVehiculoCoords.lng.toFixed(5)}
                   </span>
                 )}
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {destinoVehiculoDetalles?.road && (
+                    <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Calle: {destinoVehiculoDetalles.road}</span>
+                  )}
+                  {destinoVehiculoDetalles?.poi && (
+                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">Empresa/Punto: {destinoVehiculoDetalles.poi}</span>
+                  )}
+                  {(destinoVehiculoDetalles?.neighborhood || destinoVehiculoDetalles?.city) && (
+                    <span className="rounded bg-violet-50 px-1.5 py-0.5 text-violet-700">
+                      Zona: {[destinoVehiculoDetalles.neighborhood, destinoVehiculoDetalles.city].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                  {(destinoVehiculoDetalles?.state || destinoVehiculoDetalles?.postcode) && (
+                    <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">
+                      Estado/CP: {[destinoVehiculoDetalles.state, destinoVehiculoDetalles.postcode].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                  {destinoVehiculoDetalles?.country && (
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">País: {destinoVehiculoDetalles.country}</span>
+                  )}
+                </div>
               </div>
-              <div className="h-[calc(100%-2.2rem)] overflow-hidden rounded-xl border border-slate-200">
+              <div className="mt-2 flex-1 overflow-hidden rounded-xl border border-slate-200">
                 <MapContainer
                   center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
                   zoom={destinoVehiculoCoords ? 13 : 5}
@@ -2513,8 +2603,13 @@ export default function UsuarioView() {
                         <div className="text-xs">
                           <p className="font-semibold text-slate-900">Destino seleccionado</p>
                           <p className="text-slate-700">
-                            {formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
+                            {destinoVehiculoDetalles?.poi || destinoVehiculoDetalles?.road || formSolicitudVehiculo.destino || `${destinoVehiculoCoords.lat.toFixed(5)}, ${destinoVehiculoCoords.lng.toFixed(5)}`}
                           </p>
+                          {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
+                            <p className="text-slate-600">
+                              {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
+                            </p>
+                          )}
                         </div>
                       </Tooltip>
                     </CircleMarker>
