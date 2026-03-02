@@ -2938,6 +2938,12 @@ interface VehicleChecklistModalProps {
 
 function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto: _foto, setFoto, errors, onSubmit, onCancel, requireAllFields = false }: VehicleChecklistModalProps) {
   useEscapeKey(onCancel);
+  const [kmInput, setKmInput] = useState<string>(km > 0 ? String(km) : '');
+
+  useEffect(() => {
+    setKmInput(km > 0 ? String(km) : '');
+  }, [km]);
+
   const kmError = errors?.km;
   const fotoError = errors?.foto;
   const combustibleError = errors?.combustible;
@@ -3012,8 +3018,12 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                     </label>
                     <input
                       type="number"
-                      value={km}
-                      onChange={(event) => setKm(Number(event.target.value))}
+                      value={kmInput}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        setKmInput(nextValue);
+                        setKm(nextValue === '' ? 0 : Number(nextValue));
+                      }}
                       className={`w-full rounded-lg border px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 ${
                         kmError
                           ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-200'
