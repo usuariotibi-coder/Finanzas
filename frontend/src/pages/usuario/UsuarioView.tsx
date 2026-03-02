@@ -258,6 +258,7 @@ export default function UsuarioView() {
     requiereGasolina: false,
   });
   const [showDestinoVehiculoMap, setShowDestinoVehiculoMap] = useState(false);
+  const [showDestinoVehiculoMapExpanded, setShowDestinoVehiculoMapExpanded] = useState(false);
   const [destinoVehiculoCoords, setDestinoVehiculoCoords] = useState<VehicleMapPoint | null>(null);
   const [isResolviendoDestinoVehiculo, setIsResolviendoDestinoVehiculo] = useState(false);
   const [destinoVehiculoMapMensaje, setDestinoVehiculoMapMensaje] = useState('');
@@ -518,6 +519,7 @@ export default function UsuarioView() {
   useEscapeKey(() => setShowModalRecibirVehiculo(false), showModalRecibirVehiculo);
   useEscapeKey(() => setShowModalDevolverVehiculo(false), showModalDevolverVehiculo);
   useEscapeKey(() => setShowModalSolicitarViaje(false), showModalSolicitarViaje);
+  useEscapeKey(() => setShowDestinoVehiculoMapExpanded(false), showDestinoVehiculoMapExpanded);
   useEscapeKey(resetExtensionState, showModalExtenderViaje);
   useEscapeKey(() => setShowVehicleReturnSuccess(false), showVehicleReturnSuccess);
 
@@ -810,6 +812,7 @@ export default function UsuarioView() {
   // Funciones para vehículos (solo coches)
   const resetSolicitarVehiculoMapState = () => {
     setShowDestinoVehiculoMap(false);
+    setShowDestinoVehiculoMapExpanded(false);
     setDestinoVehiculoCoords(null);
     setIsResolviendoDestinoVehiculo(false);
     setDestinoVehiculoMapMensaje('');
@@ -2285,14 +2288,33 @@ export default function UsuarioView() {
                   <p className="mt-1 text-xs text-rose-600">{solicitarVehiculoErrors.destino}</p>
                 )}
                 <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowDestinoVehiculoMap((prev) => !prev)}
-                    className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                  >
-                    {showDestinoVehiculoMap ? 'Ocultar mapa' : 'Seleccionar en mapa'}
-                  </button>
-                  {showDestinoVehiculoMap && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDestinoVehiculoMap((prev) => {
+                          const nextValue = !prev;
+                          if (!nextValue) {
+                            setShowDestinoVehiculoMapExpanded(false);
+                          }
+                          return nextValue;
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                      {showDestinoVehiculoMap ? 'Ocultar mapa' : 'Seleccionar en mapa'}
+                    </button>
+                    {showDestinoVehiculoMap && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDestinoVehiculoMapExpanded(true)}
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Ampliar mapa
+                      </button>
+                    )}
+                  </div>
+                  {showDestinoVehiculoMap && !showDestinoVehiculoMapExpanded && (
                     <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2">
                       <p className="text-[11px] text-gray-600">
                         Haz clic en el mapa para seleccionar el destino.
@@ -2430,6 +2452,50 @@ export default function UsuarioView() {
       )}
 
       {/* Modal para solicitar viaje (avión, camión, hotel) */}
+      {showModalSolicitarVehiculo && showDestinoVehiculoMapExpanded && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 p-2 backdrop-blur-sm sm:p-4">
+          <div className="flex h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 sm:px-5">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 sm:text-base">Mapa ampliado del destino</h3>
+                <p className="text-xs text-slate-500">Haz clic para actualizar el destino seleccionado.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDestinoVehiculoMapExpanded(false)}
+                className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 p-3 sm:p-4">
+              <div className="h-full overflow-hidden rounded-xl border border-slate-200">
+                <MapContainer
+                  center={destinoVehiculoCoords ? [destinoVehiculoCoords.lat, destinoVehiculoCoords.lng] : VEHICLE_DESTINATION_MAP_CENTER}
+                  zoom={destinoVehiculoCoords ? 13 : 5}
+                  scrollWheelZoom={true}
+                  className="h-full w-full"
+                >
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <VehicleDestinationMapClick onSelect={handleSeleccionDestinoVehiculoEnMapa} />
+                  {destinoVehiculoCoords && (
+                    <CircleMarker
+                      center={[destinoVehiculoCoords.lat, destinoVehiculoCoords.lng]}
+                      radius={9}
+                      pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+                    />
+                  )}
+                </MapContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {showModalSolicitarViaje && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
