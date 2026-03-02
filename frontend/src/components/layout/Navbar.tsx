@@ -56,7 +56,7 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
-  const [viaticosUsuario] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
+  const [viaticosPm] = useLocalStorageState<Viatico[]>('pm-portal:viaticos', []);
   const [viaticosResueltos] = useLocalStorageState<string[]>('pm-portal:viaticosResueltos', []);
   const [viajesPendientesPm] = useLocalStorageState<SolicitudViaje[]>('pm-portal:viajesPendientes', []);
   const [viaticosAdmin] = useLocalStorageState<Viatico[]>('viaticos:list', []);
@@ -66,7 +66,8 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
   const [amexTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
   const [viajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
 
-  const portalPmViaticosPendientes = viaticosUsuario.filter((viatico) => {
+  const portalPmViaticosSource = viaticosPm.length > 0 ? viaticosPm : viaticosAdmin;
+  const portalPmViaticosPendientes = portalPmViaticosSource.filter((viatico) => {
     const hasExtensionRequest = Boolean(getPendingViaticoExtension(viatico.comentarios));
     const isSolicitudInicial = viatico.status === 'pendiente' && !viaticosResueltos.includes(String(viatico.id));
     return hasExtensionRequest || isSolicitudInicial;
@@ -74,7 +75,12 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
   const portalPmBadge = portalPmViaticosPendientes + viajesPendientesPm.length;
   const viaticosBadge = viaticosAdmin.filter((viatico) => viatico.status === 'pendiente').length;
   const dispersionBadge = dispersionPendientes.length;
-  const recuperacionBadge = recuperacionPendientes.length;
+  const recuperacionBadge = recuperacionPendientes.filter((viatico) => {
+    const saldo = typeof viatico.saldoRestante === 'number'
+      ? viatico.saldoRestante
+      : Math.max((viatico.montoDispersado ?? 0) - (viatico.montoGastado ?? 0), 0);
+    return saldo > 0;
+  }).length;
   const conciliacionBadge = conciliacionAlertas.length;
   const amexBadge = amexTickets.filter((ticket) => !ticket.matched).length;
   const viajesBadge = viajesSolicitudes.filter((viaje) => viaje.status === 'pendiente' || viaje.status === 'en_proceso').length;
