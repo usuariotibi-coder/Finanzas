@@ -306,8 +306,8 @@ export default function UsuarioView() {
     observaciones: '',
   });
 
-  const [fotoRecepcion, setFotoRecepcion] = useState<File | null>(null);
-  const [fotoEntrega, setFotoEntrega] = useState<File | null>(null);
+  const [fotoRecepcion, setFotoRecepcion] = useState<File[]>([]);
+  const [fotoEntrega, setFotoEntrega] = useState<File[]>([]);
   const [kmInicial, setKmInicial] = useLocalStorageState<number>('usuario:kmInicial', 0);
   const [kmFinal, setKmFinal] = useLocalStorageState<number>('usuario:kmFinal', 0);
 
@@ -398,7 +398,7 @@ export default function UsuarioView() {
         : kmInicialAsignado > 0 && kmFinal < kmInicialAsignado
         ? 'El kilometraje final debe ser mayor o igual al inicial.'
         : '',
-      foto: !fotoEntrega ? 'Agrega al menos una foto.' : '',
+      foto: fotoEntrega.length === 0 ? 'Agrega al menos una foto.' : '',
     }
     : {};
   const gastoArchivoError = showGastoDocumentoErrors && !pdfFile && !ticketFile
@@ -970,7 +970,13 @@ export default function UsuarioView() {
     try {
       const persisted = await updateFlotillaAsignacion(assignment.id, {
         kmInicial,
-        checklistRecepcion: { ...checklistRecepcion, foto: fotoRecepcion?.name },
+        checklistRecepcion: {
+          ...checklistRecepcion,
+          foto: fotoRecepcion[0]?.name,
+          fotos: fotoRecepcion
+            .filter((file): file is File => Boolean(file))
+            .map((file) => file.name),
+        },
         status: 'activo',
       });
 
@@ -984,7 +990,7 @@ export default function UsuarioView() {
       setShowModalRecibirVehiculo(false);
       setAssignmentSeleccionado(null);
       setKmInicial(0);
-      setFotoRecepcion(null);
+      setFotoRecepcion([]);
       setShowRecibirErrors(false);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo registrar la recepcion del vehiculo.', 'error');
@@ -995,7 +1001,7 @@ export default function UsuarioView() {
     const assignment = vehicleAssignments.find(a => a.id === assignmentSeleccionado);
     if (!assignment || !assignment.kmInicial) return;
 
-    if (kmFinal <= 0 || !fotoEntrega || kmFinal < assignment.kmInicial) {
+    if (kmFinal <= 0 || fotoEntrega.length === 0 || kmFinal < assignment.kmInicial) {
       setShowDevolverErrors(true);
       return;
     }
@@ -1003,7 +1009,13 @@ export default function UsuarioView() {
     try {
       const persisted = await updateFlotillaAsignacion(assignment.id, {
         kmFinal,
-        checklistEntrega: { ...checklistEntrega, foto: fotoEntrega?.name },
+        checklistEntrega: {
+          ...checklistEntrega,
+          foto: fotoEntrega[0]?.name,
+          fotos: fotoEntrega
+            .filter((file): file is File => Boolean(file))
+            .map((file) => file.name),
+        },
         fechaFin: new Date().toISOString().split('T')[0],
         status: 'completado',
       });
@@ -1019,7 +1031,7 @@ export default function UsuarioView() {
       setShowDevolverErrors(false);
       setAssignmentSeleccionado(null);
       setKmFinal(0);
-      setFotoEntrega(null);
+      setFotoEntrega([]);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo registrar la devolucion del vehiculo.', 'error');
     }
@@ -2922,8 +2934,8 @@ interface VehicleChecklistModalProps {
   setChecklist: (checklist: VehicleConditionChecklist) => void;
   km: number;
   setKm: (km: number) => void;
-  foto: File | null;
-  setFoto: (foto: File | null) => void;
+  foto: File[];
+  setFoto: (foto: File[]) => void;
   errors?: {
     km?: string;
     foto?: string;
@@ -2937,24 +2949,23 @@ interface VehicleChecklistModalProps {
 function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto, setFoto, errors, onSubmit, onCancel, requireAllFields = false }: VehicleChecklistModalProps) {
   useEscapeKey(onCancel);
   const [kmInput, setKmInput] = useState<string>(km > 0 ? String(km) : '');
-  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
-  const [selectedPhotoSlot, setSelectedPhotoSlot] = useState<number>(1);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
     setKmInput(km > 0 ? String(km) : '');
   }, [km]);
 
   useEffect(() => {
-    if (!foto) {
-      setPhotoPreviewUrl(null);
+    if (!foto.length) {
+      setPhotoPreviewUrls([]);
       return;
     }
 
-    const previewUrl = URL.createObjectURL(foto);
-    setPhotoPreviewUrl(previewUrl);
+    const previewUrls = foto.map((file) => URL.createObjectURL(file));
+    setPhotoPreviewUrls(previewUrls);
 
     return () => {
-      URL.revokeObjectURL(previewUrl);
+      previewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [foto]);
 
@@ -3121,18 +3132,18 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                   Fotos (hasta 3) {requireAllFields && <span className="text-rose-500">*</span>}
                 </label>
                 <p className="mb-2 text-[11px] text-slate-500">Agrega evidencia visual del estado.</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {[1, 2, 3].map((index) => (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {[0, 1, 2].map((index) => (
                     <label
                       key={index}
                       className={`flex aspect-[5/3] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
                         fotoError ? 'border-rose-300 bg-rose-50' : 'border-slate-300 bg-slate-50 hover:border-primary-500 hover:bg-slate-100'
                       }`}
                     >
-                      {index === selectedPhotoSlot && photoPreviewUrl ? (
+                      {photoPreviewUrls[index] ? (
                         <>
                           <img
-                            src={photoPreviewUrl}
+                            src={photoPreviewUrls[index]}
                             alt="Vista previa"
                             className="h-full w-full rounded-md object-cover"
                           />
@@ -3152,17 +3163,23 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                         accept="image/*"
                         onChange={(event) => {
                           const selected = event.target.files?.[0] || null;
-                          setFoto(selected);
-                          if (selected) {
-                            setSelectedPhotoSlot(index);
+                          if (!selected) {
+                            return;
                           }
+                          const nextPhotos = [...foto];
+                          nextPhotos[index] = selected;
+                          setFoto(nextPhotos.slice(0, 3));
                         }}
                         className="hidden"
                       />
                     </label>
                   ))}
                 </div>
-                {foto && <p className="mt-2 text-[11px] text-slate-500">Foto seleccionada: {foto.name}</p>}
+                {foto.length > 0 && (
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    Fotos seleccionadas: {foto.filter((file): file is File => Boolean(file)).map((file) => file.name).join(', ')}
+                  </p>
+                )}
                 {fotoError && <p className="mt-2 text-xs text-rose-600">{fotoError}</p>}
               </div>
             </div>
