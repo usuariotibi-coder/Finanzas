@@ -472,6 +472,9 @@ export default function Flotilla() {
   const vehiculosEnTaller = vehiclesWithStatus.filter(v => v.status === 'in_shop').length;
   const alertasPendientes = alerts.filter(a => !(a.atendido ?? a.attended)).length;
   const solicitudesPendientes = assignments.filter(a => a.status === 'solicitado');
+  const entregasPendientesValidacion = assignments.filter(
+    (assignment) => assignment.status === 'completado' && !isEntregaLiberada(assignment)
+  );
   const asignacionesActivas = assignments.filter(a => a.status !== 'completado');
   const asignacionesCompletadas = assignments.filter(a => a.status === 'completado');
   const selectedAssignment = selectedAssignmentId
@@ -527,6 +530,14 @@ export default function Flotilla() {
   const handleOpenRevisionEntregaModal = (assignmentId: string) => {
     setSelectedAssignmentId(assignmentId);
     setShowRevisionEntregaModal(true);
+  };
+
+  const handleOpenRevisionEntregas = () => {
+    setActiveTab('asignaciones');
+    if (entregasPendientesValidacion.length > 0) {
+      setSelectedAssignmentId(entregasPendientesValidacion[0].id);
+      setShowRevisionEntregaModal(true);
+    }
   };
 
   const handleCloseRevisionEntregaModal = () => {
@@ -765,6 +776,20 @@ export default function Flotilla() {
                   {solicitudesPendientes.length > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-[18px] text-center font-semibold shadow">
                       {solicitudesPendientes.length > 99 ? '99+' : solicitudesPendientes.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={handleOpenRevisionEntregas}
+                  className="relative px-2 py-1 text-[10px] bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-7 9l2 2 4-4" />
+                  </svg>
+                  <span>Revisar Entregas</span>
+                  {entregasPendientesValidacion.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-[18px] text-center font-semibold shadow">
+                      {entregasPendientesValidacion.length > 99 ? '99+' : entregasPendientesValidacion.length}
                     </span>
                   )}
                 </button>
