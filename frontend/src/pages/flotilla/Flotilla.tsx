@@ -375,8 +375,15 @@ const normalizeEntregaPhotoPath = (value: string) => {
   if (normalized.startsWith('media/')) {
     return `/${normalized}`;
   }
+  if (normalized.startsWith('flotilla/')) {
+    return `/media/${normalized}`;
+  }
+  if (normalized.startsWith('odometro/')) {
+    return `/media/flotilla/${normalized}`;
+  }
 
-  return `/media/${normalized.replace(/^\/+/, '')}`;
+  // Legacy records may store only file name; delivery photos are uploaded to flotilla/odometro.
+  return `/media/flotilla/odometro/${normalized.replace(/^\/+/, '')}`;
 };
 
 
