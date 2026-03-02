@@ -881,14 +881,14 @@ export default function Flotilla() {
               {assignments.length > 0 ? (
                 <div className="space-y-3">
                   {asignacionesActivas.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5">
-                      <div className="mb-2 flex items-center justify-between">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2">
+                      <div className="mb-1.5 flex items-center justify-between">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">Activas</p>
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
                           {asignacionesActivas.length}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
                         {asignacionesActivas.map((assignment) => (
                           <AssignmentCard
                             key={assignment.id}
@@ -902,14 +902,14 @@ export default function Flotilla() {
                     </div>
                   )}
                   {asignacionesCompletadas.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-emerald-50/40 p-2.5">
-                      <div className="mb-2 flex items-center justify-between">
+                    <div className="rounded-xl border border-slate-200 bg-emerald-50/40 p-2">
+                      <div className="mb-1.5 flex items-center justify-between">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">Finalizadas</p>
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                           {asignacionesCompletadas.length}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
                         {asignacionesCompletadas.map((assignment) => (
                           <AssignmentCard
                             key={assignment.id}
@@ -1300,68 +1300,68 @@ function AssignmentCard({
   })();
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <span className={`absolute inset-y-0 left-0 w-1 ${accentByStatus[assignment.status] ?? 'bg-slate-400'}`} />
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-2">
-            <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+          <div className="flex items-start gap-1.5">
+            <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-semibold text-blue-700">
               {statusIcon}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">{vehicleLabel}</p>
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="truncate text-[13px] font-semibold text-slate-900">{vehicleLabel}</p>
+              <p className="mt-0.5 truncate text-[10px] text-slate-500">
                 {assignment.motivo} - Desde {formatDate(assignment.fechaInicio)}
               </p>
             </div>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusBadge.color}`}>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${statusBadge.color}`}>
               {statusBadge.label}
             </span>
             {isCompleted && (
-              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+              <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                 entregaLiberada ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
               }`}>
                 {entregaLiberada ? 'Liberacion validada' : 'Pendiente liberacion'}
               </span>
             )}
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+            <span className="max-w-[150px] truncate rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
               Asignado a: {assignment.userName}
             </span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium capitalize text-slate-700">
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium capitalize text-slate-700">
               Proposito: {assignment.proposito}
             </span>
             {(assignment.origen || assignment.destino) && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+              <span className="max-w-[180px] truncate rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
                 Ruta: {assignment.origen || 'N/A'} - {assignment.destino || 'N/A'}
               </span>
             )}
           </div>
         </div>
 
-        <div className="w-[120px] flex-shrink-0 rounded-lg border border-slate-200 bg-slate-50 p-2 text-right">
+        <div className="w-[96px] flex-shrink-0 rounded-lg border border-slate-200 bg-slate-50 p-1.5 text-right">
           <p className="text-[10px] uppercase tracking-wide text-slate-500">KM Inicial</p>
-          <p className="text-xs font-semibold text-slate-900">{assignment.kmInicial.toLocaleString()}</p>
+          <p className="text-[11px] font-semibold text-slate-900">{assignment.kmInicial.toLocaleString()}</p>
           {isCompleted && (
             <>
               <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">KM Final</p>
-              <p className="text-xs font-semibold text-slate-900">{kmFinalText}</p>
+              <p className="text-[11px] font-semibold text-slate-900">{kmFinalText}</p>
             </>
           )}
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5 border-t border-slate-100 pt-2">
+      <div className="mt-1.5 flex flex-wrap items-center justify-end gap-1 border-t border-slate-100 pt-1.5">
         {isCompleted ? (
-          <span className="inline-flex items-center justify-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+          <span className="inline-flex items-center justify-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
             {'\ud83c\udfc1'} Finalizado
           </span>
         ) : (
           <button
             onClick={onFinalize}
-            className="inline-flex items-center justify-center gap-1 rounded-full bg-primary-600 px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+            className="inline-flex items-center justify-center gap-1 rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500/50"
           >
             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1372,7 +1372,7 @@ function AssignmentCard({
         {canReviewEntrega && (
           <button
             onClick={onReviewEntrega}
-            className="inline-flex items-center justify-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-200"
+            className="inline-flex items-center justify-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 transition hover:bg-slate-200"
           >
             Revisar entrega
           </button>
