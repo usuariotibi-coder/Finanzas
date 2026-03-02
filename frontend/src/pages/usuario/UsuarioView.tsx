@@ -40,6 +40,34 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
+const toUniqueTextParts = (parts: Array<string | undefined | null>) => {
+  const seen = new Set<string>();
+  return parts
+    .map((value) => (value || '').trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const normalized = normalizeText(value);
+      if (!normalized || seen.has(normalized)) {
+        return false;
+      }
+      seen.add(normalized);
+      return true;
+    });
+};
+
+const joinUniqueTextParts = (parts: Array<string | undefined | null>) => toUniqueTextParts(parts).join(', ');
+
+const isLikelyBusinessName = (name: string) => {
+  const normalized = normalizeText(name);
+  if (!normalized) {
+    return false;
+  }
+  if (/^(calle|av|avenida|blvd|boulevard|carretera|camino|autopista|ruta)\b/.test(normalized)) {
+    return false;
+  }
+  return true;
+};
+
 type VehicleDestinationDetails = {
   poi?: string;
   road?: string;
@@ -84,7 +112,7 @@ const getOverpassElementPoint = (element: OverpassElement): VehicleMapPoint | nu
 };
 
 const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]> => {
-  const radiusMeters = 450;
+  const radiusMeters = 900;
   const overpassQuery = `
 [out:json][timeout:8];
 (
@@ -93,19 +121,34 @@ const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]
   node(around:${radiusMeters},${lat},${lng})["office"]["name"];
   node(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
   node(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["retail"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
   node(around:${radiusMeters},${lat},${lng})["brand"];
+  node(around:${radiusMeters},${lat},${lng})["operator"];
   way(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
   way(around:${radiusMeters},${lat},${lng})["shop"]["name"];
   way(around:${radiusMeters},${lat},${lng})["office"]["name"];
   way(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
   way(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["retail"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
   way(around:${radiusMeters},${lat},${lng})["brand"];
+  way(around:${radiusMeters},${lat},${lng})["operator"];
   relation(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["shop"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["office"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["retail"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["brand"];
+  relation(around:${radiusMeters},${lat},${lng})["operator"];
 );
 out center 60;
 `;
@@ -152,17 +195,17 @@ out center 60;
         };
       })
       .filter((item): item is { name: string; distance: number } => Boolean(item))
-      .filter((item) => item.distance <= 900)
+      .filter((item) => item.distance <= 1800)
       .sort((a, b) => a.distance - b.distance)
       .filter((item) => {
         const normalizedName = normalizeText(item.name);
-        if (!normalizedName || unique.has(normalizedName)) {
+        if (!normalizedName || !isLikelyBusinessName(item.name) || unique.has(normalizedName)) {
           return false;
         }
         unique.add(normalizedName);
         return true;
       })
-      .slice(0, 5)
+      .slice(0, 8)
       .map((item) => item.name);
 
     return ranked;
@@ -998,7 +1041,8 @@ export default function UsuarioView() {
         address?: Record<string, string | undefined>;
       };
       const address = data.address ?? {};
-      const displayNameMain = data.display_name?.split(',')[0]?.trim() || '';
+      const displayNameParts = toUniqueTextParts((data.display_name || '').split(','));
+      const displayNameMain = displayNameParts[0] || '';
       const poiCandidates = [
         data.name,
         address.amenity,
@@ -1013,32 +1057,25 @@ export default function UsuarioView() {
         displayNameMain,
       ]
         .map((value) => (value || '').trim())
-        .filter(Boolean);
-      const poi = poiCandidates[0];
+        .filter((value) => Boolean(value) && isLikelyBusinessName(value));
       const road = address.road || address.pedestrian || address.footway || address.path || address.highway;
-      const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet;
-      const city = address.city || address.town || address.village || address.municipality || address.county;
-      const state = address.state;
+      const rawNeighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet;
+      const rawCity = address.city || address.town || address.village || address.municipality || address.county;
+      const rawState = address.state;
       const postcode = address.postcode;
       const country = address.country;
       const nearbyPlaces = await fetchNearbyPlaceNames(lat, lng);
-      const resolvedPoi = poi || nearbyPlaces[0];
+      const resolvedPoi = toUniqueTextParts([poiCandidates[0], nearbyPlaces[0], displayNameMain])[0] || '';
 
-      const direccion = [
-        resolvedPoi,
-        road,
-        neighborhood,
-        city,
-        state,
-        postcode,
-        country,
-      ]
-        .filter((part): part is string => Boolean(part && part.trim()))
-        .join(', ') || data.display_name?.split(',').slice(0, 7).join(',').trim() || coordenadasFallback;
+      const [neighborhood, city, state] = toUniqueTextParts([rawNeighborhood, rawCity, rawState]);
+      const direccion =
+        joinUniqueTextParts([resolvedPoi, road, neighborhood, city, state, postcode, country]) ||
+        displayNameParts.slice(0, 7).join(', ') ||
+        coordenadasFallback;
 
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: direccion }));
       setDestinoVehiculoDetalles({
-        poi: resolvedPoi,
+        poi: resolvedPoi || undefined,
         road,
         neighborhood,
         city,
@@ -2566,7 +2603,7 @@ export default function UsuarioView() {
                         ) : null}
                         {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
                           <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-700">
-                            Zona: {[destinoVehiculoDetalles.city, destinoVehiculoDetalles.state].filter(Boolean).join(', ')}
+                            Zona: {joinUniqueTextParts([destinoVehiculoDetalles.city, destinoVehiculoDetalles.state])}
                           </span>
                         )}
                       </div>
@@ -2712,12 +2749,12 @@ export default function UsuarioView() {
                   ) : null}
                   {(destinoVehiculoDetalles?.neighborhood || destinoVehiculoDetalles?.city) && (
                     <span className="rounded bg-violet-50 px-1.5 py-0.5 text-violet-700">
-                      Zona: {[destinoVehiculoDetalles.neighborhood, destinoVehiculoDetalles.city].filter(Boolean).join(', ')}
+                      Zona: {joinUniqueTextParts([destinoVehiculoDetalles.neighborhood, destinoVehiculoDetalles.city])}
                     </span>
                   )}
                   {(destinoVehiculoDetalles?.state || destinoVehiculoDetalles?.postcode) && (
                     <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">
-                      Estado/CP: {[destinoVehiculoDetalles.state, destinoVehiculoDetalles.postcode].filter(Boolean).join(', ')}
+                      Estado/CP: {joinUniqueTextParts([destinoVehiculoDetalles.state, destinoVehiculoDetalles.postcode])}
                     </span>
                   )}
                   {destinoVehiculoDetalles?.country && (

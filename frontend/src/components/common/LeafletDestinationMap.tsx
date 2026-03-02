@@ -37,6 +37,24 @@ const TILE_LAYER_SMOOTH_PROPS = {
   updateWhenIdle: true as const,
 };
 
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const isLikelyBusinessName = (name: string) => {
+  const normalized = normalizeText(name);
+  if (!normalized) {
+    return false;
+  }
+  if (/^(calle|av|avenida|blvd|boulevard|carretera|camino|autopista|ruta)\b/.test(normalized)) {
+    return false;
+  }
+  return true;
+};
+
 function MapViewportSync({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
@@ -86,7 +104,7 @@ const fetchNearbyPlacesForMap = async (
   lng: number,
   signal: AbortSignal
 ): Promise<NearbyPlacePoint[]> => {
-  const radiusMeters = 750;
+  const radiusMeters = 1200;
   const overpassQuery = `
 [out:json][timeout:8];
 (
@@ -95,19 +113,34 @@ const fetchNearbyPlacesForMap = async (
   node(around:${radiusMeters},${lat},${lng})["office"]["name"];
   node(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
   node(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["retail"]["name"];
+  node(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
   node(around:${radiusMeters},${lat},${lng})["brand"];
+  node(around:${radiusMeters},${lat},${lng})["operator"];
   way(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
   way(around:${radiusMeters},${lat},${lng})["shop"]["name"];
   way(around:${radiusMeters},${lat},${lng})["office"]["name"];
   way(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
   way(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["retail"]["name"];
+  way(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
   way(around:${radiusMeters},${lat},${lng})["brand"];
+  way(around:${radiusMeters},${lat},${lng})["operator"];
   relation(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["shop"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["office"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["retail"]["name"];
+  relation(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
   relation(around:${radiusMeters},${lat},${lng})["brand"];
+  relation(around:${radiusMeters},${lat},${lng})["operator"];
 );
 out center 80;
 `;
@@ -149,8 +182,8 @@ out center 80;
       if (!placeName || !point) {
         return null;
       }
-      const normalized = placeName.toLowerCase().trim();
-      if (!normalized || unique.has(normalized)) {
+      const normalized = normalizeText(placeName);
+      if (!normalized || !isLikelyBusinessName(placeName) || unique.has(normalized)) {
         return null;
       }
       unique.add(normalized);
@@ -162,9 +195,9 @@ out center 80;
       };
     })
     .filter((value): value is { name: string; lat: number; lng: number; distance: number } => Boolean(value))
-    .filter((value) => value.distance <= 1000)
+    .filter((value) => value.distance <= 1800)
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, 10)
+    .slice(0, 14)
     .map((value) => ({ name: value.name, lat: value.lat, lng: value.lng }));
 
   return places;
