@@ -220,6 +220,9 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   const conciliacionBadge = conciliacionAlertas.length;
   const amexBadge = amexTickets.filter((ticket) => !ticket.matched).length;
   const viajesBadge = viajesSolicitudes.filter((viaje) => viaje.status === 'pendiente' || viaje.status === 'en_proceso').length;
+  const miPortalBadge = vehicleAssignments.filter((assignment) => (
+    assignment.userId === String(user?.id) && assignment.status === 'asignado'
+  )).length;
   const flotillaBadge = vehicleAssignments.filter((assignment) => {
     const status = String(assignment.status);
     if (status === 'solicitado' || status === 'pendiente') {
@@ -277,6 +280,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
               {(() => {
                 const badgeMap: Record<string, number> = {
+                  '/mi-portal': miPortalBadge,
                   '/portal-pm': portalPmBadge,
                   '/viaticos': viaticosBadge,
                   '/dispersion': dispersionBadge,

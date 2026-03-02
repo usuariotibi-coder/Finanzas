@@ -4,7 +4,7 @@ import { roleLabels } from '../../context/AuthContext';
 import useAuth from '../../hooks/useAuth';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, Viatico } from '../../types';
+import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, VehicleAssignment, Viatico } from '../../types';
 import { canAccessPath } from '../../utils/access';
 import { getPendingViaticoExtension } from '../../utils/viaticoExtensions';
 import { api } from '../../utils/api';
@@ -21,6 +21,24 @@ interface NotificationItem {
   count: number;
   path: string;
 }
+
+const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
+
+const readVehicleAssignments = (): VehicleAssignment[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+  const raw = localStorage.getItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY);
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as VehicleAssignment[]) : [];
+  } catch {
+    return [];
+  }
+};
 
 const strengthMeta = [
   { label: 'Muy debil', color: 'bg-red-500', text: 'text-red-600' },
@@ -65,6 +83,37 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
   const [conciliacionAlertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
   const [amexTickets] = useLocalStorageState<TicketAMEX[]>('amex:tickets', []);
   const [viajesSolicitudes] = useLocalStorageState<SolicitudViaje[]>('viajes:solicitudes', []);
+  const [vehicleAssignments, setVehicleAssignments] = useState<VehicleAssignment[]>(readVehicleAssignments);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const syncAssignments = () => {
+      setVehicleAssignments(readVehicleAssignments());
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === VEHICLE_ASSIGNMENTS_STORAGE_KEY) {
+        syncAssignments();
+      }
+    };
+
+    const handleCustom = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string }>).detail;
+      if (detail?.key === VEHICLE_ASSIGNMENTS_STORAGE_KEY) {
+        syncAssignments();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('app-storage-change', handleCustom);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('app-storage-change', handleCustom);
+    };
+  }, []);
 
   const portalPmViaticosSource = viaticosPm.length > 0 ? viaticosPm : viaticosAdmin;
   const portalPmViaticosPendientes = portalPmViaticosSource.filter((viatico) => {
@@ -84,9 +133,21 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
   const conciliacionBadge = conciliacionAlertas.length;
   const amexBadge = amexTickets.filter((ticket) => !ticket.matched).length;
   const viajesBadge = viajesSolicitudes.filter((viaje) => viaje.status === 'pendiente' || viaje.status === 'en_proceso').length;
+  const miPortalBadge = vehicleAssignments.filter((assignment) => (
+    assignment.userId === String(user?.id) && assignment.status === 'asignado'
+  )).length;
 
   const notifications = useMemo<NotificationItem[]>(() => {
     const items: NotificationItem[] = [];
+    if (miPortalBadge > 0) {
+      items.push({
+        id: 'mi-portal',
+        title: 'Mi Portal',
+        description: `Vehiculos por recibir: ${miPortalBadge}`,
+        count: miPortalBadge,
+        path: '/mi-portal',
+      });
+    }
     if (portalPmBadge > 0) {
       items.push({
         id: 'portal-pm',
@@ -152,6 +213,7 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
     }
     return items.filter((item) => canAccessPath(user?.role, item.path));
   }, [
+    miPortalBadge,
     portalPmBadge,
     viaticosBadge,
     dispersionBadge,
@@ -183,6 +245,14 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
 
   const getNotificationStyle = (id: string) => {
     const styles = {
+      'mi-portal': {
+        label: 'MP',
+        bg: 'bg-primary-100',
+        text: 'text-primary-700',
+        badge: 'bg-accent-500',
+        border: 'border-primary-100',
+        ring: 'ring-primary-100',
+      },
       'portal-pm': {
         label: 'PM',
         bg: 'bg-primary-50',
