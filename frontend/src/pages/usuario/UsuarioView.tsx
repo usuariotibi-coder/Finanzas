@@ -37,6 +37,7 @@ const VEHICLE_DESTINATION_OSM_ATTRIBUTION = '&copy; OpenStreetMap contributors';
 const VEHICLE_DESTINATION_CARTO_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
 const VEHICLE_DESTINATION_ESRI_ATTRIBUTION =
   'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+const VEHICLE_TILE_LAYER_SMOOTH_PROPS = { keepBuffer: 8, updateWhenZooming: false as const };
 
 type VehicleMapPoint = { lat: number; lng: number };
 const normalizeText = (value: string) =>
@@ -201,6 +202,7 @@ function VehicleDestinationLayeredMap({
       minZoom={4}
       maxZoom={20}
       scrollWheelZoom={true}
+      fadeAnimation={false}
       className="h-full w-full"
     >
       <LayersControl position="topright" collapsed={compact}>
@@ -209,24 +211,35 @@ function VehicleDestinationLayeredMap({
             attribution={VEHICLE_DESTINATION_CARTO_ATTRIBUTION}
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             subdomains={['a', 'b', 'c', 'd']}
+            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
           />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Calles clasico">
           <TileLayer
             attribution={VEHICLE_DESTINATION_OSM_ATTRIBUTION}
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
           />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Satelite">
           <TileLayer
             attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
           />
         </LayersControl.BaseLayer>
+        <LayersControl.Overlay checked name="Calles sobre satelite">
+          <TileLayer
+            attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
+            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
+          />
+        </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Etiquetas (calles/lugares)">
           <TileLayer
             attribution={VEHICLE_DESTINATION_ESRI_ATTRIBUTION}
             url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+            {...VEHICLE_TILE_LAYER_SMOOTH_PROPS}
           />
         </LayersControl.Overlay>
       </LayersControl>
@@ -2767,7 +2780,7 @@ export default function UsuarioView() {
                 </div>
               </div>
               <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs text-blue-800">
-                Capas visibles: esquina superior derecha del mapa. Puedes alternar entre "Calles + lugares", "Calles clasico", "Satelite" y "Etiquetas".
+                Capas visibles: esquina superior derecha del mapa. Puedes alternar entre "Calles + lugares", "Calles clasico", "Satelite", "Calles sobre satelite" y "Etiquetas".
               </div>
               <div className="mt-2 flex-1 overflow-hidden rounded-xl border border-slate-200">
                 <VehicleDestinationLayeredMap

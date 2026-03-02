@@ -59,6 +59,7 @@ const OSM_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors';
 const CARTO_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
 const ESRI_IMAGERY_ATTRIBUTION =
   'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+const MAP_TILE_SMOOTH_PROPS = { keepBuffer: 8, updateWhenZooming: false as const };
 
 interface DestinationLayeredMapProps {
   coords: [number, number];
@@ -76,6 +77,7 @@ function DestinationLayeredMap({ coords, destinationLabel, compact = false }: De
       minZoom={4}
       maxZoom={20}
       scrollWheelZoom={true}
+      fadeAnimation={false}
       className="h-full w-full"
     >
       <LayersControl position="topright">
@@ -84,21 +86,35 @@ function DestinationLayeredMap({ coords, destinationLabel, compact = false }: De
             attribution={CARTO_TILE_ATTRIBUTION}
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             subdomains={['a', 'b', 'c', 'd']}
+            {...MAP_TILE_SMOOTH_PROPS}
           />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Mapa clasico">
-          <TileLayer attribution={OSM_TILE_ATTRIBUTION} url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <TileLayer
+            attribution={OSM_TILE_ATTRIBUTION}
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            {...MAP_TILE_SMOOTH_PROPS}
+          />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Satelite">
           <TileLayer
             attribution={ESRI_IMAGERY_ATTRIBUTION}
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            {...MAP_TILE_SMOOTH_PROPS}
           />
         </LayersControl.BaseLayer>
+        <LayersControl.Overlay checked name="Calles sobre satelite">
+          <TileLayer
+            attribution={ESRI_IMAGERY_ATTRIBUTION}
+            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+            {...MAP_TILE_SMOOTH_PROPS}
+          />
+        </LayersControl.Overlay>
         <LayersControl.Overlay checked name="Etiquetas de lugares">
           <TileLayer
             attribution={ESRI_IMAGERY_ATTRIBUTION}
             url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+            {...MAP_TILE_SMOOTH_PROPS}
           />
         </LayersControl.Overlay>
       </LayersControl>
