@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import useAuth from '../../hooks/useAuth';
-import { CircleMarker, MapContainer, TileLayer } from 'react-leaflet';
+import { CircleMarker, LayersControl, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { Vehicle, VehicleAssignment, VehicleAlert, CargaGasolina, MaintenanceRecord, VehicleConditionChecklist } from '../../types';
@@ -54,6 +54,66 @@ const parseCoordinatesFromText = (value: string): [number, number] | null => {
 
   return null;
 };
+
+const OSM_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors';
+const CARTO_TILE_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
+const ESRI_IMAGERY_ATTRIBUTION =
+  'Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community';
+
+interface DestinationLayeredMapProps {
+  coords: [number, number];
+  destinationLabel: string;
+  compact?: boolean;
+}
+
+function DestinationLayeredMap({ coords, destinationLabel, compact = false }: DestinationLayeredMapProps) {
+  const tooltipText = destinationLabel || 'Destino seleccionado';
+
+  return (
+    <MapContainer
+      center={coords}
+      zoom={compact ? 15 : 17}
+      minZoom={4}
+      maxZoom={20}
+      scrollWheelZoom={true}
+      className="h-full w-full"
+    >
+      <LayersControl position="topright">
+        <LayersControl.BaseLayer checked name="Mapa detallado">
+          <TileLayer
+            attribution={CARTO_TILE_ATTRIBUTION}
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            subdomains={['a', 'b', 'c', 'd']}
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Mapa clasico">
+          <TileLayer attribution={OSM_TILE_ATTRIBUTION} url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="Satelite">
+          <TileLayer
+            attribution={ESRI_IMAGERY_ATTRIBUTION}
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          />
+        </LayersControl.BaseLayer>
+        <LayersControl.Overlay checked name="Etiquetas de lugares">
+          <TileLayer
+            attribution={ESRI_IMAGERY_ATTRIBUTION}
+            url="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+          />
+        </LayersControl.Overlay>
+      </LayersControl>
+      <CircleMarker
+        center={coords}
+        radius={8}
+        pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+      >
+        <Tooltip permanent={!compact} direction="top" offset={[0, -8]}>
+          {tooltipText}
+        </Tooltip>
+      </CircleMarker>
+    </MapContainer>
+  );
+}
 
 const getVehicleFallbackImage = (brand: string, model: string) => {
   const title = `${brand} ${model}`.trim() || 'Vehiculo';
@@ -2740,22 +2800,11 @@ function AssignmentModal({
                       {!showExpandedMap ? (
                         summaryMapCoords ? (
                           <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
-                            <MapContainer
-                              center={summaryMapCoords}
-                              zoom={14}
-                              scrollWheelZoom={true}
-                              className="h-full w-full"
-                            >
-                              <TileLayer
-                                attribution='&copy; OpenStreetMap contributors'
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                              />
-                              <CircleMarker
-                                center={summaryMapCoords}
-                                radius={8}
-                                pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-                              />
-                            </MapContainer>
+                            <DestinationLayeredMap
+                              coords={summaryMapCoords}
+                              destinationLabel={summaryDestination}
+                              compact
+                            />
                           </div>
                         ) : summaryDestinationEmbedUrl ? (
                           <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
@@ -2854,22 +2903,7 @@ function AssignmentModal({
             <div className="flex-1 p-2">
               {summaryMapCoords ? (
                 <div className="h-full overflow-hidden rounded-lg border border-slate-200">
-                  <MapContainer
-                    center={summaryMapCoords}
-                    zoom={14}
-                    scrollWheelZoom={true}
-                    className="h-full w-full"
-                  >
-                    <TileLayer
-                      attribution='&copy; OpenStreetMap contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <CircleMarker
-                      center={summaryMapCoords}
-                      radius={8}
-                      pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
-                    />
-                  </MapContainer>
+                  <DestinationLayeredMap coords={summaryMapCoords} destinationLabel={summaryDestination} />
                 </div>
               ) : summaryDestinationEmbedUrl ? (
                 <div className="h-full overflow-hidden rounded-lg border border-slate-200">
