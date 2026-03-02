@@ -2374,7 +2374,14 @@ function AssignmentModal({
   onAssign: (requestId: string, vehicleId: string, vehiculoLabel: string) => Promise<void> | void;
   onClose: () => void;
 }) {
-  useEscapeKey(onClose);
+  const [showExpandedMap, setShowExpandedMap] = useState(false);
+  useEscapeKey(() => {
+    if (showExpandedMap) {
+      setShowExpandedMap(false);
+      return;
+    }
+    onClose();
+  });
   const [selectedRequestId, setSelectedRequestId] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
@@ -2396,6 +2403,7 @@ function AssignmentModal({
   const [summaryMapCoords, setSummaryMapCoords] = useState<[number, number] | null>(null);
   const [loadingSummaryMap, setLoadingSummaryMap] = useState(false);
   const [summaryMapMessage, setSummaryMapMessage] = useState('');
+  const hasMapPreview = Boolean(summaryMapCoords || summaryDestinationEmbedUrl);
 
   useEffect(() => {
     const destination = summaryDestination;
@@ -2684,9 +2692,23 @@ function AssignmentModal({
                     <div className="mt-1 rounded-xl border border-slate-200 bg-white/80 p-1.5">
                       <div className="mb-1 flex items-center justify-between">
                         <p className="text-xs font-semibold text-slate-700">Mapa del destino</p>
-                        <span className="text-[11px] text-slate-500">
-                          {loadingSummaryMap ? 'Cargando...' : summaryMapMessage}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-500">
+                            {loadingSummaryMap ? 'Cargando...' : summaryMapMessage}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowExpandedMap(true)}
+                            disabled={!hasMapPreview}
+                            className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-1 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            title={hasMapPreview ? 'Ampliar mapa' : 'No hay mapa disponible'}
+                            aria-label="Ampliar mapa"
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 3H5a2 2 0 00-2 2v3m16-5h-3m3 0v3M3 16v3a2 2 0 002 2h3m11-5v3a2 2 0 01-2 2h-3" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                       {summaryMapCoords ? (
                         <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
@@ -2779,6 +2801,62 @@ function AssignmentModal({
           </div>
         </form>
       </div>
+
+      {showExpandedMap && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-2 backdrop-blur-sm sm:p-4">
+          <div className="flex h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
+              <h3 className="text-sm font-semibold text-slate-900">Mapa ampliado del destino</h3>
+              <button
+                type="button"
+                onClick={() => setShowExpandedMap(false)}
+                className="rounded-md p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar mapa ampliado"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 p-2">
+              {summaryMapCoords ? (
+                <div className="h-full overflow-hidden rounded-lg border border-slate-200">
+                  <MapContainer
+                    center={summaryMapCoords}
+                    zoom={14}
+                    scrollWheelZoom={true}
+                    className="h-full w-full"
+                  >
+                    <TileLayer
+                      attribution='&copy; OpenStreetMap contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <CircleMarker
+                      center={summaryMapCoords}
+                      radius={8}
+                      pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+                    />
+                  </MapContainer>
+                </div>
+              ) : summaryDestinationEmbedUrl ? (
+                <div className="h-full overflow-hidden rounded-lg border border-slate-200">
+                  <iframe
+                    title={`Mapa ampliado de destino ${summaryDestination}`}
+                    src={summaryDestinationEmbedUrl}
+                    className="h-full w-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+                  No hay destino disponible para mostrar en el mapa.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
