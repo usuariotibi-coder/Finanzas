@@ -3136,7 +3136,7 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                   {[0, 1, 2].map((index) => (
                     <label
                       key={index}
-                      className={`flex aspect-[5/3] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+                      className={`relative flex aspect-[5/3] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-colors ${
                         fotoError ? 'border-rose-300 bg-rose-50' : 'border-slate-300 bg-slate-50 hover:border-primary-500 hover:bg-slate-100'
                       }`}
                     >
@@ -3147,7 +3147,9 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                             alt="Vista previa"
                             className="h-full w-full rounded-md object-cover"
                           />
-                          <span className="mt-1 px-1 text-[11px] text-slate-600">Cambiar foto</span>
+                          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 shadow-sm">
+                            Cambiar foto
+                          </span>
                         </>
                       ) : (
                         <>
@@ -3175,11 +3177,6 @@ function VehicleChecklistModal({ title, checklist, setChecklist, km, setKm, foto
                     </label>
                   ))}
                 </div>
-                {foto.length > 0 && (
-                  <p className="mt-2 text-[11px] text-slate-500">
-                    Fotos seleccionadas: {foto.filter((file): file is File => Boolean(file)).map((file) => file.name).join(', ')}
-                  </p>
-                )}
                 {fotoError && <p className="mt-2 text-xs text-rose-600">{fotoError}</p>}
               </div>
             </div>
