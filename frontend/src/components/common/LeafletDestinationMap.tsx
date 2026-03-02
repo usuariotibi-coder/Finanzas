@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { fetchNearbyPlaces } from '../../utils/nearbyPlaces';
 import 'leaflet/dist/leaflet.css';
 
 type MapMode = 'mapa' | 'satelite' | 'hibrido' | 'relieve';
@@ -35,24 +36,6 @@ const TILE_LAYER_SMOOTH_PROPS = {
   keepBuffer: 12,
   updateWhenZooming: true as const,
   updateWhenIdle: true as const,
-};
-
-const normalizeText = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-
-const isLikelyBusinessName = (name: string) => {
-  const normalized = normalizeText(name);
-  if (!normalized) {
-    return false;
-  }
-  if (/^(calle|av|avenida|blvd|boulevard|carretera|camino|autopista|ruta)\b/.test(normalized)) {
-    return false;
-  }
-  return true;
 };
 
 function MapViewportSync({ center, zoom }: { center: [number, number]; zoom: number }) {
@@ -92,121 +75,6 @@ function MapZoomWatcher({ onZoomChange }: { onZoomChange: (zoom: number) => void
 
   return null;
 }
-
-const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
-  const toRad = (value: number) => (value * Math.PI) / 180;
-  const earthRadiusMeters = 6_371_000;
-  const dLat = toRad(toLat - fromLat);
-  const dLng = toRad(toLng - fromLng);
-  const lat1 = toRad(fromLat);
-  const lat2 = toRad(toLat);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return earthRadiusMeters * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-};
-
-type OverpassElement = {
-  lat?: number;
-  lon?: number;
-  center?: { lat?: number; lon?: number };
-  tags?: Record<string, string | undefined>;
-};
-
-const fetchNearbyPlacesForMap = async (
-  lat: number,
-  lng: number,
-  signal: AbortSignal
-): Promise<NearbyPlacePoint[]> => {
-  const radiusMeters = 1800;
-  const overpassQuery = `
-[out:json][timeout:10];
-(
-  nwr(around:${radiusMeters},${lat},${lng})["name"];
-);
-out center 250;
-`;
-
-  const endpoints = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-  ];
-  let data: { elements?: OverpassElement[] } | null = null;
-
-  for (const endpoint of endpoints) {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: `data=${encodeURIComponent(overpassQuery)}`,
-      signal,
-    });
-    if (!response.ok) {
-      continue;
-    }
-    data = (await response.json()) as { elements?: OverpassElement[] };
-    break;
-  }
-
-  if (!data) {
-    return [];
-  }
-
-  const unique = new Set<string>();
-  const places = (data.elements ?? [])
-    .map((element) => {
-      const tags = element.tags ?? {};
-      const placeName = (tags.name || tags.brand || tags.operator || '').trim();
-      const point =
-        Number.isFinite(element.lat) && Number.isFinite(element.lon)
-          ? { lat: Number(element.lat), lng: Number(element.lon) }
-          : Number.isFinite(element.center?.lat) && Number.isFinite(element.center?.lon)
-            ? { lat: Number(element.center?.lat), lng: Number(element.center?.lon) }
-            : null;
-      if (!placeName || !point) {
-        return null;
-      }
-      const hasBusinessTag = Boolean(
-        tags.shop ||
-          tags.amenity ||
-          tags.office ||
-          tags.brand ||
-          tags.operator ||
-          tags.craft ||
-          tags.man_made ||
-          tags.industrial ||
-          tags.commercial ||
-          tags.retail ||
-          tags.landuse === 'industrial' ||
-          tags.building === 'industrial' ||
-          tags.building === 'commercial' ||
-          tags.building === 'retail'
-      );
-      const isMostlyInfrastructure = Boolean(
-        tags.highway || tags.railway || tags.route || tags.boundary || tags.admin_level || tags.place || tags.waterway || tags.aeroway
-      );
-      const normalized = normalizeText(placeName);
-      if (!normalized || !isLikelyBusinessName(placeName) || unique.has(normalized) || (!hasBusinessTag && isMostlyInfrastructure)) {
-        return null;
-      }
-      unique.add(normalized);
-      const distance = getDistanceMeters(lat, lng, point.lat, point.lng);
-      const score = distance + (hasBusinessTag ? 0 : 800) + (tags.building ? 120 : 0);
-      return {
-        name: placeName,
-        lat: point.lat,
-        lng: point.lng,
-        distance,
-        score,
-      };
-    })
-    .filter((value): value is { name: string; lat: number; lng: number; distance: number; score: number } => Boolean(value))
-    .filter((value) => value.distance <= 2500)
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 18)
-    .map((value) => ({ name: value.name, lat: value.lat, lng: value.lng }));
-
-  return places;
-};
 
 export default function LeafletDestinationMap({
   center,
@@ -272,9 +140,9 @@ export default function LeafletDestinationMap({
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 7000);
 
-    void fetchNearbyPlacesForMap(anchor.lat, anchor.lng, controller.signal)
+    void fetchNearbyPlaces(anchor.lat, anchor.lng, 18, controller.signal)
       .then((places) => {
-        setNearbyPlaces(places);
+        setNearbyPlaces(places.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng })));
       })
       .catch(() => {
         setNearbyPlaces([]);

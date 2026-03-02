@@ -26,6 +26,7 @@ import {
   getPendingViaticoExtension,
   withPendingViaticoExtension,
 } from '../../utils/viaticoExtensions';
+import { fetchNearbyPlaces } from '../../utils/nearbyPlaces';
 import LeafletDestinationMap from '../../components/common/LeafletDestinationMap';
 
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
@@ -79,135 +80,12 @@ type VehicleDestinationDetails = {
   nearbyPlaces?: string[];
 };
 
-const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
-  const toRad = (value: number) => (value * Math.PI) / 180;
-  const earthRadiusMeters = 6_371_000;
-  const dLat = toRad(toLat - fromLat);
-  const dLng = toRad(toLng - fromLng);
-  const lat1 = toRad(fromLat);
-  const lat2 = toRad(toLat);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-  return earthRadiusMeters * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-};
-
-type OverpassElement = {
-  lat?: number;
-  lon?: number;
-  center?: { lat?: number; lon?: number };
-  tags?: Record<string, string | undefined>;
-};
-
-const getOverpassElementPoint = (element: OverpassElement): VehicleMapPoint | null => {
-  if (Number.isFinite(element.lat) && Number.isFinite(element.lon)) {
-    return { lat: Number(element.lat), lng: Number(element.lon) };
-  }
-  if (Number.isFinite(element.center?.lat) && Number.isFinite(element.center?.lon)) {
-    return { lat: Number(element.center?.lat), lng: Number(element.center?.lon) };
-  }
-  return null;
-};
-
 const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]> => {
-  const radiusMeters = 1800;
-  const overpassQuery = `
-[out:json][timeout:10];
-(
-  nwr(around:${radiusMeters},${lat},${lng})["name"];
-);
-out center 250;
-`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7000);
-
   try {
-    const overpassEndpoints = [
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-    ];
-    let data: { elements?: OverpassElement[] } | null = null;
-
-    for (const endpoint of overpassEndpoints) {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        },
-        body: `data=${encodeURIComponent(overpassQuery)}`,
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        continue;
-      }
-      data = (await response.json()) as { elements?: OverpassElement[] };
-      break;
-    }
-    if (!data) {
-      return [];
-    }
-
-    const unique = new Set<string>();
-    const ranked = (data.elements ?? [])
-      .map((element) => {
-        const tags = element.tags ?? {};
-        const name = (tags.name || tags.brand || tags.operator || '').trim();
-        const point = getOverpassElementPoint(element);
-        if (!name || !point) {
-          return null;
-        }
-        const hasBusinessTag = Boolean(
-          tags.shop ||
-            tags.amenity ||
-            tags.office ||
-            tags.brand ||
-            tags.operator ||
-            tags.craft ||
-            tags.man_made ||
-            tags.industrial ||
-            tags.commercial ||
-            tags.retail ||
-            tags.landuse === 'industrial' ||
-            tags.building === 'industrial' ||
-            tags.building === 'commercial' ||
-            tags.building === 'retail'
-        );
-        const isMostlyInfrastructure = Boolean(
-          tags.highway || tags.railway || tags.route || tags.boundary || tags.admin_level || tags.place || tags.waterway || tags.aeroway
-        );
-        return {
-          name,
-          distance: getDistanceMeters(lat, lng, point.lat, point.lng),
-          hasBusinessTag,
-          isMostlyInfrastructure,
-        };
-      })
-      .filter((item): item is { name: string; distance: number; hasBusinessTag: boolean; isMostlyInfrastructure: boolean } => Boolean(item))
-      .filter((item) => item.distance <= 2500)
-      .sort((a, b) => (a.distance + (a.hasBusinessTag ? 0 : 800)) - (b.distance + (b.hasBusinessTag ? 0 : 800)))
-      .filter((item) => {
-        const normalizedName = normalizeText(item.name);
-        if (
-          !normalizedName ||
-          !isLikelyBusinessName(item.name) ||
-          unique.has(normalizedName) ||
-          (!item.hasBusinessTag && item.isMostlyInfrastructure)
-        ) {
-          return false;
-        }
-        unique.add(normalizedName);
-        return true;
-      })
-      .slice(0, 12)
-      .map((item) => item.name);
-
-    return ranked;
+    const places = await fetchNearbyPlaces(lat, lng, 12);
+    return places.map((item) => item.name).filter(Boolean);
   } catch {
     return [];
-  } finally {
-    clearTimeout(timeout);
   }
 };
 
