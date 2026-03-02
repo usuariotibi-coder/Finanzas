@@ -77,7 +77,7 @@ export default function LeafletDestinationMap({
           key: 'relieve',
           attribution: ESRI_TILE_ATTRIBUTION,
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-          subdomains: undefined,
+          subdomains: 'abc',
         };
       case 'satelite':
       case 'hibrido':
@@ -86,7 +86,7 @@ export default function LeafletDestinationMap({
           key: 'satelite',
           attribution: ESRI_TILE_ATTRIBUTION,
           url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          subdomains: undefined,
+          subdomains: 'abc',
         };
     }
   }, [mapMode]);
