@@ -1882,14 +1882,17 @@ export default function UsuarioView() {
           <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Nuevo Viático</h2>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">Solicitar Nuevo Viático</h2>
+                  <p className="text-xs text-slate-500">Completa la solicitud en formato compacto.</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowModalNuevoViatico(false);
                     setShowNuevoViaticoErrors(false);
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1898,8 +1901,8 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-3 sm:px-4">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm md:grid-cols-2">
                 <div>
                   {/* Proyecto - OBLIGATORIO */}
                   <ProyectoSelector
@@ -1935,7 +1938,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Motivo */}
-              <div>
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 shadow-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Motivo del Viaje <span className="text-red-500">*</span>
                 </label>
@@ -1958,7 +1961,7 @@ export default function UsuarioView() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-sky-100 bg-sky-50/60 p-3 shadow-sm md:grid-cols-2">
               {/* Pais */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2036,7 +2039,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha de Inicio <span className="text-red-500">*</span>
@@ -2078,7 +2081,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Alimentos */}
-              <div>
+              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3 shadow-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Alimentos (MXN) <span className="text-red-500">*</span>
                 </label>
@@ -2147,7 +2150,7 @@ export default function UsuarioView() {
                   setShowModalNuevoViatico(false);
                   setShowNuevoViaticoErrors(false);
                 }}
-                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                className="w-full sm:w-auto rounded-lg border border-slate-300 px-4 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50"
               >
                 Cancelar
               </button>
@@ -2155,7 +2158,7 @@ export default function UsuarioView() {
                 onClick={handleCrearNuevoViatico}
                 className={`w-full sm:w-auto px-4 py-1.5 rounded-lg text-sm ${
                   isFormValid
-                    ? 'bg-primary-600 text-white hover:bg-primary-700'
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 text-white hover:from-blue-700 hover:via-indigo-700 hover:to-emerald-600'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                 }`}
               >
@@ -2172,15 +2175,18 @@ export default function UsuarioView() {
           <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Vehículo (Coche)</h2>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">Solicitar Vehículo (Coche)</h2>
+                  <p className="text-xs text-slate-500">Define origen, destino y fechas del traslado.</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowModalSolicitarVehiculo(false);
                     setShowSolicitarVehiculoErrors(false);
                     resetSolicitarVehiculoMapState();
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2189,8 +2195,8 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-2.5 overflow-y-auto px-4 py-2.5 sm:px-5">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-3 sm:px-4">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm md:grid-cols-2">
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -2222,7 +2228,7 @@ export default function UsuarioView() {
 
               </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-sky-100 bg-sky-50/60 p-3 shadow-sm md:grid-cols-2">
               {/* Origen */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2316,7 +2322,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha de Inicio <span className="text-red-500">*</span>
@@ -2351,7 +2357,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Motivo */}
-              <div>
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 shadow-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Motivo <span className="text-red-500">*</span>
                 </label>
@@ -2372,7 +2378,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Requiere Gasolina */}
-              <div className="flex items-center">
+              <div className="flex items-center rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2 shadow-sm">
                 <input
                   type="checkbox"
                   id="requiereGasolina"
@@ -2393,13 +2399,13 @@ export default function UsuarioView() {
                   setShowSolicitarVehiculoErrors(false);
                   resetSolicitarVehiculoMapState();
                 }}
-                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                className="w-full sm:w-auto rounded-lg border border-slate-300 px-4 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSolicitarVehiculo}
-                className="w-full sm:w-auto px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                className="w-full sm:w-auto rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 px-4 py-1.5 text-sm text-white transition-colors hover:from-blue-700 hover:via-indigo-700 hover:to-emerald-600"
               >
                 Solicitar Vehículo
               </button>
@@ -2414,14 +2420,17 @@ export default function UsuarioView() {
           <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">Solicitar Viaje</h2>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 sm:text-lg">Solicitar Viaje</h2>
+                  <p className="text-xs text-slate-500">Captura servicios y detalles del itinerario.</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowModalSolicitarViaje(false);
                     setShowSolicitarViajeErrors(false);
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2430,9 +2439,9 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-2.5 sm:px-5">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-3 sm:px-4">
               {/* Información General */}
-              <div className="space-y-3">
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -2558,7 +2567,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Servicios Requeridos */}
-              <div className="space-y-3 border-t border-gray-200 pt-3">
+              <div className="space-y-3 rounded-xl border border-violet-100 bg-violet-50/60 p-3 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Servicios Requeridos</h3>
                 <p className="text-sm text-gray-600">Selecciona los servicios que necesitas (al menos uno)</p>
                 {solicitarViajeErrors.servicios && (
@@ -2665,13 +2674,13 @@ export default function UsuarioView() {
                   setShowModalSolicitarViaje(false);
                   setShowSolicitarViajeErrors(false);
                 }}
-                className="w-full sm:w-auto px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm"
+                className="w-full sm:w-auto rounded-lg border border-slate-300 px-4 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSolicitarViaje}
-                className="w-full sm:w-auto px-4 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
+                className="w-full sm:w-auto rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 px-4 py-1.5 text-sm text-white transition-colors hover:from-blue-700 hover:via-indigo-700 hover:to-emerald-600"
               >
                 Solicitar Viaje
               </button>
