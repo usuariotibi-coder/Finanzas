@@ -2710,38 +2710,44 @@ function AssignmentModal({
                           </button>
                         </div>
                       </div>
-                      {summaryMapCoords ? (
-                        <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
-                          <MapContainer
-                            center={summaryMapCoords}
-                            zoom={14}
-                            scrollWheelZoom={true}
-                            className="h-full w-full"
-                          >
-                            <TileLayer
-                              attribution='&copy; OpenStreetMap contributors'
-                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
-                            <CircleMarker
+                      {!showExpandedMap ? (
+                        summaryMapCoords ? (
+                          <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
+                            <MapContainer
                               center={summaryMapCoords}
-                              radius={8}
-                              pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+                              zoom={14}
+                              scrollWheelZoom={true}
+                              className="h-full w-full"
+                            >
+                              <TileLayer
+                                attribution='&copy; OpenStreetMap contributors'
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              />
+                              <CircleMarker
+                                center={summaryMapCoords}
+                                radius={8}
+                                pathOptions={{ color: '#1d4ed8', fillColor: '#3b82f6', fillOpacity: 0.85 }}
+                              />
+                            </MapContainer>
+                          </div>
+                        ) : summaryDestinationEmbedUrl ? (
+                          <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
+                            <iframe
+                              title={`Mapa de destino ${summaryDestination}`}
+                              src={summaryDestinationEmbedUrl}
+                              className="h-full w-full"
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
                             />
-                          </MapContainer>
-                        </div>
-                      ) : summaryDestinationEmbedUrl ? (
-                        <div className="h-16 overflow-hidden rounded-lg border border-slate-200">
-                          <iframe
-                            title={`Mapa de destino ${summaryDestination}`}
-                            src={summaryDestinationEmbedUrl}
-                            className="h-full w-full"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                          />
-                        </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2 text-xs text-slate-500">
+                            No hay destino disponible para mostrar en el mapa.
+                          </div>
+                        )
                       ) : (
-                        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2 text-xs text-slate-500">
-                          No hay destino disponible para mostrar en el mapa.
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                          Mapa ampliado abierto.
                         </div>
                       )}
                     </div>
