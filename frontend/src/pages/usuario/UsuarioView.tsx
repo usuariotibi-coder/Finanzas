@@ -504,7 +504,7 @@ export default function UsuarioView() {
             : item
         )
       );
-      await syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) });
+      void syncCoreAppData({ userId: persisted.userId || (user ? String(user.id) : undefined) }).catch(() => {});
       showToast('Solicitud de extension enviada al PM para aprobacion.', 'success');
       resetExtensionState();
     } catch (error) {
@@ -754,7 +754,7 @@ export default function UsuarioView() {
         });
       }));
 
-      await syncCoreAppData({ userId: currentUserId });
+      void syncCoreAppData({ userId: currentUserId }).catch(() => {});
       showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
       resetSubirDocumentosFlow();
     } catch (error) {
@@ -799,7 +799,6 @@ export default function UsuarioView() {
       });
 
       setViaticos((prev) => [...prev, nuevoViatico]);
-      await syncCoreAppData({ userId: currentUserId || undefined });
       setShowModalNuevoViatico(false);
       setFormNuevoViatico({
         proyectoId: '',
@@ -816,6 +815,7 @@ export default function UsuarioView() {
         cenas: 0,
       });
       setShowNuevoViaticoErrors(false);
+      void syncCoreAppData({ userId: currentUserId || undefined }).catch(() => {});
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo crear el viatico.', 'error');
     }
@@ -927,9 +927,6 @@ export default function UsuarioView() {
       });
 
       saveVehicleAssignments([nuevaSolicitud, ...vehicleAssignments]);
-      await syncCoreAppData({ userId: currentUserId });
-      showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
-
       setShowModalSolicitarVehiculo(false);
       resetSolicitarVehiculoMapState();
       setFormSolicitudVehiculo({
@@ -943,6 +940,8 @@ export default function UsuarioView() {
         requiereGasolina: false,
       });
       setShowSolicitarVehiculoErrors(false);
+      showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
+      void syncCoreAppData({ userId: currentUserId }).catch(() => {});
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo solicitar el vehiculo.', 'error');
     }
@@ -989,9 +988,6 @@ export default function UsuarioView() {
       });
 
       setSolicitudesViaje((prev) => [...prev, nuevaSolicitud]);
-      await syncCoreAppData({ userId: currentUserId || undefined });
-      showToast('Solicitud de viaje enviada. El administrador te contactara para coordinar los servicios.', 'success');
-
       setShowModalSolicitarViaje(false);
       setFormSolicitudViaje({
         proyectoId: '',
@@ -1008,6 +1004,8 @@ export default function UsuarioView() {
         detallesHotel: '',
       });
       setShowSolicitarViajeErrors(false);
+      showToast('Solicitud de viaje enviada. El administrador te contactara para coordinar los servicios.', 'success');
+      void syncCoreAppData({ userId: currentUserId || undefined }).catch(() => {});
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo crear la solicitud de viaje.', 'error');
     }
@@ -1040,13 +1038,13 @@ export default function UsuarioView() {
       ));
 
       saveVehicleAssignments(updatedAssignments);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
-      showToast('Vehiculo recibido correctamente', 'success');
       setShowModalRecibirVehiculo(false);
       setAssignmentSeleccionado(null);
       setKmInicial(0);
       setFotoRecepcion([]);
       setShowRecibirErrors(false);
+      showToast('Vehiculo recibido correctamente', 'success');
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo registrar la recepcion del vehiculo.', 'error');
     }
@@ -1084,13 +1082,13 @@ export default function UsuarioView() {
       ));
 
       saveVehicleAssignments(updatedAssignments);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       setShowVehicleReturnSuccess(true);
       setShowModalDevolverVehiculo(false);
       setShowDevolverErrors(false);
       setAssignmentSeleccionado(null);
       setKmFinal(0);
       setFotoEntrega([]);
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo registrar la devolucion del vehiculo.', 'error');
     }

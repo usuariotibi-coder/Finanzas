@@ -436,7 +436,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
         comentarios: formData.comentarios.trim(),
       });
 
-      await syncCoreAppData({ userId: currentUser ? String(currentUser.id) : undefined });
+      void syncCoreAppData({ userId: currentUser ? String(currentUser.id) : undefined }).catch(() => {});
       onCreated({
         ...created,
         userName: created.userName || currentUser?.full_name || created.userId,

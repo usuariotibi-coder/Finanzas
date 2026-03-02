@@ -200,7 +200,7 @@ export default function Proyectos() {
         setProyectos((prev) => [...prev, sanitizeProyectoMontos(nuevoProyecto)]);
       }
 
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       cerrarModal();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.');

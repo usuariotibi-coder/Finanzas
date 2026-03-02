@@ -544,8 +544,8 @@ export default function Flotilla() {
         : [{ ...persisted, vehiculoLabel: persisted.vehiculoLabel || vehiculoLabel }, ...assignments];
 
       saveAssignments(updatedAssignments);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       setShowAssignmentForm(false);
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo asignar el vehiculo.');
     }
@@ -601,8 +601,8 @@ export default function Flotilla() {
         assignment.id === assignmentId ? { ...assignment, ...persisted } : assignment
       ));
       saveAssignments(updatedAssignments);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       handleCloseFinalizarModal();
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo finalizar la asignacion.');
     }
@@ -636,8 +636,8 @@ export default function Flotilla() {
         item.id === assignmentId ? { ...item, ...persisted } : item
       ));
       saveAssignments(updatedAssignments);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       handleCloseRevisionEntregaModal();
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo validar la liberacion de entrega.');
     }
@@ -2110,8 +2110,8 @@ function NewVehicleModal({
       } else {
         await createFlotillaVehiculo(payload);
       }
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
       onClose();
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       window.alert(
         error instanceof Error

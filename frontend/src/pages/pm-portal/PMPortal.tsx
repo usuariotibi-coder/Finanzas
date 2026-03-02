@@ -208,7 +208,7 @@ export default function PMPortal() {
         map.set(nuevo.id, sanitizeProyectoMontos(nuevo));
         return Array.from(map.values());
       });
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowModalCrearProyecto(false);
       resetNuevoProyecto();
       setShowProyectoErrors(false);
@@ -258,7 +258,7 @@ export default function PMPortal() {
           map.set(updatedRecord.id, { ...map.get(updatedRecord.id), ...updatedRecord });
           return Array.from(map.values());
         });
-        await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+        void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
         setShowModalViaticoDetalle(false);
         setViaticoSeleccionado(null);
         showToast(
@@ -282,7 +282,7 @@ export default function PMPortal() {
         return Array.from(map.values());
       });
       setViaticosResueltos((prev) => (prev.includes(viaticoId) ? prev : [...prev, viaticoId]));
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowModalViaticoDetalle(false);
       setViaticoSeleccionado(null);
       showToast('Viatico aprobado correctamente.', 'success');
@@ -319,7 +319,7 @@ export default function PMPortal() {
           map.set(updatedRecord.id, { ...map.get(updatedRecord.id), ...updatedRecord });
           return Array.from(map.values());
         });
-        await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+        void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
         setShowModalViaticoDetalle(false);
         setViaticoSeleccionado(null);
         showToast('Extension rechazada. El viatico mantiene su estado actual.', 'info');
@@ -337,7 +337,7 @@ export default function PMPortal() {
         return Array.from(map.values());
       });
       setViaticosResueltos((prev) => (prev.includes(viaticoId) ? prev : [...prev, viaticoId]));
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowModalViaticoDetalle(false);
       setViaticoSeleccionado(null);
       showToast('Viatico rechazado.', 'info');
@@ -369,7 +369,7 @@ export default function PMPortal() {
         }
         return next;
       });
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowModalViajeDetalle(false);
       setViajeSeleccionado(null);
       showToast('Viaje aprobado y enviado a gestion.', 'success');
@@ -389,7 +389,7 @@ export default function PMPortal() {
     try {
       await updateViaje(viajeId, { status: 'rechazado' });
       setViajesPendientes((prev) => prev.filter((viaje) => viaje.id !== viajeId));
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowModalViajeDetalle(false);
       setViajeSeleccionado(null);
       showToast('Viaje rechazado.', 'info');
@@ -406,7 +406,7 @@ export default function PMPortal() {
     try {
       await deleteProyecto(proyectoId);
       setProyectos((prev) => prev.filter((item) => item.id !== proyectoId));
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowModalProyectoDetalle(false);
       setIsEditingProyecto(false);
       setProyectoForm(null);
@@ -438,7 +438,7 @@ export default function PMPortal() {
       );
       setProyectoSeleccionado(proyectoSanitizado);
       setIsEditingProyecto(false);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       showToast('Proyecto actualizado correctamente.', 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.', 'error');

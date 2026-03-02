@@ -197,7 +197,7 @@ export default function Conciliacion() {
       }
 
       upsertFactura(facturaCreada);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       closeUploadModal();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo subir la factura.');
@@ -735,7 +735,7 @@ export default function Conciliacion() {
               setFacturas((prev) => prev.map((item) => (
                 item.id === facturaId ? { ...item, ...updated } : item
               )));
-              await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+              void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
             } catch (error) {
               window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado de la factura.');
             }

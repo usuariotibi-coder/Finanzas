@@ -147,7 +147,7 @@ export default function Dispersion() {
 
       setDispersiones((prev) => [createdDispersion, ...prev]);
       setViaticosPendientes((prev) => prev.filter((viatico) => viatico.id !== updatedViatico.id));
-      await syncCoreAppData({ userId: updatedViatico.userId });
+      void syncCoreAppData({ userId: updatedViatico.userId }).catch(() => {});
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo guardar la dispersión.');
     }

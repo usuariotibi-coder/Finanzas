@@ -478,7 +478,7 @@ export default function Amex() {
       setTickets((prevTickets) =>
         prevTickets.map((ticket) => (ticket.id === facturaTicketId ? { ...ticket, ...updated } : ticket))
       );
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowFacturaModal(false);
       setFacturaTicketId(null);
       setFacturaValue('');
@@ -608,7 +608,7 @@ export default function Amex() {
       });
 
       setTickets((prevTickets) => [created, ...prevTickets]);
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
       setShowAddModal(false);
       resetNewTicket();
       setShowAddErrors(false);

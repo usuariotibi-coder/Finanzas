@@ -986,19 +986,35 @@ export const createRecuperacion = async (payload: {
   });
 
 export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
-  const proyectos = await loadOptional(fetchProyectos, [] as Proyecto[]);
-  const viaticos = await loadOptional(fetchViaticos, [] as Viatico[]);
-  const viajes = await loadOptional(fetchViajes, [] as SolicitudViaje[]);
-  const dispersiones = await loadOptional(fetchDispersiones, [] as Dispersion[]);
-  const facturas = await loadOptional(fetchFacturas, [] as Factura[]);
-  const consumos = await loadOptional(fetchConsumos, [] as Consumo[]);
-  const alertasConciliacion = await loadOptional(fetchAlertasConciliacion, [] as AlertaConciliacion[]);
-  const amexTickets = await loadOptional(fetchAmexTickets, [] as TicketAMEX[]);
-  const flotillaVehiculos = await loadOptional(fetchFlotillaVehiculos, [] as Vehicle[]);
-  const flotillaAsignaciones = await loadOptional(fetchFlotillaAsignaciones, [] as VehicleAssignment[]);
-  const flotillaAlertas = await loadOptional(fetchFlotillaAlertas, [] as VehicleAlert[]);
-  const flotillaCargasGasolina = await loadOptional(fetchFlotillaCargasGasolina, [] as CargaGasolina[]);
-  const flotillaMantenimiento = await loadOptional(fetchFlotillaMantenimiento, [] as MaintenanceRecord[]);
+  const [
+    proyectos,
+    viaticos,
+    viajes,
+    dispersiones,
+    facturas,
+    consumos,
+    alertasConciliacion,
+    amexTickets,
+    flotillaVehiculos,
+    flotillaAsignaciones,
+    flotillaAlertas,
+    flotillaCargasGasolina,
+    flotillaMantenimiento,
+  ] = await Promise.all([
+    loadOptional(fetchProyectos, [] as Proyecto[]),
+    loadOptional(fetchViaticos, [] as Viatico[]),
+    loadOptional(fetchViajes, [] as SolicitudViaje[]),
+    loadOptional(fetchDispersiones, [] as Dispersion[]),
+    loadOptional(fetchFacturas, [] as Factura[]),
+    loadOptional(fetchConsumos, [] as Consumo[]),
+    loadOptional(fetchAlertasConciliacion, [] as AlertaConciliacion[]),
+    loadOptional(fetchAmexTickets, [] as TicketAMEX[]),
+    loadOptional(fetchFlotillaVehiculos, [] as Vehicle[]),
+    loadOptional(fetchFlotillaAsignaciones, [] as VehicleAssignment[]),
+    loadOptional(fetchFlotillaAlertas, [] as VehicleAlert[]),
+    loadOptional(fetchFlotillaCargasGasolina, [] as CargaGasolina[]),
+    loadOptional(fetchFlotillaMantenimiento, [] as MaintenanceRecord[]),
+  ]);
 
   writeStorageList('proyectos_data', proyectos);
   writeStorageList('proyectos_data', proyectos, { legacy: true });

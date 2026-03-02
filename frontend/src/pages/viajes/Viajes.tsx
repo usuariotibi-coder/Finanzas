@@ -271,7 +271,7 @@ export default function Viajes() {
                 }
                 return Array.from(map.values());
               });
-              await syncCoreAppData({ userId: persisted.userId });
+              void syncCoreAppData({ userId: persisted.userId }).catch(() => {});
               setSelectedSolicitud(null);
             } catch (error) {
               window.alert(error instanceof Error ? error.message : 'No se pudo guardar la solicitud.');

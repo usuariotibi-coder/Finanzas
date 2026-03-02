@@ -115,7 +115,7 @@ export default function Recuperacion() {
       setViaticosPendientes((prev) =>
         prev.map((viatico) => (viatico.id === selectedGastoViatico.id ? { ...applyUpdate(viatico), ...persisted } : viatico))
       );
-      await syncCoreAppData({ userId: persisted.userId });
+      void syncCoreAppData({ userId: persisted.userId }).catch(() => {});
       setShowGastoModal(false);
       setSelectedGastoViatico(null);
       setGastoMonto('');
@@ -151,7 +151,7 @@ export default function Recuperacion() {
       setViaticosPendientes((prev) =>
         prev.map((item) => (item.id === viatico.id ? { ...updatedRecord, ...persisted } : item))
       );
-      await syncCoreAppData({ userId: persisted.userId });
+      void syncCoreAppData({ userId: persisted.userId }).catch(() => {});
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo confirmar la recuperación.');
     }
