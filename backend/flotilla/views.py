@@ -64,9 +64,11 @@ class VehicleAssignmentViewSet(viewsets.ModelViewSet):
                 continue
             assignment.foto_odometro_final = foto
             assignment.save()
-            stored_name = assignment.foto_odometro_final.name
-            if stored_name:
-                foto_paths.append(stored_name)
+            stored_path = ''
+            if assignment.foto_odometro_final:
+                stored_path = assignment.foto_odometro_final.url or assignment.foto_odometro_final.name
+            if stored_path:
+                foto_paths.append(stored_path)
                 foto_names.append(foto.name)
 
         checklist['fotos'] = foto_names[-3:]

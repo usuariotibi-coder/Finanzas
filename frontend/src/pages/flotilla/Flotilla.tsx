@@ -359,6 +359,26 @@ const getVehicleStatusLabel = (status: Vehicle['status']) => {
 const isEntregaLiberada = (assignment: VehicleAssignment) =>
   Boolean(assignment.checklistEntrega?.liberacionEntrega?.validada);
 
+const normalizeEntregaPhotoPath = (value: string) => {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+
+  const normalized = raw.replace(/\\/g, '/');
+  if (normalized.startsWith('/')) {
+    return normalized;
+  }
+  if (normalized.startsWith('media/')) {
+    return `/${normalized}`;
+  }
+
+  return `/media/${normalized.replace(/^\/+/, '')}`;
+};
+
 
 
 
@@ -1532,7 +1552,7 @@ function RevisionEntregaModal({
                 {fotosEntrega.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {fotosEntrega.map((foto, index) => {
-                      const fotoUrl = toApiAssetUrl(foto.path);
+                      const fotoUrl = toApiAssetUrl(normalizeEntregaPhotoPath(foto.path));
                       return (
                         <a
                           key={`${foto.nombre}-${index}`}
