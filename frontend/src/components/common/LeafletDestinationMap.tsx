@@ -118,45 +118,13 @@ const fetchNearbyPlacesForMap = async (
   lng: number,
   signal: AbortSignal
 ): Promise<NearbyPlacePoint[]> => {
-  const radiusMeters = 1200;
+  const radiusMeters = 1800;
   const overpassQuery = `
-[out:json][timeout:8];
+[out:json][timeout:10];
 (
-  node(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["shop"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["office"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["retail"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["brand"];
-  node(around:${radiusMeters},${lat},${lng})["operator"];
-  way(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["shop"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["office"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["retail"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["brand"];
-  way(around:${radiusMeters},${lat},${lng})["operator"];
-  relation(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["shop"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["office"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["retail"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["brand"];
-  relation(around:${radiusMeters},${lat},${lng})["operator"];
+  nwr(around:${radiusMeters},${lat},${lng})["name"];
 );
-out center 80;
+out center 250;
 `;
 
   const endpoints = [
@@ -186,7 +154,8 @@ out center 80;
   const unique = new Set<string>();
   const places = (data.elements ?? [])
     .map((element) => {
-      const placeName = (element.tags?.name || element.tags?.brand || element.tags?.operator || '').trim();
+      const tags = element.tags ?? {};
+      const placeName = (tags.name || tags.brand || tags.operator || '').trim();
       const point =
         Number.isFinite(element.lat) && Number.isFinite(element.lon)
           ? { lat: Number(element.lat), lng: Number(element.lon) }
@@ -196,22 +165,44 @@ out center 80;
       if (!placeName || !point) {
         return null;
       }
+      const hasBusinessTag = Boolean(
+        tags.shop ||
+          tags.amenity ||
+          tags.office ||
+          tags.brand ||
+          tags.operator ||
+          tags.craft ||
+          tags.man_made ||
+          tags.industrial ||
+          tags.commercial ||
+          tags.retail ||
+          tags.landuse === 'industrial' ||
+          tags.building === 'industrial' ||
+          tags.building === 'commercial' ||
+          tags.building === 'retail'
+      );
+      const isMostlyInfrastructure = Boolean(
+        tags.highway || tags.railway || tags.route || tags.boundary || tags.admin_level || tags.place || tags.waterway || tags.aeroway
+      );
       const normalized = normalizeText(placeName);
-      if (!normalized || !isLikelyBusinessName(placeName) || unique.has(normalized)) {
+      if (!normalized || !isLikelyBusinessName(placeName) || unique.has(normalized) || (!hasBusinessTag && isMostlyInfrastructure)) {
         return null;
       }
       unique.add(normalized);
+      const distance = getDistanceMeters(lat, lng, point.lat, point.lng);
+      const score = distance + (hasBusinessTag ? 0 : 800) + (tags.building ? 120 : 0);
       return {
         name: placeName,
         lat: point.lat,
         lng: point.lng,
-        distance: getDistanceMeters(lat, lng, point.lat, point.lng),
+        distance,
+        score,
       };
     })
-    .filter((value): value is { name: string; lat: number; lng: number; distance: number } => Boolean(value))
-    .filter((value) => value.distance <= 1800)
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 14)
+    .filter((value): value is { name: string; lat: number; lng: number; distance: number; score: number } => Boolean(value))
+    .filter((value) => value.distance <= 2500)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 18)
     .map((value) => ({ name: value.name, lat: value.lat, lng: value.lng }));
 
   return places;

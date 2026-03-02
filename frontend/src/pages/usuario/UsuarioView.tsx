@@ -112,45 +112,13 @@ const getOverpassElementPoint = (element: OverpassElement): VehicleMapPoint | nu
 };
 
 const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]> => {
-  const radiusMeters = 900;
+  const radiusMeters = 1800;
   const overpassQuery = `
-[out:json][timeout:8];
+[out:json][timeout:10];
 (
-  node(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["shop"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["office"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["retail"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
-  node(around:${radiusMeters},${lat},${lng})["brand"];
-  node(around:${radiusMeters},${lat},${lng})["operator"];
-  way(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["shop"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["office"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["retail"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
-  way(around:${radiusMeters},${lat},${lng})["brand"];
-  way(around:${radiusMeters},${lat},${lng})["operator"];
-  relation(around:${radiusMeters},${lat},${lng})["amenity"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["shop"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["office"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["tourism"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["leisure"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["industrial"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["commercial"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["retail"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["building"~"industrial|commercial|retail"]["name"];
-  relation(around:${radiusMeters},${lat},${lng})["brand"];
-  relation(around:${radiusMeters},${lat},${lng})["operator"];
+  nwr(around:${radiusMeters},${lat},${lng})["name"];
 );
-out center 60;
+out center 250;
 `;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 7000);
@@ -184,28 +152,55 @@ out center 60;
     const unique = new Set<string>();
     const ranked = (data.elements ?? [])
       .map((element) => {
-        const name = (element.tags?.name || element.tags?.brand || element.tags?.operator || '').trim();
+        const tags = element.tags ?? {};
+        const name = (tags.name || tags.brand || tags.operator || '').trim();
         const point = getOverpassElementPoint(element);
         if (!name || !point) {
           return null;
         }
+        const hasBusinessTag = Boolean(
+          tags.shop ||
+            tags.amenity ||
+            tags.office ||
+            tags.brand ||
+            tags.operator ||
+            tags.craft ||
+            tags.man_made ||
+            tags.industrial ||
+            tags.commercial ||
+            tags.retail ||
+            tags.landuse === 'industrial' ||
+            tags.building === 'industrial' ||
+            tags.building === 'commercial' ||
+            tags.building === 'retail'
+        );
+        const isMostlyInfrastructure = Boolean(
+          tags.highway || tags.railway || tags.route || tags.boundary || tags.admin_level || tags.place || tags.waterway || tags.aeroway
+        );
         return {
           name,
           distance: getDistanceMeters(lat, lng, point.lat, point.lng),
+          hasBusinessTag,
+          isMostlyInfrastructure,
         };
       })
-      .filter((item): item is { name: string; distance: number } => Boolean(item))
-      .filter((item) => item.distance <= 1800)
-      .sort((a, b) => a.distance - b.distance)
+      .filter((item): item is { name: string; distance: number; hasBusinessTag: boolean; isMostlyInfrastructure: boolean } => Boolean(item))
+      .filter((item) => item.distance <= 2500)
+      .sort((a, b) => (a.distance + (a.hasBusinessTag ? 0 : 800)) - (b.distance + (b.hasBusinessTag ? 0 : 800)))
       .filter((item) => {
         const normalizedName = normalizeText(item.name);
-        if (!normalizedName || !isLikelyBusinessName(item.name) || unique.has(normalizedName)) {
+        if (
+          !normalizedName ||
+          !isLikelyBusinessName(item.name) ||
+          unique.has(normalizedName) ||
+          (!item.hasBusinessTag && item.isMostlyInfrastructure)
+        ) {
           return false;
         }
         unique.add(normalizedName);
         return true;
       })
-      .slice(0, 8)
+      .slice(0, 12)
       .map((item) => item.name);
 
     return ranked;
@@ -1065,7 +1060,8 @@ export default function UsuarioView() {
       const postcode = address.postcode;
       const country = address.country;
       const nearbyPlaces = await fetchNearbyPlaceNames(lat, lng);
-      const resolvedPoi = toUniqueTextParts([poiCandidates[0], nearbyPlaces[0], displayNameMain])[0] || '';
+      const resolvedPoi =
+        toUniqueTextParts([nearbyPlaces[0], poiCandidates[0], displayNameMain]).find((value) => isLikelyBusinessName(value)) || '';
 
       const [neighborhood, city, state] = toUniqueTextParts([rawNeighborhood, rawCity, rawState]);
       const direccion =
