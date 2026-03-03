@@ -65,10 +65,22 @@ export const searchGeocodePlaces = async (
   if (safeQuery.length < 3) {
     return [];
   }
-  const safeLimit = Math.max(1, Math.min(limit, 12));
+  const safeLimit = Math.max(1, Math.min(limit, 80));
   const nearLatSafe = Number.isFinite(Number(nearLat)) ? Number(nearLat) : undefined;
   const nearLngSafe = Number.isFinite(Number(nearLng)) ? Number(nearLng) : undefined;
-  const cacheKey = `${safeQuery}:${safeLimit}:${nearLatSafe?.toFixed(3) || '-'}:${nearLngSafe?.toFixed(3) || '-'}`;
+  const hasBounds = Boolean(
+    bounds &&
+    Number.isFinite(Number(bounds.north)) &&
+    Number.isFinite(Number(bounds.south)) &&
+    Number.isFinite(Number(bounds.east)) &&
+    Number.isFinite(Number(bounds.west)) &&
+    Number(bounds.north) > Number(bounds.south) &&
+    Number(bounds.east) > Number(bounds.west)
+  );
+  const boundsKey = hasBounds && bounds
+    ? `${bounds.north.toFixed(3)}:${bounds.south.toFixed(3)}:${bounds.east.toFixed(3)}:${bounds.west.toFixed(3)}:${bounded ? '1' : '0'}`
+    : '-';
+  const cacheKey = `${safeQuery}:${safeLimit}:${nearLatSafe?.toFixed(3) || '-'}:${nearLngSafe?.toFixed(3) || '-'}:${boundsKey}`;
   const now = Date.now();
   const cached = searchCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
@@ -88,15 +100,6 @@ export const searchGeocodePlaces = async (
     params.set('near_lat', String(nearLatSafe));
     params.set('near_lng', String(nearLngSafe));
   }
-  const hasBounds = Boolean(
-    bounds &&
-    Number.isFinite(Number(bounds.north)) &&
-    Number.isFinite(Number(bounds.south)) &&
-    Number.isFinite(Number(bounds.east)) &&
-    Number.isFinite(Number(bounds.west)) &&
-    Number(bounds.north) > Number(bounds.south) &&
-    Number(bounds.east) > Number(bounds.west)
-  );
   if (hasBounds && bounds) {
     params.set('north', String(bounds.north));
     params.set('south', String(bounds.south));

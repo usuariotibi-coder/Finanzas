@@ -334,11 +334,13 @@ export default function LeafletDestinationMap({
     if (!mapBounds) {
       return allNearbyPlaces;
     }
+    const latPad = Math.max(0.0015, (mapBounds.north - mapBounds.south) * 0.08);
+    const lngPad = Math.max(0.0015, (mapBounds.east - mapBounds.west) * 0.08);
     return allNearbyPlaces.filter((place) => (
-      place.lat <= mapBounds.north &&
-      place.lat >= mapBounds.south &&
-      place.lng <= mapBounds.east &&
-      place.lng >= mapBounds.west
+      place.lat <= mapBounds.north + latPad &&
+      place.lat >= mapBounds.south - latPad &&
+      place.lng <= mapBounds.east + lngPad &&
+      place.lng >= mapBounds.west - lngPad
     ));
   }, [allNearbyPlaces, mapBounds]);
   const labelAnchor = mapViewportCenter ?? marker ?? center;
@@ -583,25 +585,19 @@ export default function LeafletDestinationMap({
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 6500);
     setIsLoadingReferencePlaces(true);
-    const fallbackQueries = ['industrial', 'empresa', 'avenida'];
-    void Promise.all(
-      fallbackQueries.map((query) => (
-        searchGeocodePlaces(query, {
-          limit: 7,
-          nearLat: anchor.lat,
-          nearLng: anchor.lng,
-          bounds: mapBounds ?? undefined,
-          bounded: Boolean(mapBounds),
-          signal: controller.signal,
-        }).catch(() => [])
-      ))
-    )
-      .then((groups) => {
+    void searchGeocodePlaces('__any__', {
+      limit: 64,
+      nearLat: anchor.lat,
+      nearLng: anchor.lng,
+      bounds: mapBounds ?? undefined,
+      bounded: Boolean(mapBounds),
+      signal: controller.signal,
+    })
+      .then((results) => {
         if (controller.signal.aborted) {
           return;
         }
-        const referencePlaces = groups
-          .flat()
+        const referencePlaces = results
           .filter((result) => !Number.isFinite(Number(result.distance)) || Number(result.distance) <= 16000)
           .map((result) => ({ name: result.name, lat: result.lat, lng: result.lng }));
         if (referencePlaces.length > 0) {

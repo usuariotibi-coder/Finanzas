@@ -318,6 +318,127 @@ def fetch_nominatim_places(lat: float, lng: float, limit: int, fast_mode: bool =
     return places
 
 
+def fetch_overpass_bbox_labels(
+    north: float,
+    south: float,
+    east: float,
+    west: float,
+    limit: int,
+    query_text: str = '',
+    center_lat: float | None = None,
+    center_lng: float | None = None,
+) -> list[dict[str, float | str]]:
+    if not (north > south and east > west):
+        return []
+    safe_limit = max(1, min(int(limit), 220))
+    bbox_height = abs(north - south)
+    bbox_width = abs(east - west)
+    is_tight_box = bbox_height < 0.35 and bbox_width < 0.35
+    out_limit = min(2600, max(700, safe_limit * 14))
+    timeout_value = 5 if is_tight_box else 6
+    query = f"""
+[out:json][timeout:{timeout_value}];
+(
+  nwr({south},{west},{north},{east})["name"];
+  nwr({south},{west},{north},{east})["brand"];
+  nwr({south},{west},{north},{east})["operator"];
+);
+out center {out_limit};
+"""
+    endpoints = (
+        'https://lz4.overpass-api.de/api/interpreter',
+        'https://z.overpass-api.de/api/interpreter',
+        'https://overpass-api.de/api/interpreter',
+    )
+    data = None
+    started_at = time.monotonic()
+    max_total_seconds = 4.8 if is_tight_box else 6.8
+    for endpoint in endpoints:
+        if time.monotonic() - started_at > max_total_seconds:
+            break
+        try:
+            data = _http_post_form_json(endpoint, {'data': query}, timeout_seconds=3 if is_tight_box else 4)
+            break
+        except Exception:
+            continue
+    if not data:
+        return []
+
+    normalized_query = normalize_text(query_text)
+    tokens = [token for token in normalized_query.split() if token]
+    has_query_filter = bool(tokens) and normalized_query not in {'__any__', '*'}
+    anchor_lat = center_lat if center_lat is not None else (north + south) / 2
+    anchor_lng = center_lng if center_lng is not None else (east + west) / 2
+
+    places: list[dict[str, float | str]] = []
+    seen: set[str] = set()
+    for element in data.get('elements', []):
+        tags = element.get('tags') or {}
+        name = str(tags.get('name') or tags.get('brand') or tags.get('operator') or '').strip()
+        if not name:
+            continue
+        normalized_name = normalize_text(name)
+        if has_query_filter and not all(token in normalized_name for token in tokens):
+            continue
+        lat_value = element.get('lat')
+        lng_value = element.get('lon')
+        center = element.get('center') or {}
+        if lat_value is None or lng_value is None:
+            lat_value = center.get('lat')
+            lng_value = center.get('lon')
+        if lat_value is None or lng_value is None:
+            continue
+        try:
+            lat_value = float(lat_value)
+            lng_value = float(lng_value)
+        except (TypeError, ValueError):
+            continue
+        if not (south <= lat_value <= north and west <= lng_value <= east):
+            continue
+
+        key = f'{normalized_name}:{round(lat_value, 5)}:{round(lng_value, 5)}'
+        if key in seen:
+            continue
+        seen.add(key)
+
+        has_business_tag = any((
+            tags.get('shop'),
+            tags.get('amenity'),
+            tags.get('office'),
+            tags.get('brand'),
+            tags.get('operator'),
+            tags.get('craft'),
+            tags.get('industrial'),
+            tags.get('commercial'),
+            tags.get('retail'),
+            tags.get('landuse') == 'industrial',
+            tags.get('building') in {'industrial', 'commercial', 'retail'},
+        ))
+        is_mostly_infrastructure = any((
+            tags.get('highway'),
+            tags.get('railway'),
+            tags.get('route'),
+            tags.get('boundary'),
+            tags.get('admin_level'),
+            tags.get('place'),
+            tags.get('waterway'),
+            tags.get('aeroway'),
+        ))
+        distance = get_distance_meters(anchor_lat, anchor_lng, lat_value, lng_value)
+        score = distance + (0 if has_business_tag else 380) + (120 if is_mostly_infrastructure else 0)
+        places.append({
+            'name': name,
+            'lat': lat_value,
+            'lng': lng_value,
+            'distance': round(distance, 2),
+            'score': round(score, 2),
+            'source': 'overpass-bbox',
+        })
+
+    places.sort(key=lambda item: float(item['score']))
+    return places[:safe_limit]
+
+
 def get_nearby_places(lat: float, lng: float, limit: int, *, mode: str = 'full') -> list[dict[str, float | str]]:
     safe_limit = max(1, min(int(limit), NEARBY_PLACES_MAX_LIMIT))
     safe_mode = 'quick' if str(mode or '').strip().lower() == 'quick' else 'full'
@@ -365,9 +486,11 @@ def search_geocode_places(
     bounded: bool = False,
 ) -> list[dict[str, float | str]]:
     safe_query = str(query or '').strip()
-    if len(safe_query) < 3:
+    normalized_query = normalize_text(safe_query)
+    is_any_query = normalized_query in {'__any__', '*'}
+    if len(safe_query) < 3 and not is_any_query:
         return []
-    safe_limit = max(1, min(int(limit), 12))
+    safe_limit = max(1, min(int(limit), 80))
     params = {
         'format': 'jsonv2',
         'addressdetails': '1',
@@ -391,10 +514,34 @@ def search_geocode_places(
         bottom = near_lat - delta
         # viewbox as hint to prioritize nearby matches without hard bounding.
         params['viewbox'] = f'{left},{top},{right},{bottom}'
+    if has_bbox and bounded and is_any_query:
+        overpass_labels = fetch_overpass_bbox_labels(
+            north=north,
+            south=south,
+            east=east,
+            west=west,
+            limit=safe_limit,
+            query_text='',
+            center_lat=near_lat,
+            center_lng=near_lng,
+        )
+        if overpass_labels:
+            return overpass_labels
+        if near_lat is not None and near_lng is not None:
+            nominatim_fallback = fetch_nominatim_places(near_lat, near_lng, safe_limit, fast_mode=True)
+            if has_bbox:
+                nominatim_fallback = [
+                    place for place in nominatim_fallback
+                    if south - 0.01 <= float(place.get('lat') or 0) <= north + 0.01
+                    and west - 0.01 <= float(place.get('lng') or 0) <= east + 0.01
+                ]
+            return nominatim_fallback[:safe_limit]
+        return []
+
     url = f"https://nominatim.openstreetmap.org/search?{urlencode(params)}"
     data = _http_get_json(url, timeout_seconds=6)
     if not isinstance(data, list):
-        return []
+        data = []
 
     unique: dict[str, dict[str, float | str]] = {}
     for item in data:
@@ -430,7 +577,23 @@ def search_geocode_places(
 
     values = list(unique.values())
     values.sort(key=lambda value: float(value.get('distance', -1)) if float(value.get('distance', -1)) >= 0 else 9999999)
-    return values[:safe_limit]
+    if values:
+        return values[:safe_limit]
+
+    if has_bbox:
+        fallback = fetch_overpass_bbox_labels(
+            north=north,
+            south=south,
+            east=east,
+            west=west,
+            limit=safe_limit,
+            query_text=safe_query,
+            center_lat=near_lat,
+            center_lng=near_lng,
+        )
+        if fallback:
+            return fallback
+    return []
 
 
 def reverse_geocode_details(lat: float, lng: float, include_nearby: bool = False) -> dict[str, object]:
@@ -592,7 +755,7 @@ class GeocodeSearchView(APIView):
             return Response({'results': []})
 
         try:
-            limit = max(1, min(int(raw_limit), 12))
+            limit = max(1, min(int(raw_limit), 80))
         except (TypeError, ValueError):
             limit = 8
 
