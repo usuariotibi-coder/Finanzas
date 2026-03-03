@@ -10,6 +10,7 @@ import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExc
 import {
   createFlotillaVehiculo,
   fetchFlotillaAsignaciones,
+  fetchFlotillaCargasGasolina,
   syncCoreAppData,
   updateFlotillaAsignacion,
   updateFlotillaVehiculo,
@@ -435,7 +436,7 @@ export default function Flotilla() {
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [vehicles] = useLocalStorageState<Vehicle[]>('flotilla:vehiculos', []);
   const [alerts] = useLocalStorageState<VehicleAlert[]>('flotilla:alertas', []);
-  const [cargasGasolina] = useLocalStorageState<CargaGasolina[]>('flotilla:cargasGasolina', []);
+  const [cargasGasolina, setCargasGasolina] = useLocalStorageState<CargaGasolina[]>('flotilla:cargasGasolina', []);
   const [maintenanceHistory] = useLocalStorageState<MaintenanceRecord[]>('flotilla:maintenanceHistory', []);
   const [assignments, setAssignments] = useState<VehicleAssignment[]>(getVehicleAssignments);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
@@ -497,6 +498,54 @@ export default function Flotilla() {
       window.removeEventListener('app-storage-change', handleCustomStorage);
     };
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadGasolina = async () => {
+      try {
+        const remoteCargas = await fetchFlotillaCargasGasolina();
+        if (!isActive) {
+          return;
+        }
+        setCargasGasolina(remoteCargas);
+      } catch {
+        // Keep local cache if backend is temporarily unavailable.
+      }
+    };
+
+    void loadGasolina();
+
+    return () => {
+      isActive = false;
+    };
+  }, [setCargasGasolina]);
+
+  useEffect(() => {
+    if (activeTab !== 'gasolina') {
+      return;
+    }
+
+    let isActive = true;
+
+    const refreshGasolina = async () => {
+      try {
+        const remoteCargas = await fetchFlotillaCargasGasolina();
+        if (!isActive) {
+          return;
+        }
+        setCargasGasolina(remoteCargas);
+      } catch {
+        // Keep cached values in the view.
+      }
+    };
+
+    void refreshGasolina();
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeTab, setCargasGasolina]);
 
   const assignedVehicleIds = new Set(
     assignments

@@ -92,6 +92,19 @@ const writeStorageList = <T,>(
 
 type RawRecord = Record<string, unknown>;
 
+const asArrayRecords = (value: unknown): RawRecord[] => {
+  if (Array.isArray(value)) {
+    return value as RawRecord[];
+  }
+  if (value && typeof value === 'object') {
+    const payload = value as Record<string, unknown>;
+    if (Array.isArray(payload.results)) {
+      return payload.results as RawRecord[];
+    }
+  }
+  return [];
+};
+
 const mapProyectoFromApi = (raw: RawRecord): Proyecto => ({
   id: toStringId(raw.id),
   codigo: parseString(raw.codigo),
@@ -644,28 +657,28 @@ export const fetchAmexTickets = async (): Promise<TicketAMEX[]> => {
 };
 
 export const fetchFlotillaVehiculos = async (): Promise<Vehicle[]> => {
-  const data = (await apiFetch('/flotilla/vehiculos/')) as RawRecord[];
-  return Array.isArray(data) ? data.map(mapVehicleFromApi) : [];
+  const data = await apiFetch('/flotilla/vehiculos/');
+  return asArrayRecords(data).map(mapVehicleFromApi);
 };
 
 export const fetchFlotillaAsignaciones = async (): Promise<VehicleAssignment[]> => {
-  const data = (await apiFetch('/flotilla/asignaciones/')) as RawRecord[];
-  return Array.isArray(data) ? data.map(mapVehicleAssignmentFromApi) : [];
+  const data = await apiFetch('/flotilla/asignaciones/');
+  return asArrayRecords(data).map(mapVehicleAssignmentFromApi);
 };
 
 export const fetchFlotillaAlertas = async (): Promise<VehicleAlert[]> => {
-  const data = (await apiFetch('/flotilla/alertas/')) as RawRecord[];
-  return Array.isArray(data) ? data.map(mapVehicleAlertFromApi) : [];
+  const data = await apiFetch('/flotilla/alertas/');
+  return asArrayRecords(data).map(mapVehicleAlertFromApi);
 };
 
 export const fetchFlotillaCargasGasolina = async (): Promise<CargaGasolina[]> => {
-  const data = (await apiFetch('/flotilla/gasolina/')) as RawRecord[];
-  return Array.isArray(data) ? data.map(mapCargaGasolinaFromApi) : [];
+  const data = await apiFetch('/flotilla/gasolina/');
+  return asArrayRecords(data).map(mapCargaGasolinaFromApi);
 };
 
 export const fetchFlotillaMantenimiento = async (): Promise<MaintenanceRecord[]> => {
-  const data = (await apiFetch('/flotilla/mantenimiento/')) as RawRecord[];
-  return Array.isArray(data) ? data.map(mapMaintenanceRecordFromApi) : [];
+  const data = await apiFetch('/flotilla/mantenimiento/');
+  return asArrayRecords(data).map(mapMaintenanceRecordFromApi);
 };
 
 export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
