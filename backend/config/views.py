@@ -84,10 +84,38 @@ def _http_post_form_json(url: str, form_data: dict[str, str], timeout_seconds: i
         return json.loads(response.read().decode('utf-8'))
 
 
-def fetch_overpass_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    radius_meters = 9000
+def fetch_overpass_places(lat: float, lng: float, limit: int, fast_mode: bool = False) -> list[dict[str, float | str]]:
+    if limit <= 100:
+        radius_meters = 5000
+        overpass_timeout = 5
+        out_limit = 1400
+        endpoint_timeout = 3
+        max_total_seconds = 5.5
+        max_distance = 8000
+    elif limit <= 200:
+        radius_meters = 7000
+        overpass_timeout = 6
+        out_limit = 1900
+        endpoint_timeout = 4
+        max_total_seconds = 7.0
+        max_distance = 10000
+    else:
+        radius_meters = 9000
+        overpass_timeout = 6
+        out_limit = 2400
+        endpoint_timeout = 4
+        max_total_seconds = 8.0
+        max_distance = 12000
+    if fast_mode:
+        radius_meters = min(radius_meters, 4200)
+        overpass_timeout = min(overpass_timeout, 4)
+        out_limit = min(out_limit, max(500, limit * 8))
+        endpoint_timeout = 2
+        max_total_seconds = 2.8
+        max_distance = min(max_distance, 7000)
+
     query = f"""
-[out:json][timeout:6];
+[out:json][timeout:{overpass_timeout}];
 (
   nwr(around:{radius_meters},{lat},{lng})["name"];
   nwr(around:{radius_meters},{lat},{lng})["brand"];
@@ -96,9 +124,12 @@ def fetch_overpass_places(lat: float, lng: float) -> list[dict[str, float | str]
   nwr(around:{radius_meters},{lat},{lng})["shop"];
   nwr(around:{radius_meters},{lat},{lng})["office"];
 );
-out center 2400;
+out center {out_limit};
 """
     endpoints = (
+        'https://lz4.overpass-api.de/api/interpreter',
+        'https://z.overpass-api.de/api/interpreter',
+    ) if fast_mode else (
         'https://lz4.overpass-api.de/api/interpreter',
         'https://z.overpass-api.de/api/interpreter',
         'https://overpass-api.de/api/interpreter',
@@ -106,12 +137,11 @@ out center 2400;
     )
     data = None
     started_at = time.monotonic()
-    max_total_seconds = 8.0
     for endpoint in endpoints:
         if time.monotonic() - started_at > max_total_seconds:
             break
         try:
-            data = _http_post_form_json(endpoint, {'data': query}, timeout_seconds=4)
+            data = _http_post_form_json(endpoint, {'data': query}, timeout_seconds=endpoint_timeout)
             break
         except Exception:
             continue
@@ -173,7 +203,7 @@ out center 2400;
             continue
 
         distance = get_distance_meters(lat, lng, point_lat, point_lng)
-        if distance > 12000:
+        if distance > max_distance:
             continue
 
         seen_names.add(normalized)
@@ -191,8 +221,22 @@ out center 2400;
     return places
 
 
-def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    delta = 0.09
+def fetch_nominatim_places(lat: float, lng: float, limit: int, fast_mode: bool = False) -> list[dict[str, float | str]]:
+    if fast_mode:
+        delta = 0.05
+        max_total_seconds = 2.6
+        per_query_limit = '8'
+        max_results = 36
+    elif limit <= 100:
+        delta = 0.06
+        max_total_seconds = 4.0
+        per_query_limit = '18'
+        max_results = 80
+    else:
+        delta = 0.09
+        max_total_seconds = 8.0
+        per_query_limit = '25'
+        max_results = min(max(limit + 30, 100), 180)
     left = lng - delta
     right = lng + delta
     top = lat + delta
@@ -219,17 +263,18 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
         'supermercado',
         'tienda',
     )
+    if fast_mode:
+        queries = queries[:8]
     places: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
     started_at = time.monotonic()
-    max_total_seconds = 8.0
 
     for query in queries:
         if time.monotonic() - started_at > max_total_seconds:
             break
         params = {
             'format': 'jsonv2',
-            'limit': '25',
+            'limit': per_query_limit,
             'accept-language': 'es',
             'bounded': '1',
             'viewbox': f'{left},{top},{right},{bottom}',
@@ -266,16 +311,17 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
                 'score': round(distance + 1200, 2),
                 'source': 'nominatim',
             })
-        if len(places) >= 100:
+        if len(places) >= max_results:
             break
 
     places.sort(key=lambda item: float(item['score']))
     return places
 
 
-def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, float | str]]:
+def get_nearby_places(lat: float, lng: float, limit: int, *, mode: str = 'full') -> list[dict[str, float | str]]:
     safe_limit = max(1, min(int(limit), NEARBY_PLACES_MAX_LIMIT))
-    cache_key = f'{round(lat, 4)}:{round(lng, 4)}:{safe_limit}'
+    safe_mode = 'quick' if str(mode or '').strip().lower() == 'quick' else 'full'
+    cache_key = f'{round(lat, 3)}:{round(lng, 3)}:{safe_limit}:{safe_mode}'
     now = time.time()
     cache_entry = NEARBY_PLACES_CACHE.get(cache_key)
     if cache_entry:
@@ -284,9 +330,14 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
         if now - cache_entry[0] < ttl:
             return cached_places
 
-    overpass_places = fetch_overpass_places(lat, lng)
-    # Skip expensive fallback when Overpass already returns enough nearby business names.
-    nominatim_places = fetch_nominatim_places(lat, lng) if len(overpass_places) < max(12, min(safe_limit, 30)) else []
+    fast_mode = safe_mode == 'quick'
+    overpass_places = fetch_overpass_places(lat, lng, safe_limit, fast_mode=fast_mode)
+    # Quick mode should return fast and leave deep hydration to a full request.
+    nominatim_places = (
+        []
+        if fast_mode
+        else fetch_nominatim_places(lat, lng, safe_limit, fast_mode=False) if len(overpass_places) < max(12, min(safe_limit, 30)) else []
+    )
     merged = overpass_places + nominatim_places
     deduped: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
@@ -428,6 +479,7 @@ class NearbyPlacesView(APIView):
         raw_lat = request.query_params.get('lat')
         raw_lng = request.query_params.get('lng')
         raw_limit = request.query_params.get('limit', '18')
+        raw_mode = str(request.query_params.get('mode', 'full') or 'full').strip().lower()
 
         try:
             lat = float(raw_lat)
@@ -436,7 +488,10 @@ class NearbyPlacesView(APIView):
         except (TypeError, ValueError):
             return Response({'detail': 'Parámetros inválidos. Usa lat, lng y limit numéricos.'}, status=400)
 
-        places = get_nearby_places(lat=lat, lng=lng, limit=limit)
+        mode = 'quick' if raw_mode == 'quick' else 'full'
+        if mode == 'quick':
+            limit = min(limit, 140)
+        places = get_nearby_places(lat=lat, lng=lng, limit=limit, mode=mode)
         return Response({'places': places})
 
 

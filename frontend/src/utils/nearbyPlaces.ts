@@ -8,11 +8,13 @@ export type NearbyPlace = {
   score?: number;
   source?: string;
 };
+export type NearbyFetchMode = 'quick' | 'full';
 
 const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
 const NEARBY_PLACES_MAX_LIMIT = 300;
 const NEARBY_PLACES_CACHE_TTL_MS = 10 * 60 * 1000;
 const NEARBY_PLACES_EMPTY_CACHE_TTL_MS = 20 * 1000;
+const WARM_CACHE_MAX_COORD_DELTA = 0.0055;
 const nearbyPlacesCache = new Map<string, { expiresAt: number; places: NearbyPlace[] }>();
 const nearbyPlacesInFlight = new Map<string, Promise<NearbyPlace[]>>();
 
@@ -95,8 +97,73 @@ const dedupeNearbyPlaces = (places: NearbyPlace[], limit: number): NearbyPlace[]
   return Array.from(unique.values()).slice(0, limit);
 };
 
+const toCacheKey = (lat: number, lng: number, limit: number, mode: NearbyFetchMode) =>
+  `${lat.toFixed(3)}:${lng.toFixed(3)}:${limit}:${mode}`;
+
+const getWarmCachePlaces = (
+  lat: number,
+  lng: number,
+  limit: number,
+  mode: NearbyFetchMode,
+  now: number
+): NearbyPlace[] => {
+  let bestPlaces: NearbyPlace[] = [];
+  let bestDistanceScore = Number.POSITIVE_INFINITY;
+  for (const [cacheKey, entry] of nearbyPlacesCache.entries()) {
+    if (entry.expiresAt <= now || entry.places.length === 0) {
+      continue;
+    }
+    const [rawLat, rawLng, rawLimit, rawMode] = cacheKey.split(':');
+    if (rawMode !== mode || Number(rawLimit) !== limit) {
+      continue;
+    }
+    const cachedLat = Number(rawLat);
+    const cachedLng = Number(rawLng);
+    if (!Number.isFinite(cachedLat) || !Number.isFinite(cachedLng)) {
+      continue;
+    }
+    const deltaLat = Math.abs(cachedLat - lat);
+    const deltaLng = Math.abs(cachedLng - lng);
+    if (deltaLat > WARM_CACHE_MAX_COORD_DELTA || deltaLng > WARM_CACHE_MAX_COORD_DELTA) {
+      continue;
+    }
+    const score = deltaLat + deltaLng;
+    if (score < bestDistanceScore) {
+      bestDistanceScore = score;
+      bestPlaces = entry.places;
+    }
+  }
+  return dedupeNearbyPlaces(bestPlaces, limit);
+};
+
+const getSearchProfile = (limit: number) => {
+  if (limit <= 100) {
+    return {
+      radiusMeters: 5000,
+      overpassTimeout: 5,
+      outLimit: 1400,
+      maxDistance: 8000,
+    };
+  }
+  if (limit <= 200) {
+    return {
+      radiusMeters: 7000,
+      overpassTimeout: 6,
+      outLimit: 1900,
+      maxDistance: 10000,
+    };
+  }
+  return {
+    radiusMeters: 9000,
+    overpassTimeout: 6,
+    outLimit: 2400,
+    maxDistance: 12000,
+  };
+};
+
 const fetchNearbyPlacesFromNominatimFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const delta = 0.06;
+  const isQuickMode = limit <= 100;
+  const delta = isQuickMode ? 0.06 : 0.09;
   const left = lng - delta;
   const right = lng + delta;
   const top = lat + delta;
@@ -129,7 +196,7 @@ const fetchNearbyPlacesFromNominatimFallback = async (lat: number, lng: number, 
   for (const query of queries) {
     const params = new URLSearchParams({
       format: 'jsonv2',
-      limit: '35',
+      limit: isQuickMode ? '20' : '35',
       'accept-language': 'es',
       bounded: '1',
       viewbox: `${left},${top},${right},${bottom}`,
@@ -183,19 +250,25 @@ const fetchNearbyPlacesFromNominatimFallback = async (lat: number, lng: number, 
     .slice(0, limit);
 };
 
-const fetchNearbyPlacesFromOverpassFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const radiusMeters = 9000;
+const fetchNearbyPlacesFromOverpassFallback = async (
+  lat: number,
+  lng: number,
+  limit: number,
+  signal?: AbortSignal,
+  allowNominatimFallback = true
+): Promise<NearbyPlace[]> => {
+  const profile = getSearchProfile(limit);
   const query = `
-[out:json][timeout:6];
+[out:json][timeout:${profile.overpassTimeout}];
 (
-  nwr(around:${radiusMeters},${lat},${lng})["name"];
-  nwr(around:${radiusMeters},${lat},${lng})["brand"];
-  nwr(around:${radiusMeters},${lat},${lng})["operator"];
-  nwr(around:${radiusMeters},${lat},${lng})["amenity"];
-  nwr(around:${radiusMeters},${lat},${lng})["shop"];
-  nwr(around:${radiusMeters},${lat},${lng})["office"];
+  nwr(around:${profile.radiusMeters},${lat},${lng})["name"];
+  nwr(around:${profile.radiusMeters},${lat},${lng})["brand"];
+  nwr(around:${profile.radiusMeters},${lat},${lng})["operator"];
+  nwr(around:${profile.radiusMeters},${lat},${lng})["amenity"];
+  nwr(around:${profile.radiusMeters},${lat},${lng})["shop"];
+  nwr(around:${profile.radiusMeters},${lat},${lng})["office"];
 );
-out center 2400;
+out center ${profile.outLimit};
 `;
   const endpoints = [
     'https://lz4.overpass-api.de/api/interpreter',
@@ -223,7 +296,7 @@ out center 2400;
     }
   }
   if (!data) {
-    return fetchNearbyPlacesFromNominatimFallback(lat, lng, limit, signal);
+    return allowNominatimFallback ? fetchNearbyPlacesFromNominatimFallback(lat, lng, limit, signal) : [];
   }
 
   const unique = new Set<string>();
@@ -275,7 +348,7 @@ out center 2400;
         return null;
       }
       const distance = getDistanceMeters(lat, lng, latValue, lngValue);
-      if (distance > 12000) {
+      if (distance > profile.maxDistance) {
         return null;
       }
       const item: ScoredPlace = {
@@ -296,16 +369,29 @@ out center 2400;
   if (places.length > 0) {
     return places;
   }
-  return fetchNearbyPlacesFromNominatimFallback(lat, lng, limit, signal);
+  return allowNominatimFallback ? fetchNearbyPlacesFromNominatimFallback(lat, lng, limit, signal) : [];
 };
 
-export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, signal?: AbortSignal): Promise<NearbyPlace[]> => {
+export const fetchNearbyPlaces = async (
+  lat: number,
+  lng: number,
+  limit = 18,
+  signal?: AbortSignal,
+  mode: NearbyFetchMode = 'full'
+): Promise<NearbyPlace[]> => {
   const safeLimit = Math.max(1, Math.min(limit, NEARBY_PLACES_MAX_LIMIT));
-  const cacheKey = `${lat.toFixed(4)}:${lng.toFixed(4)}:${safeLimit}`;
+  const safeMode: NearbyFetchMode = mode === 'quick' ? 'quick' : 'full';
+  const cacheKey = toCacheKey(lat, lng, safeLimit, safeMode);
   const now = Date.now();
   const cached = nearbyPlacesCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
     return dedupeNearbyPlaces(cached.places, safeLimit);
+  }
+  if (safeMode === 'quick') {
+    const warmCache = getWarmCachePlaces(lat, lng, safeLimit, safeMode, now);
+    if (warmCache.length > 0) {
+      return warmCache;
+    }
   }
 
   const inFlight = nearbyPlacesInFlight.get(cacheKey);
@@ -314,7 +400,8 @@ export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, si
     return dedupeNearbyPlaces(sharedPlaces, safeLimit);
   }
 
-  const url = `${API_BASE}/geocode/nearby-places/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&limit=${safeLimit}`;
+  const url = `${API_BASE}/geocode/nearby-places/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&limit=${safeLimit}&mode=${safeMode}`;
+  const allowNominatimFallback = safeMode === 'full';
 
   const requestPromise = (async () => {
     try {
@@ -324,7 +411,13 @@ export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, si
         signal,
       });
       if (!response.ok) {
-        const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+        const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(
+          lat,
+          lng,
+          safeLimit,
+          signal,
+          allowNominatimFallback
+        );
         return dedupeNearbyPlaces(fallbackPlaces, safeLimit);
       }
       const payload = (await response.json()) as { places?: unknown[] };
@@ -334,10 +427,22 @@ export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, si
       if (places.length > 0) {
         return dedupeNearbyPlaces(places, safeLimit);
       }
-      const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+      const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(
+        lat,
+        lng,
+        safeLimit,
+        signal,
+        allowNominatimFallback
+      );
       return dedupeNearbyPlaces(fallbackPlaces, safeLimit);
     } catch {
-      const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+      const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(
+        lat,
+        lng,
+        safeLimit,
+        signal,
+        allowNominatimFallback
+      );
       return dedupeNearbyPlaces(fallbackPlaces, safeLimit);
     }
   })();

@@ -98,18 +98,18 @@ body {
 }
 
 .gm-place-label-text {
-  display: inline-block;
-  max-width: 180px;
+  display: inline-flex;
+  align-items: center;
+  max-width: 210px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.9);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.97),
-    1px 0 0 rgba(255, 255, 255, 0.97),
-    0 -1px 0 rgba(255, 255, 255, 0.97),
-    -1px 0 0 rgba(255, 255, 255, 0.97),
-    0 0 6px rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.22);
 }
