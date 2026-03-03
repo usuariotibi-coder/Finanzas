@@ -40,6 +40,25 @@ def is_likely_business_name(name: str) -> bool:
     return not normalized.startswith(ROAD_PREFIXES)
 
 
+def to_unique_text_parts(parts: list[str | None]) -> list[str]:
+    seen: set[str] = set()
+    values: list[str] = []
+    for raw_value in parts:
+        value = str(raw_value or '').strip()
+        if not value:
+            continue
+        normalized = normalize_text(value)
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        values.append(value)
+    return values
+
+
+def join_unique_text_parts(parts: list[str | None]) -> str:
+    return ', '.join(to_unique_text_parts(parts))
+
+
 def get_distance_meters(from_lat: float, from_lng: float, to_lat: float, to_lng: float) -> float:
     earth_radius_meters = 6_371_000
     d_lat = radians(to_lat - from_lat)
@@ -245,6 +264,114 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
     return deduped
 
 
+def reverse_geocode_details(lat: float, lng: float) -> dict[str, object]:
+    data = None
+    for zoom in ('18', '17', '16', '15'):
+        params = {
+            'format': 'jsonv2',
+            'addressdetails': '1',
+            'accept-language': 'es',
+            'zoom': zoom,
+            'lat': str(lat),
+            'lon': str(lng),
+        }
+        url = f"https://nominatim.openstreetmap.org/reverse?{urlencode(params)}"
+        try:
+            candidate = _http_get_json(url, timeout_seconds=10)
+            if candidate:
+                data = candidate
+                break
+        except Exception:
+            continue
+
+    address = (data or {}).get('address') or {}
+    display_name = str((data or {}).get('display_name') or '').strip()
+    display_parts = to_unique_text_parts(display_name.split(','))
+    display_main = display_parts[0] if display_parts else ''
+
+    road = (
+        str(address.get('road') or '')
+        or str(address.get('pedestrian') or '')
+        or str(address.get('footway') or '')
+        or str(address.get('path') or '')
+        or str(address.get('highway') or '')
+    ).strip()
+    industrial = str(address.get('industrial') or address.get('commercial') or '').strip()
+    neighborhood = str(address.get('neighbourhood') or address.get('suburb') or address.get('quarter') or address.get('hamlet') or '').strip()
+    city = str(address.get('city') or address.get('town') or address.get('village') or address.get('municipality') or address.get('county') or '').strip()
+    state = str(address.get('state') or '').strip()
+    postcode = str(address.get('postcode') or '').strip()
+    country = str(address.get('country') or '').strip()
+
+    nearby_places = get_nearby_places(lat, lng, 8)
+    nearby_names = [str(place.get('name') or '').strip() for place in nearby_places if str(place.get('name') or '').strip()]
+    nearby_poi = ''
+    for place in nearby_places:
+        distance = float(place.get('distance') or 999999)
+        name = str(place.get('name') or '').strip()
+        if name and distance <= 500:
+            nearby_poi = name
+            break
+
+    generic_tokens = {normalize_text(value) for value in to_unique_text_parts([neighborhood, city, state, country])}
+    poi_candidates = to_unique_text_parts([
+        str((data or {}).get('name') or '').strip(),
+        str(address.get('amenity') or '').strip(),
+        str(address.get('shop') or '').strip(),
+        str(address.get('office') or '').strip(),
+        str(address.get('tourism') or '').strip(),
+        str(address.get('leisure') or '').strip(),
+        str(address.get('retail') or '').strip(),
+        str(address.get('building') or '').strip(),
+        display_main,
+        nearby_poi,
+    ])
+    poi = ''
+    for candidate in poi_candidates:
+        normalized = normalize_text(candidate)
+        if is_likely_business_name(candidate) and normalized not in generic_tokens:
+            poi = candidate
+            break
+
+    formatted_address = (
+        join_unique_text_parts([poi, road, industrial, neighborhood, city, state, postcode, country])
+        or ', '.join(display_parts[:7])
+        or join_unique_text_parts([road, industrial, city, state, country])
+        or 'Direccion no disponible en este punto.'
+    )
+
+    try:
+        reverse_lat = float(data.get('lat')) if data and str(data.get('lat') or '').strip() else lat
+    except (TypeError, ValueError):
+        reverse_lat = lat
+    try:
+        reverse_lng = float(data.get('lon')) if data and str(data.get('lon') or '').strip() else lng
+    except (TypeError, ValueError):
+        reverse_lng = lng
+    reverse_distance = get_distance_meters(lat, lng, reverse_lat, reverse_lng)
+    if reverse_distance > 1500:
+        # Protect against occasional geocoder mismatch by keeping user-selected coordinates.
+        reverse_lat = lat
+        reverse_lng = lng
+
+    return {
+        'formatted_address': formatted_address,
+        'lat': round(reverse_lat, 7),
+        'lng': round(reverse_lng, 7),
+        'details': {
+            'poi': poi,
+            'road': road,
+            'industrial': industrial,
+            'neighborhood': neighborhood,
+            'city': city,
+            'state': state,
+            'postcode': postcode,
+            'country': country,
+        },
+        'nearby_places': nearby_names[:8],
+    }
+
+
 class HealthCheckView(APIView):
     permission_classes = []
 
@@ -269,6 +396,22 @@ class NearbyPlacesView(APIView):
 
         places = get_nearby_places(lat=lat, lng=lng, limit=limit)
         return Response({'places': places})
+
+
+class ReverseGeocodeView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        raw_lat = request.query_params.get('lat')
+        raw_lng = request.query_params.get('lng')
+        try:
+            lat = float(raw_lat)
+            lng = float(raw_lng)
+        except (TypeError, ValueError):
+            return Response({'detail': 'Parametros invalidos. Usa lat y lng numericos.'}, status=400)
+
+        payload = reverse_geocode_details(lat=lat, lng=lng)
+        return Response(payload)
 
 
 class DashboardMetricsView(APIView):

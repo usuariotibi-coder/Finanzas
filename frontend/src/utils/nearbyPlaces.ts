@@ -261,7 +261,7 @@ export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, si
   try {
     const response = await fetch(url, {
       method: 'GET',
-      credentials: 'include',
+      credentials: 'omit',
       signal,
     });
     if (!response.ok) {

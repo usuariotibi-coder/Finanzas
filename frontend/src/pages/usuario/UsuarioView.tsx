@@ -18,6 +18,7 @@ import {
   updateFlotillaAsignacion,
   updateViatico,
 } from '../../utils/backendSync';
+import { API_ROOT } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
@@ -67,19 +68,6 @@ const isLikelyBusinessName = (name: string) => {
     return false;
   }
   return true;
-};
-
-const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
-  const toRad = (numberValue: number) => (numberValue * Math.PI) / 180;
-  const earthRadiusMeters = 6_371_000;
-  const deltaLat = toRad(toLat - fromLat);
-  const deltaLng = toRad(toLng - fromLng);
-  const latA = toRad(fromLat);
-  const latB = toRad(toLat);
-  const value =
-    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-    Math.cos(latA) * Math.cos(latB) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
-  return earthRadiusMeters * (2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
 };
 
 type VehicleDestinationDetails = {
@@ -144,6 +132,27 @@ const formatNearbyPlacesLabel = (nearbyPlaces: string[]) => {
   return hiddenCount > 0 ? `${preview} | +${hiddenCount} mas` : preview;
 };
 
+const GEOCODE_API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api/geocode`;
+
+type ReverseGeocodeResult = {
+  formatted_address?: string;
+  details?: Partial<VehicleDestinationDetails>;
+  nearby_places?: string[];
+};
+
+const reverseGeocodeDestination = async (lat: number, lng: number, signal?: AbortSignal): Promise<ReverseGeocodeResult | null> => {
+  const url = `${GEOCODE_API_BASE}/reverse/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`;
+  try {
+    const response = await fetch(url, { method: 'GET', credentials: 'omit', signal });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as ReverseGeocodeResult;
+  } catch {
+    return null;
+  }
+};
+
 function VehicleDestinationLayeredMap({
   center,
   selectedPoint,
@@ -163,7 +172,7 @@ function VehicleDestinationLayeredMap({
   const markerTitle = destinationDetails?.poi || destinationDetails?.road || 'Destino seleccionado';
   const markerSubtitle =
     destinationText ||
-    (selectedPoint ? `${selectedPoint.lat.toFixed(5)}, ${selectedPoint.lng.toFixed(5)}` : '');
+    (selectedPoint ? 'Punto seleccionado en el mapa' : '');
 
   return (
     <LeafletDestinationMap
@@ -171,6 +180,7 @@ function VehicleDestinationLayeredMap({
       marker={selectedPoint}
       markerTitle={markerTitle}
       markerSubtitle={markerSubtitle}
+      fallbackNearbyNames={destinationDetails?.nearbyPlaces || []}
       defaultZoom={compact ? 15 : 17}
       fallbackZoom={5}
       onMapClick={onSelect}
@@ -967,94 +977,31 @@ export default function UsuarioView() {
 
     setDestinoVehiculoCoords({ lat, lng });
     setIsResolviendoDestinoVehiculo(true);
-    setDestinoVehiculoMapMensaje('');
+    setDestinoVehiculoMapMensaje('Resolviendo direccion...');
 
-    const coordenadasFallback = `Lat ${lat.toFixed(5)}, Lon ${lng.toFixed(5)}`;
-    setFormSolicitudVehiculo((prev) => ({ ...prev, destino: coordenadasFallback }));
+    const fallbackAddress = 'Direccion no disponible en este punto. Selecciona una vialidad o empresa cercana.';
     setDestinoVehiculoDetalles(null);
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${lat}&lon=${lng}&accept-language=es`,
-        { signal: controller.signal }
-      );
-      if (!response.ok) {
-        throw new Error('No se pudo resolver la direccion.');
-      }
-
-      const data = (await response.json()) as {
-        lat?: string;
-        lon?: string;
-        display_name?: string;
-        name?: string;
-        address?: Record<string, string | undefined>;
-      };
-      const reverseLat = Number(data.lat);
-      const reverseLon = Number(data.lon);
-      if (Number.isFinite(reverseLat) && Number.isFinite(reverseLon)) {
-        const reverseDistance = getDistanceMeters(lat, lng, reverseLat, reverseLon);
-        if (reverseDistance > 1500) {
-          throw new Error('La geocodificacion devolvio un punto lejano al seleccionado.');
-        }
-      }
-      const address = data.address ?? {};
-      const displayNameParts = toUniqueTextParts((data.display_name || '').split(','));
-      const displayNameMain = displayNameParts[0] || '';
-      const poiCandidates = [
-        data.name,
-        address.amenity,
-        address.shop,
-        address.office,
-        address.tourism,
-        address.leisure,
-        address.commercial,
-        address.industrial,
-        address.retail,
-        address.building,
-        displayNameMain,
-      ]
-        .map((value) => (value || '').trim())
-        .filter((value) => Boolean(value) && isLikelyBusinessName(value));
-      const road = address.road || address.pedestrian || address.footway || address.path || address.highway;
-      const rawNeighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet;
-      const rawCity = address.city || address.town || address.village || address.municipality || address.county;
-      const rawState = address.state;
-      const industrial = address.industrial || address.commercial;
-      const postcode = address.postcode;
-      const country = address.country;
+      const reverseData = await reverseGeocodeDestination(lat, lng, controller.signal);
       const nearbyPlaceCandidates = await fetchNearbyPlaceCandidates(lat, lng, controller.signal);
       if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
         return;
       }
-      const nearbyPlaces = nearbyPlaceCandidates.map((item) => item.name);
-      const nearbyPoi = nearbyPlaceCandidates.find((item) => item.distance <= 450)?.name || '';
-      const genericLocationTokens = new Set(
-        toUniqueTextParts([rawNeighborhood, rawCity, rawState, country]).map((value) => normalizeText(value))
-      );
-      const resolvedPoi =
-        toUniqueTextParts([poiCandidates[0], displayNameMain, nearbyPoi]).find((value) => (
-          isLikelyBusinessName(value) && !genericLocationTokens.has(normalizeText(value))
-        )) || '';
-
-      const [neighborhood, city, state] = toUniqueTextParts([rawNeighborhood, rawCity, rawState]);
-      const roadLine = joinUniqueTextParts([road]);
-      const zoneLine = joinUniqueTextParts([industrial, neighborhood, city]);
-      const stateLine = joinUniqueTextParts([state, postcode, country]);
-      const direccion =
-        joinUniqueTextParts([resolvedPoi, roadLine, zoneLine, stateLine]) ||
-        displayNameParts.slice(0, 7).join(', ') ||
-        coordenadasFallback;
+      const reverseDetails = reverseData?.details || {};
+      const nearbyPlaces = toUniqueTextParts([...(reverseData?.nearby_places || []), ...nearbyPlaceCandidates.map((item) => item.name)]);
+      const direccion = String(reverseData?.formatted_address || '').trim() || fallbackAddress;
 
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: direccion }));
       setDestinoVehiculoDetalles({
-        poi: resolvedPoi || undefined,
-        road,
-        industrial,
-        neighborhood,
-        city,
-        state,
-        postcode,
-        country,
+        poi: (reverseDetails.poi || '') || undefined,
+        road: (reverseDetails.road || '') || undefined,
+        industrial: (reverseDetails.industrial || '') || undefined,
+        neighborhood: (reverseDetails.neighborhood || '') || undefined,
+        city: (reverseDetails.city || '') || undefined,
+        state: (reverseDetails.state || '') || undefined,
+        postcode: (reverseDetails.postcode || '') || undefined,
+        country: (reverseDetails.country || '') || undefined,
         nearbyPlaces,
       });
       setDestinoVehiculoMapMensaje('Destino tomado del mapa.');
@@ -1065,9 +1012,9 @@ export default function UsuarioView() {
       if (error instanceof Error && error.name === 'AbortError') {
         return;
       }
-      setFormSolicitudVehiculo((prev) => ({ ...prev, destino: coordenadasFallback }));
+      setFormSolicitudVehiculo((prev) => ({ ...prev, destino: fallbackAddress }));
       setDestinoVehiculoDetalles(null);
-      setDestinoVehiculoMapMensaje('No se pudo resolver la direccion exacta. Se guardaron coordenadas.');
+      setDestinoVehiculoMapMensaje('No se pudo resolver la direccion exacta. Ajusta el punto en calle o empresa cercana.');
     } finally {
       if (!controller.signal.aborted && selectionId === destinoVehiculoSelectionRef.current) {
         setIsResolviendoDestinoVehiculo(false);
@@ -2575,11 +2522,6 @@ export default function UsuarioView() {
                         {!isResolviendoDestinoVehiculo && destinoVehiculoMapMensaje && (
                           <span className="text-blue-700">{destinoVehiculoMapMensaje}</span>
                         )}
-                        {destinoVehiculoCoords && (
-                          <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-700">
-                            {destinoVehiculoCoords.lat.toFixed(5)}, {destinoVehiculoCoords.lng.toFixed(5)}
-                          </span>
-                        )}
                         {destinoVehiculoDetalles?.road && (
                           <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
                             Calle: {destinoVehiculoDetalles.road}
@@ -2729,11 +2671,6 @@ export default function UsuarioView() {
               <div className="mb-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
                 <span className="font-semibold text-slate-900">Destino actual:</span>{' '}
                 {formSolicitudVehiculo.destino || 'Selecciona un punto en el mapa'}
-                {destinoVehiculoCoords && (
-                  <span className="ml-2 rounded bg-white px-1.5 py-0.5 text-slate-600">
-                    {destinoVehiculoCoords.lat.toFixed(5)}, {destinoVehiculoCoords.lng.toFixed(5)}
-                  </span>
-                )}
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {destinoVehiculoDetalles?.road && (
                     <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Calle: {destinoVehiculoDetalles.road}</span>

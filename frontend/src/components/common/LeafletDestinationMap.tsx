@@ -95,6 +95,7 @@ interface LeafletDestinationMapProps {
   marker?: LatLngPoint | null;
   markerTitle?: string;
   markerSubtitle?: string;
+  fallbackNearbyNames?: string[];
   defaultZoom?: number;
   fallbackZoom?: number;
   showModeControl?: boolean;
@@ -175,6 +176,7 @@ export default function LeafletDestinationMap({
   marker = null,
   markerTitle = 'Destino seleccionado',
   markerSubtitle = '',
+  fallbackNearbyNames = [],
   defaultZoom = 17,
   fallbackZoom = 5,
   showModeControl = true,
@@ -257,6 +259,16 @@ export default function LeafletDestinationMap({
     }
     return subtitle;
   }, [markerTitle, markerSubtitle]);
+  const fallbackNearbyNamesSafe = useMemo(
+    () => (
+      fallbackNearbyNames
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .filter((value, index, array) => array.findIndex((item) => normalizeBusinessKey(item) === normalizeBusinessKey(value)) === index)
+        .slice(0, 12)
+    ),
+    [fallbackNearbyNames]
+  );
 
   useEffect(() => {
     const anchor = marker ?? center;
@@ -381,7 +393,19 @@ export default function LeafletDestinationMap({
           </div>
         </div>
       ) : null}
-      {currentZoom >= 12 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 ? (
+      {currentZoom >= 12 && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length > 0 ? (
+        <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
+          <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
+          <div className="space-y-0.5">
+            {fallbackNearbyNamesSafe.map((name) => (
+              <p key={`fallback:${name}`} className="text-[10px] text-slate-700">
+                {name}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {currentZoom >= 12 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] rounded-md border border-slate-300 bg-white/95 px-2 py-1 shadow">
           <p className="text-[10px] text-slate-700">No hay nombres OSM en esta zona.</p>
         </div>
