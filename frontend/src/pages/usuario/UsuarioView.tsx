@@ -100,7 +100,7 @@ type NearbyPlaceCandidate = {
   lng: number;
 };
 
-const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 40): NearbyPlaceCandidate[] => {
+const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 140): NearbyPlaceCandidate[] => {
   const seen = new Set<string>();
   const unique: NearbyPlaceCandidate[] = [];
   for (const place of places) {
@@ -122,7 +122,7 @@ const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 40)
 
 const fetchNearbyPlaceCandidates = async (lat: number, lng: number, signal?: AbortSignal): Promise<NearbyPlaceCandidate[]> => {
   try {
-    const places = await fetchNearbyPlaces(lat, lng, 60, signal);
+    const places = await fetchNearbyPlaces(lat, lng, 220, signal);
     const normalized = places
       .filter((item) => isLikelyBusinessName(item.name))
       .map((item) => ({

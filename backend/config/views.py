@@ -22,7 +22,7 @@ from viaticos.models import Viatico
 NEARBY_PLACES_CACHE: dict[str, tuple[float, list[dict[str, float | str]]]] = {}
 NEARBY_PLACES_CACHE_TTL_SECONDS = 300
 NEARBY_PLACES_EMPTY_CACHE_TTL_SECONDS = 20
-NEARBY_PLACES_MAX_LIMIT = 50
+NEARBY_PLACES_MAX_LIMIT = 300
 ROAD_PREFIXES = ('calle', 'av', 'avenida', 'blvd', 'boulevard', 'carretera', 'camino', 'autopista', 'ruta')
 HTTP_HEADERS = {
     'User-Agent': 'FinanzasV2/1.0 (nearby-places-service)',

@@ -10,7 +10,7 @@ export type NearbyPlace = {
 };
 
 const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
-const NEARBY_PLACES_MAX_LIMIT = 50;
+const NEARBY_PLACES_MAX_LIMIT = 300;
 const NEARBY_PLACES_CACHE_TTL_MS = 10 * 60 * 1000;
 const NEARBY_PLACES_EMPTY_CACHE_TTL_MS = 20 * 1000;
 const nearbyPlacesCache = new Map<string, { expiresAt: number; places: NearbyPlace[] }>();
