@@ -10,6 +10,10 @@ export type NearbyPlace = {
 };
 
 const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
+const NEARBY_PLACES_MAX_LIMIT = 50;
+const NEARBY_PLACES_CACHE_TTL_MS = 10 * 60 * 1000;
+const nearbyPlacesCache = new Map<string, { expiresAt: number; places: NearbyPlace[] }>();
+const nearbyPlacesInFlight = new Map<string, Promise<NearbyPlace[]>>();
 
 const normalizeText = (value: string) =>
   String(value || '')
@@ -73,20 +77,58 @@ const toNearbyPlace = (value: unknown): NearbyPlace | null => {
   };
 };
 
+const dedupeNearbyPlaces = (places: NearbyPlace[], limit: number): NearbyPlace[] => {
+  const unique = new Map<string, NearbyPlace>();
+  places.forEach((place) => {
+    const name = String(place.name || '').trim();
+    const lat = Number(place.lat);
+    const lng = Number(place.lng);
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return;
+    }
+    const key = `${normalizeText(name)}:${lat.toFixed(5)}:${lng.toFixed(5)}`;
+    if (!unique.has(key)) {
+      unique.set(key, { ...place, name, lat, lng });
+    }
+  });
+  return Array.from(unique.values()).slice(0, limit);
+};
+
 const fetchNearbyPlacesFromNominatimFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
   const delta = 0.06;
   const left = lng - delta;
   const right = lng + delta;
   const top = lat + delta;
   const bottom = lat - delta;
-  const queries = ['parque industrial', 'industrial', 'fabrica', 'empresa', 'planta'];
+  const queries = [
+    'parque industrial',
+    'industrial',
+    'fabrica',
+    'empresa',
+    'planta',
+    'manufactura',
+    'almacen',
+    'logistica',
+    'taller',
+    'maquiladora',
+    'automotriz',
+    'proveedor',
+    'gasolinera',
+    'restaurant',
+    'hotel',
+    'hospital',
+    'farmacia',
+    'banco',
+    'supermercado',
+    'tienda',
+  ];
   const unique = new Set<string>();
   const places: NearbyPlace[] = [];
 
   for (const query of queries) {
     const params = new URLSearchParams({
       format: 'jsonv2',
-      limit: '25',
+      limit: '35',
       'accept-language': 'es',
       bounded: '1',
       viewbox: `${left},${top},${right},${bottom}`,
@@ -152,9 +194,11 @@ const fetchNearbyPlacesFromOverpassFallback = async (lat: number, lng: number, l
   nwr(around:${radiusMeters},${lat},${lng})["shop"];
   nwr(around:${radiusMeters},${lat},${lng})["office"];
 );
-out center 1200;
+out center 2400;
 `;
   const endpoints = [
+    'https://lz4.overpass-api.de/api/interpreter',
+    'https://z.overpass-api.de/api/interpreter',
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
   ];
@@ -255,27 +299,57 @@ out center 1200;
 };
 
 export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const safeLimit = Math.max(1, Math.min(limit, 100));
+  const safeLimit = Math.max(1, Math.min(limit, NEARBY_PLACES_MAX_LIMIT));
+  const cacheKey = `${lat.toFixed(4)}:${lng.toFixed(4)}:${safeLimit}`;
+  const now = Date.now();
+  const cached = nearbyPlacesCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return dedupeNearbyPlaces(cached.places, safeLimit);
+  }
+
+  const inFlight = nearbyPlacesInFlight.get(cacheKey);
+  if (inFlight) {
+    const sharedPlaces = await inFlight;
+    return dedupeNearbyPlaces(sharedPlaces, safeLimit);
+  }
+
   const url = `${API_BASE}/geocode/nearby-places/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&limit=${safeLimit}`;
 
+  const requestPromise = (async () => {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'omit',
+        signal,
+      });
+      if (!response.ok) {
+        const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+        return dedupeNearbyPlaces(fallbackPlaces, safeLimit);
+      }
+      const payload = (await response.json()) as { places?: unknown[] };
+      const places = (payload.places || [])
+        .map(toNearbyPlace)
+        .filter((place): place is NearbyPlace => Boolean(place));
+      if (places.length > 0) {
+        return dedupeNearbyPlaces(places, safeLimit);
+      }
+      const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+      return dedupeNearbyPlaces(fallbackPlaces, safeLimit);
+    } catch {
+      const fallbackPlaces = await fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+      return dedupeNearbyPlaces(fallbackPlaces, safeLimit);
+    }
+  })();
+
+  nearbyPlacesInFlight.set(cacheKey, requestPromise);
   try {
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'omit',
-      signal,
+    const places = await requestPromise;
+    nearbyPlacesCache.set(cacheKey, {
+      expiresAt: Date.now() + NEARBY_PLACES_CACHE_TTL_MS,
+      places,
     });
-    if (!response.ok) {
-      return fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
-    }
-    const payload = (await response.json()) as { places?: unknown[] };
-    const places = (payload.places || [])
-      .map(toNearbyPlace)
-      .filter((place): place is NearbyPlace => Boolean(place));
-    if (places.length > 0) {
-      return places;
-    }
-    return fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
-  } catch {
-    return fetchNearbyPlacesFromOverpassFallback(lat, lng, safeLimit, signal);
+    return places;
+  } finally {
+    nearbyPlacesInFlight.delete(cacheKey);
   }
 };

@@ -21,6 +21,7 @@ from viaticos.models import Viatico
 
 NEARBY_PLACES_CACHE: dict[str, tuple[float, list[dict[str, float | str]]]] = {}
 NEARBY_PLACES_CACHE_TTL_SECONDS = 300
+NEARBY_PLACES_MAX_LIMIT = 50
 ROAD_PREFIXES = ('calle', 'av', 'avenida', 'blvd', 'boulevard', 'carretera', 'camino', 'autopista', 'ruta')
 HTTP_HEADERS = {
     'User-Agent': 'FinanzasV2/1.0 (nearby-places-service)',
@@ -94,9 +95,11 @@ def fetch_overpass_places(lat: float, lng: float) -> list[dict[str, float | str]
   nwr(around:{radius_meters},{lat},{lng})["shop"];
   nwr(around:{radius_meters},{lat},{lng})["office"];
 );
-out center 1200;
+out center 2400;
 """
     endpoints = (
+        'https://lz4.overpass-api.de/api/interpreter',
+        'https://z.overpass-api.de/api/interpreter',
         'https://overpass-api.de/api/interpreter',
         'https://overpass.kumi.systems/api/interpreter',
     )
@@ -189,14 +192,39 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
     right = lng + delta
     top = lat + delta
     bottom = lat - delta
-    queries = ('parque industrial', 'industrial', 'fabrica', 'empresa', 'planta')
+    queries = (
+        'parque industrial',
+        'industrial',
+        'fabrica',
+        'empresa',
+        'planta',
+        'manufactura',
+        'almacen',
+        'logistica',
+        'taller',
+        'maquiladora',
+        'automotriz',
+        'proveedor',
+        'gasolinera',
+        'restaurant',
+        'hotel',
+        'hospital',
+        'farmacia',
+        'banco',
+        'supermercado',
+        'tienda',
+    )
     places: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
+    started_at = time.monotonic()
+    max_total_seconds = 8.0
 
     for query in queries:
+        if time.monotonic() - started_at > max_total_seconds:
+            break
         params = {
             'format': 'jsonv2',
-            'limit': '15',
+            'limit': '25',
             'accept-language': 'es',
             'bounded': '1',
             'viewbox': f'{left},{top},{right},{bottom}',
@@ -204,7 +232,7 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
         }
         url = f"https://nominatim.openstreetmap.org/search?{urlencode(params)}"
         try:
-            data = _http_get_json(url, timeout_seconds=10)
+            data = _http_get_json(url, timeout_seconds=2)
         except Exception:
             continue
 
@@ -233,13 +261,16 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
                 'score': round(distance + 1200, 2),
                 'source': 'nominatim',
             })
+        if len(places) >= 100:
+            break
 
     places.sort(key=lambda item: float(item['score']))
     return places
 
 
 def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, float | str]]:
-    cache_key = f'{round(lat, 4)}:{round(lng, 4)}:{limit}'
+    safe_limit = max(1, min(int(limit), NEARBY_PLACES_MAX_LIMIT))
+    cache_key = f'{round(lat, 4)}:{round(lng, 4)}:{safe_limit}'
     now = time.time()
     cache_entry = NEARBY_PLACES_CACHE.get(cache_key)
     if cache_entry and now - cache_entry[0] < NEARBY_PLACES_CACHE_TTL_SECONDS:
@@ -247,7 +278,7 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
 
     overpass_places = fetch_overpass_places(lat, lng)
     # Skip expensive fallback when Overpass already returns enough nearby business names.
-    nominatim_places = fetch_nominatim_places(lat, lng) if len(overpass_places) < max(8, min(limit, 20)) else []
+    nominatim_places = fetch_nominatim_places(lat, lng) if len(overpass_places) < max(12, min(safe_limit, 30)) else []
     merged = overpass_places + nominatim_places
     deduped: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
@@ -257,7 +288,7 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
             continue
         seen_names.add(normalized)
         deduped.append(place)
-        if len(deduped) >= limit:
+        if len(deduped) >= safe_limit:
             break
 
     NEARBY_PLACES_CACHE[cache_key] = (now, deduped)
@@ -304,7 +335,7 @@ def reverse_geocode_details(lat: float, lng: float, include_nearby: bool = False
     postcode = str(address.get('postcode') or '').strip()
     country = str(address.get('country') or '').strip()
 
-    nearby_places = get_nearby_places(lat, lng, 8) if include_nearby else []
+    nearby_places = get_nearby_places(lat, lng, NEARBY_PLACES_MAX_LIMIT) if include_nearby else []
     nearby_names = [str(place.get('name') or '').strip() for place in nearby_places if str(place.get('name') or '').strip()]
     nearby_poi = ''
     if include_nearby:
@@ -370,8 +401,8 @@ def reverse_geocode_details(lat: float, lng: float, include_nearby: bool = False
             'postcode': postcode,
             'country': country,
         },
-        'nearby_places': nearby_names[:40],
-        'nearby_points': nearby_places[:40] if include_nearby else [],
+        'nearby_places': nearby_names[:NEARBY_PLACES_MAX_LIMIT],
+        'nearby_points': nearby_places[:NEARBY_PLACES_MAX_LIMIT] if include_nearby else [],
     }
 
 
@@ -393,7 +424,7 @@ class NearbyPlacesView(APIView):
         try:
             lat = float(raw_lat)
             lng = float(raw_lng)
-            limit = max(1, min(int(raw_limit), 50))
+            limit = max(1, min(int(raw_limit), NEARBY_PLACES_MAX_LIMIT))
         except (TypeError, ValueError):
             return Response({'detail': 'Parámetros inválidos. Usa lat, lng y limit numéricos.'}, status=400)
 

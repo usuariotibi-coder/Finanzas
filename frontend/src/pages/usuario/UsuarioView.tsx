@@ -214,7 +214,8 @@ const reverseGeocodeDestination = async (
       return null;
     }
     const payload = (await response.json()) as ReverseGeocodeResult;
-    if (payload?.formatted_address) {
+    const hasNearbyData = Boolean((payload?.nearby_places || []).length || (payload?.nearby_points || []).length);
+    if (payload?.formatted_address && (!includeNearby || hasNearbyData)) {
       reverseGeocodeCache.set(`${cacheKey}:${includeNearby ? '1' : '0'}`, payload);
     }
     return payload;

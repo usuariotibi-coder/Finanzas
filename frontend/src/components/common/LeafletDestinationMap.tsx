@@ -57,15 +57,15 @@ const buildReadableNearbyPlaces = (
   currentZoom: number
 ) => {
   const maxVisible =
-    currentZoom >= 16 ? 80 :
-      currentZoom >= 15 ? 60 :
-        currentZoom >= 14 ? 40 :
-          currentZoom >= 13 ? 28 : 16;
+    currentZoom >= 16 ? 160 :
+      currentZoom >= 15 ? 120 :
+        currentZoom >= 14 ? 90 :
+          currentZoom >= 13 ? 70 : 40;
   const minGapMeters =
-    currentZoom >= 16 ? 20 :
-      currentZoom >= 15 ? 30 :
-        currentZoom >= 14 ? 45 :
-          currentZoom >= 13 ? 65 : 90;
+    currentZoom >= 16 ? 12 :
+      currentZoom >= 15 ? 18 :
+        currentZoom >= 14 ? 24 :
+          currentZoom >= 13 ? 32 : 45;
 
   const sorted = places
     .filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.lng) && place.name.trim())
@@ -412,7 +412,7 @@ export default function LeafletDestinationMap({
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
           <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
           <div className="space-y-0.5">
-            {nearbyPlacesToRender.slice(0, 30).map((place) => (
+            {nearbyPlacesToRender.slice(0, 60).map((place) => (
               <p key={`list:${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`} className="text-[10px] text-slate-700">
                 {place.name}
               </p>
