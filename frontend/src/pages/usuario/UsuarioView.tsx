@@ -80,13 +80,54 @@ type VehicleDestinationDetails = {
   nearbyPlaces?: string[];
 };
 
-const fetchNearbyPlaceNames = async (lat: number, lng: number): Promise<string[]> => {
+type NearbyPlaceCandidate = {
+  name: string;
+  distance: number;
+};
+
+const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 6): NearbyPlaceCandidate[] => {
+  const seen = new Set<string>();
+  const unique: NearbyPlaceCandidate[] = [];
+  for (const place of places) {
+    const normalized = normalizeText(place.name)
+      .replace(/\b(sa de cv|s a de c v|s de rl de cv|s de rl|de cv|sa|sc|ac|inc|llc)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    unique.push(place);
+    if (unique.length >= limit) {
+      break;
+    }
+  }
+  return unique;
+};
+
+const fetchNearbyPlaceCandidates = async (lat: number, lng: number): Promise<NearbyPlaceCandidate[]> => {
   try {
-    const places = await fetchNearbyPlaces(lat, lng, 12);
-    return places.map((item) => item.name).filter(Boolean);
+    const places = await fetchNearbyPlaces(lat, lng, 18);
+    const normalized = places
+      .filter((item) => isLikelyBusinessName(item.name))
+      .map((item) => ({
+        name: item.name.trim(),
+        distance: Number.isFinite(Number(item.distance)) ? Number(item.distance) : Number.POSITIVE_INFINITY,
+      }))
+      .sort((a, b) => a.distance - b.distance);
+    return dedupeNearbyPlaceCandidates(normalized);
   } catch {
     return [];
   }
+};
+
+const formatNearbyPlacesLabel = (nearbyPlaces: string[]) => {
+  if (!nearbyPlaces.length) {
+    return '';
+  }
+  const preview = nearbyPlaces.slice(0, 4).join(' | ');
+  const hiddenCount = nearbyPlaces.length - 4;
+  return hiddenCount > 0 ? `${preview} | +${hiddenCount} mas` : preview;
 };
 
 function VehicleDestinationLayeredMap({
@@ -937,13 +978,18 @@ export default function UsuarioView() {
       const rawState = address.state;
       const postcode = address.postcode;
       const country = address.country;
-      const nearbyPlaces = await fetchNearbyPlaceNames(lat, lng);
+      const nearbyPlaceCandidates = await fetchNearbyPlaceCandidates(lat, lng);
+      const nearbyPlaces = nearbyPlaceCandidates.map((item) => item.name);
+      const nearbyPoi = nearbyPlaceCandidates.find((item) => item.distance <= 450)?.name || '';
       const resolvedPoi =
-        toUniqueTextParts([nearbyPlaces[0], poiCandidates[0], displayNameMain]).find((value) => isLikelyBusinessName(value)) || '';
+        toUniqueTextParts([poiCandidates[0], displayNameMain, nearbyPoi]).find((value) => isLikelyBusinessName(value)) || '';
 
       const [neighborhood, city, state] = toUniqueTextParts([rawNeighborhood, rawCity, rawState]);
+      const roadLine = joinUniqueTextParts([road]);
+      const zoneLine = joinUniqueTextParts([neighborhood, city]);
+      const stateLine = joinUniqueTextParts([state, postcode, country]);
       const direccion =
-        joinUniqueTextParts([resolvedPoi, road, neighborhood, city, state, postcode, country]) ||
+        joinUniqueTextParts([resolvedPoi, roadLine, zoneLine, stateLine]) ||
         displayNameParts.slice(0, 7).join(', ') ||
         coordenadasFallback;
 
@@ -2472,7 +2518,7 @@ export default function UsuarioView() {
                         )}
                         {destinoVehiculoDetalles?.nearbyPlaces?.length ? (
                           <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">
-                            Negocios cercanos: {destinoVehiculoDetalles.nearbyPlaces.join(' | ')}
+                            Negocios cercanos: {formatNearbyPlacesLabel(destinoVehiculoDetalles.nearbyPlaces)}
                           </span>
                         ) : null}
                         {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
@@ -2618,7 +2664,7 @@ export default function UsuarioView() {
                   )}
                   {destinoVehiculoDetalles?.nearbyPlaces?.length ? (
                     <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
-                      Negocios cercanos: {destinoVehiculoDetalles.nearbyPlaces.join(' | ')}
+                      Negocios cercanos: {formatNearbyPlacesLabel(destinoVehiculoDetalles.nearbyPlaces)}
                     </span>
                   ) : null}
                   {(destinoVehiculoDetalles?.neighborhood || destinoVehiculoDetalles?.city) && (

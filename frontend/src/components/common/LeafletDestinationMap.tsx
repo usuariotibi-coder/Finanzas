@@ -23,6 +23,73 @@ type BoundsBox = {
   west: number;
 };
 
+const normalizeText = (value: string) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const normalizeBusinessKey = (value: string) =>
+  normalizeText(value)
+    .replace(/\b(sa de cv|s a de c v|s de rl de cv|s de rl|de cv|sa|sc|ac|inc|llc)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+  const toRad = (numberValue: number) => (numberValue * Math.PI) / 180;
+  const earthRadiusMeters = 6_371_000;
+  const deltaLat = toRad(toLat - fromLat);
+  const deltaLng = toRad(toLng - fromLng);
+  const latA = toRad(fromLat);
+  const latB = toRad(toLat);
+  const value =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(latA) * Math.cos(latB) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  return earthRadiusMeters * (2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
+};
+
+const buildReadableNearbyPlaces = (
+  places: NearbyPlacePoint[],
+  anchor: LatLngPoint,
+  currentZoom: number
+) => {
+  const maxVisible = currentZoom >= 16 ? 12 : currentZoom >= 14 ? 9 : 6;
+  const minGapMeters = currentZoom >= 16 ? 120 : currentZoom >= 14 ? 180 : 260;
+
+  const sorted = places
+    .filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.lng) && place.name.trim())
+    .sort(
+      (a, b) =>
+        getDistanceMeters(anchor.lat, anchor.lng, a.lat, a.lng) -
+        getDistanceMeters(anchor.lat, anchor.lng, b.lat, b.lng)
+    );
+
+  const selected: NearbyPlacePoint[] = [];
+  const seenNames = new Set<string>();
+  for (const place of sorted) {
+    const canonicalName = normalizeBusinessKey(place.name);
+    if (!canonicalName || seenNames.has(canonicalName)) {
+      continue;
+    }
+    const tooCloseToExisting = selected.some(
+      (existing) => getDistanceMeters(existing.lat, existing.lng, place.lat, place.lng) < minGapMeters
+    );
+    if (tooCloseToExisting) {
+      continue;
+    }
+    seenNames.add(canonicalName);
+    selected.push(place);
+    if (selected.length >= maxVisible) {
+      break;
+    }
+  }
+
+  return selected;
+};
+
 interface LeafletDestinationMapProps {
   center: LatLngPoint;
   marker?: LatLngPoint | null;
@@ -171,6 +238,25 @@ export default function LeafletDestinationMap({
       place.lng >= mapBounds.west
     ));
   }, [nearbyPlaces, mapBounds]);
+  const nearbyPlacesToRender = useMemo(
+    () => buildReadableNearbyPlaces(visibleNearbyPlaces, marker ?? center, currentZoom),
+    [visibleNearbyPlaces, marker?.lat, marker?.lng, center.lat, center.lng, currentZoom]
+  );
+  const markerSubtitleSafe = useMemo(() => {
+    const subtitle = String(markerSubtitle || '').trim();
+    if (!subtitle) {
+      return '';
+    }
+    const titleNormalized = normalizeText(markerTitle);
+    const subtitleNormalized = normalizeText(subtitle);
+    if (!titleNormalized || titleNormalized === subtitleNormalized) {
+      return titleNormalized === subtitleNormalized ? '' : subtitle;
+    }
+    if (subtitleNormalized.startsWith(`${titleNormalized} `) || subtitleNormalized.startsWith(`${titleNormalized},`)) {
+      return subtitle.slice(markerTitle.length).replace(/^[,\s-]+/, '').trim();
+    }
+    return subtitle;
+  }, [markerTitle, markerSubtitle]);
 
   useEffect(() => {
     const anchor = marker ?? center;
@@ -264,13 +350,13 @@ export default function LeafletDestinationMap({
             <Tooltip direction="top" offset={[0, -8]} opacity={0.95} permanent>
               <div className="text-xs">
                 <p className="font-semibold text-slate-900">{markerTitle}</p>
-                {markerSubtitle ? <p className="text-slate-700">{markerSubtitle}</p> : null}
+                {markerSubtitleSafe ? <p className="text-slate-700">{markerSubtitleSafe}</p> : null}
               </div>
             </Tooltip>
           </CircleMarker>
         ) : null}
         {currentZoom >= 12 &&
-          visibleNearbyPlaces.map((place) => (
+          nearbyPlacesToRender.map((place) => (
           <CircleMarker
             key={`${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}`}
             center={[place.lat, place.lng]}
@@ -283,11 +369,11 @@ export default function LeafletDestinationMap({
           </CircleMarker>
           ))}
       </MapContainer>
-      {currentZoom >= 12 && visibleNearbyPlaces.length > 0 ? (
+      {currentZoom >= 12 && nearbyPlacesToRender.length > 0 ? (
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
           <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
           <div className="space-y-0.5">
-            {visibleNearbyPlaces.slice(0, 12).map((place) => (
+            {nearbyPlacesToRender.slice(0, 12).map((place) => (
               <p key={`list:${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`} className="text-[10px] text-slate-700">
                 {place.name}
               </p>
@@ -295,7 +381,7 @@ export default function LeafletDestinationMap({
           </div>
         </div>
       ) : null}
-      {currentZoom >= 12 && !isLoadingNearbyPlaces && visibleNearbyPlaces.length === 0 ? (
+      {currentZoom >= 12 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 ? (
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] rounded-md border border-slate-300 bg-white/95 px-2 py-1 shadow">
           <p className="text-[10px] text-slate-700">No hay nombres OSM en esta zona.</p>
         </div>
