@@ -150,6 +150,23 @@ type ReverseGeocodeResult = {
   nearby_places?: string[];
 };
 
+type NominatimReverseResponse = {
+  display_name?: string;
+  address?: Record<string, string | undefined>;
+};
+
+const resolveWithTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fallbackValue: T): Promise<T> => {
+  let timeoutHandle: number | null = null;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeoutHandle = window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+  });
+  const result = await Promise.race([promise, timeoutPromise]);
+  if (timeoutHandle !== null) {
+    window.clearTimeout(timeoutHandle);
+  }
+  return result;
+};
+
 const reverseGeocodeDestination = async (lat: number, lng: number, signal?: AbortSignal): Promise<ReverseGeocodeResult | null> => {
   const url = `${GEOCODE_API_BASE}/reverse/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`;
   try {
@@ -158,6 +175,49 @@ const reverseGeocodeDestination = async (lat: number, lng: number, signal?: Abor
       return null;
     }
     return (await response.json()) as ReverseGeocodeResult;
+  } catch {
+    return null;
+  }
+};
+
+const reverseGeocodeDirectNominatim = async (lat: number, lng: number, signal?: AbortSignal): Promise<ReverseGeocodeResult | null> => {
+  const url =
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18` +
+    `&lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lng))}&accept-language=es`;
+  try {
+    const response = await fetch(url, { method: 'GET', signal });
+    if (!response.ok) {
+      return null;
+    }
+    const payload = (await response.json()) as NominatimReverseResponse;
+    const address = payload.address ?? {};
+    const road = address.road || address.pedestrian || address.footway || address.path || address.highway || '';
+    const industrial = address.industrial || address.commercial || '';
+    const neighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet || '';
+    const city = address.city || address.town || address.village || address.municipality || address.county || '';
+    const state = address.state || '';
+    const postcode = address.postcode || '';
+    const country = address.country || '';
+    const formattedAddress =
+      joinUniqueTextParts([road, industrial, neighborhood, city, state, postcode, country]) ||
+      String(payload.display_name || '').trim();
+
+    if (!formattedAddress) {
+      return null;
+    }
+    return {
+      formatted_address: formattedAddress,
+      details: {
+        road,
+        industrial,
+        neighborhood,
+        city,
+        state,
+        postcode,
+        country,
+      },
+      nearby_places: [],
+    };
   } catch {
     return null;
   }
@@ -998,18 +1058,27 @@ export default function UsuarioView() {
     setDestinoVehiculoCoords({ lat, lng });
     setIsResolviendoDestinoVehiculo(true);
     setDestinoVehiculoMapMensaje('Resolviendo direccion...');
+    setFormSolicitudVehiculo((prev) => ({ ...prev, destino: 'Resolviendo direccion del punto seleccionado...' }));
 
     const fallbackAddress = 'Direccion no disponible en este punto. Selecciona una vialidad o empresa cercana.';
     setDestinoVehiculoDetalles(null);
 
     try {
-      const reverseData = await reverseGeocodeDestination(lat, lng, controller.signal);
-      const nearbyPlaceCandidates = await fetchNearbyPlaceCandidates(lat, lng, controller.signal);
+      const reverseFromApi = await resolveWithTimeout(
+        reverseGeocodeDestination(lat, lng, controller.signal),
+        6500,
+        null
+      );
+      const reverseData = reverseFromApi || await resolveWithTimeout(
+        reverseGeocodeDirectNominatim(lat, lng, controller.signal),
+        6500,
+        null
+      );
       if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
         return;
       }
       const reverseDetails = reverseData?.details || {};
-      const nearbyPlaces = toUniqueTextParts([...(reverseData?.nearby_places || []), ...nearbyPlaceCandidates.map((item) => item.name)]);
+      const nearbyPlaces = toUniqueTextParts(reverseData?.nearby_places || []);
       const direccion = String(reverseData?.formatted_address || '').trim() || fallbackAddress;
 
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: direccion }));
@@ -1024,7 +1093,29 @@ export default function UsuarioView() {
         country: (reverseDetails.country || '') || undefined,
         nearbyPlaces,
       });
-      setDestinoVehiculoMapMensaje('Destino tomado del mapa.');
+      setDestinoVehiculoMapMensaje(reverseData ? 'Destino tomado del mapa.' : 'Se cargo una direccion aproximada.');
+
+      // Nearby names should not block the address update; enrich in background.
+      void resolveWithTimeout(fetchNearbyPlaceCandidates(lat, lng, controller.signal), 8000, [])
+        .then((candidates) => {
+          if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
+            return;
+          }
+          const candidateNames = candidates.map((item) => item.name);
+          if (!candidateNames.length) {
+            return;
+          }
+          setDestinoVehiculoDetalles((prev) => {
+            if (!prev) {
+              return null;
+            }
+            return {
+              ...prev,
+              nearbyPlaces: toUniqueTextParts([...(prev.nearbyPlaces || []), ...candidateNames]),
+            };
+          });
+        })
+        .catch(() => {});
     } catch (error) {
       if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
         return;
