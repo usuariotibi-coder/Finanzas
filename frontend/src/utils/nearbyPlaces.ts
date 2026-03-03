@@ -68,13 +68,18 @@ const toNearbyPlace = (value: unknown): NearbyPlace | null => {
 };
 
 const fetchNearbyPlacesFromOverpassFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const radiusMeters = 3200;
+  const radiusMeters = 4500;
   const query = `
 [out:json][timeout:10];
 (
   nwr(around:${radiusMeters},${lat},${lng})["name"];
+  nwr(around:${radiusMeters},${lat},${lng})["brand"];
+  nwr(around:${radiusMeters},${lat},${lng})["operator"];
+  nwr(around:${radiusMeters},${lat},${lng})["amenity"];
+  nwr(around:${radiusMeters},${lat},${lng})["shop"];
+  nwr(around:${radiusMeters},${lat},${lng})["office"];
 );
-out center 900;
+out center 1200;
 `;
   const endpoints = [
     'https://overpass-api.de/api/interpreter',

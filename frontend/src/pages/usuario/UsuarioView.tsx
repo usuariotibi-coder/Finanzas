@@ -105,9 +105,9 @@ const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 6):
   return unique;
 };
 
-const fetchNearbyPlaceCandidates = async (lat: number, lng: number): Promise<NearbyPlaceCandidate[]> => {
+const fetchNearbyPlaceCandidates = async (lat: number, lng: number, signal?: AbortSignal): Promise<NearbyPlaceCandidate[]> => {
   try {
-    const places = await fetchNearbyPlaces(lat, lng, 18);
+    const places = await fetchNearbyPlaces(lat, lng, 18, signal);
     const normalized = places
       .filter((item) => isLikelyBusinessName(item.name))
       .map((item) => ({
@@ -331,6 +331,10 @@ export default function UsuarioView() {
   const [isSavingExtension, setIsSavingExtension] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
+  const destinoVehiculoSelectionRef = useRef(0);
+  const destinoVehiculoAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => destinoVehiculoAbortRef.current?.abort(), []);
 
   const saveVehicleAssignments = (assignments: VehicleAssignment[]) => {
     setVehicleAssignments(assignments);
@@ -925,7 +929,14 @@ export default function UsuarioView() {
   };
 
   // Funciones para vehículos (solo coches)
+  const cancelDestinoVehiculoLookup = () => {
+    destinoVehiculoSelectionRef.current += 1;
+    destinoVehiculoAbortRef.current?.abort();
+    destinoVehiculoAbortRef.current = null;
+  };
+
   const resetSolicitarVehiculoMapState = () => {
+    cancelDestinoVehiculoLookup();
     setShowDestinoVehiculoMap(false);
     setShowDestinoVehiculoMapExpanded(false);
     setDestinoVehiculoCoords(null);
@@ -935,6 +946,11 @@ export default function UsuarioView() {
   };
 
   const handleSeleccionDestinoVehiculoEnMapa = async ({ lat, lng }: VehicleMapPoint) => {
+    cancelDestinoVehiculoLookup();
+    const selectionId = destinoVehiculoSelectionRef.current;
+    const controller = new AbortController();
+    destinoVehiculoAbortRef.current = controller;
+
     setDestinoVehiculoCoords({ lat, lng });
     setIsResolviendoDestinoVehiculo(true);
     setDestinoVehiculoMapMensaje('');
@@ -943,7 +959,8 @@ export default function UsuarioView() {
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=es`
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${lat}&lon=${lng}&accept-language=es`,
+        { signal: controller.signal }
       );
       if (!response.ok) {
         throw new Error('No se pudo resolver la direccion.');
@@ -978,11 +995,19 @@ export default function UsuarioView() {
       const rawState = address.state;
       const postcode = address.postcode;
       const country = address.country;
-      const nearbyPlaceCandidates = await fetchNearbyPlaceCandidates(lat, lng);
+      const nearbyPlaceCandidates = await fetchNearbyPlaceCandidates(lat, lng, controller.signal);
+      if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
+        return;
+      }
       const nearbyPlaces = nearbyPlaceCandidates.map((item) => item.name);
       const nearbyPoi = nearbyPlaceCandidates.find((item) => item.distance <= 450)?.name || '';
+      const genericLocationTokens = new Set(
+        toUniqueTextParts([rawNeighborhood, rawCity, rawState, country]).map((value) => normalizeText(value))
+      );
       const resolvedPoi =
-        toUniqueTextParts([poiCandidates[0], displayNameMain, nearbyPoi]).find((value) => isLikelyBusinessName(value)) || '';
+        toUniqueTextParts([poiCandidates[0], displayNameMain, nearbyPoi]).find((value) => (
+          isLikelyBusinessName(value) && !genericLocationTokens.has(normalizeText(value))
+        )) || '';
 
       const [neighborhood, city, state] = toUniqueTextParts([rawNeighborhood, rawCity, rawState]);
       const roadLine = joinUniqueTextParts([road]);
@@ -1005,12 +1030,23 @@ export default function UsuarioView() {
         nearbyPlaces,
       });
       setDestinoVehiculoMapMensaje('Destino tomado del mapa.');
-    } catch {
+    } catch (error) {
+      if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
+        return;
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        return;
+      }
       setFormSolicitudVehiculo((prev) => ({ ...prev, destino: coordenadasFallback }));
       setDestinoVehiculoDetalles(null);
       setDestinoVehiculoMapMensaje('No se pudo resolver la direccion exacta. Se guardaron coordenadas.');
     } finally {
-      setIsResolviendoDestinoVehiculo(false);
+      if (!controller.signal.aborted && selectionId === destinoVehiculoSelectionRef.current) {
+        setIsResolviendoDestinoVehiculo(false);
+      }
+      if (destinoVehiculoAbortRef.current === controller) {
+        destinoVehiculoAbortRef.current = null;
+      }
     }
   };
 
@@ -2440,7 +2476,17 @@ export default function UsuarioView() {
                 <input
                   type="text"
                   value={formSolicitudVehiculo.destino}
-                  onChange={(e) => setFormSolicitudVehiculo({ ...formSolicitudVehiculo, destino: e.target.value })}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setFormSolicitudVehiculo({ ...formSolicitudVehiculo, destino: nextValue });
+                    if (destinoVehiculoCoords || destinoVehiculoDetalles) {
+                      cancelDestinoVehiculoLookup();
+                      setDestinoVehiculoCoords(null);
+                      setDestinoVehiculoDetalles(null);
+                      setIsResolviendoDestinoVehiculo(false);
+                      setDestinoVehiculoMapMensaje(nextValue.trim() ? 'Destino editado manualmente. Selecciona en mapa para sincronizar coordenadas.' : '');
+                    }
+                  }}
                   className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 ${
                     solicitarVehiculoErrors.destino
                       ? 'border-rose-300 bg-rose-50 focus:ring-rose-200 focus:border-rose-400'

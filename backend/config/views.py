@@ -64,13 +64,18 @@ def _http_post_form_json(url: str, form_data: dict[str, str], timeout_seconds: i
 
 
 def fetch_overpass_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    radius_meters = 3200
+    radius_meters = 4500
     query = f"""
 [out:json][timeout:10];
 (
   nwr(around:{radius_meters},{lat},{lng})["name"];
+  nwr(around:{radius_meters},{lat},{lng})["brand"];
+  nwr(around:{radius_meters},{lat},{lng})["operator"];
+  nwr(around:{radius_meters},{lat},{lng})["amenity"];
+  nwr(around:{radius_meters},{lat},{lng})["shop"];
+  nwr(around:{radius_meters},{lat},{lng})["office"];
 );
-out center 900;
+out center 1200;
 """
     endpoints = (
         'https://overpass-api.de/api/interpreter',
