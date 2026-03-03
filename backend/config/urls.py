@@ -12,7 +12,7 @@ from conciliacion.views import (
     ConsumoViewSet,
     FacturaViewSet,
 )
-from config.views import DashboardMetricsView, HealthCheckView, NearbyPlacesView, ReverseGeocodeView
+from config.views import DashboardMetricsView, GeocodeSearchView, HealthCheckView, NearbyPlacesView, ReverseGeocodeView
 from dispersion.views import DispersionViewSet
 from flotilla.views import (
     CargaGasolinaViewSet,
@@ -53,6 +53,7 @@ urlpatterns = [
     path('api/auth/', include('accounts.urls')),
     path('api/health/', HealthCheckView.as_view(), name='health'),
     path('api/geocode/nearby-places/', NearbyPlacesView.as_view(), name='nearby-places'),
+    path('api/geocode/search/', GeocodeSearchView.as_view(), name='search-geocode'),
     path('api/geocode/reverse/', ReverseGeocodeView.as_view(), name='reverse-geocode'),
     path('api/dashboard/metrics/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
     path('api/', include(router.urls)),

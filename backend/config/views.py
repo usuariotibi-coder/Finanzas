@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from math import atan2, cos, radians, sin, sqrt
+from math import atan2, cos, isfinite, radians, sin, sqrt
 import json
 import time
 import unicodedata
@@ -353,6 +353,73 @@ def get_nearby_places(lat: float, lng: float, limit: int, *, mode: str = 'full')
     return deduped
 
 
+def search_geocode_places(
+    query: str,
+    limit: int = 8,
+    near_lat: float | None = None,
+    near_lng: float | None = None,
+) -> list[dict[str, float | str]]:
+    safe_query = str(query or '').strip()
+    if len(safe_query) < 3:
+        return []
+    safe_limit = max(1, min(int(limit), 12))
+    params = {
+        'format': 'jsonv2',
+        'addressdetails': '1',
+        'accept-language': 'es',
+        'limit': str(safe_limit),
+        'q': safe_query,
+    }
+    if near_lat is not None and near_lng is not None:
+        delta = 0.35
+        left = near_lng - delta
+        right = near_lng + delta
+        top = near_lat + delta
+        bottom = near_lat - delta
+        # viewbox as hint to prioritize nearby matches without hard bounding.
+        params['viewbox'] = f'{left},{top},{right},{bottom}'
+    url = f"https://nominatim.openstreetmap.org/search?{urlencode(params)}"
+    data = _http_get_json(url, timeout_seconds=6)
+    if not isinstance(data, list):
+        return []
+
+    unique: dict[str, dict[str, float | str]] = {}
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        display_name = str(item.get('display_name') or '').strip()
+        raw_name = str(item.get('name') or '').strip()
+        name = raw_name or (display_name.split(',')[0].strip() if display_name else '')
+        if not name:
+            continue
+        try:
+            lat_value = float(item.get('lat'))
+            lng_value = float(item.get('lon'))
+        except (TypeError, ValueError):
+            continue
+        if not (isfinite(lat_value) and isfinite(lng_value)):
+            continue
+        key = f"{normalize_text(name)}:{round(lat_value, 5)}:{round(lng_value, 5)}"
+        if key in unique:
+            continue
+        distance = (
+            get_distance_meters(near_lat, near_lng, lat_value, lng_value)
+            if near_lat is not None and near_lng is not None else -1
+        )
+        unique[key] = {
+            'name': name,
+            'address': display_name,
+            'lat': lat_value,
+            'lng': lng_value,
+            'distance': round(distance, 2) if distance >= 0 else -1,
+            'source': 'nominatim-search',
+        }
+
+    values = list(unique.values())
+    values.sort(key=lambda value: float(value.get('distance', -1)) if float(value.get('distance', -1)) >= 0 else 9999999)
+    return values[:safe_limit]
+
+
 def reverse_geocode_details(lat: float, lng: float, include_nearby: bool = False) -> dict[str, object]:
     data = None
     # Keep reverse-geocode fast: try only a couple zoom levels with short timeouts.
@@ -492,6 +559,39 @@ class NearbyPlacesView(APIView):
             limit = min(limit, 140)
         places = get_nearby_places(lat=lat, lng=lng, limit=limit, mode=mode)
         return Response({'places': places})
+
+
+class GeocodeSearchView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        raw_query = str(request.query_params.get('q') or '').strip()
+        raw_limit = request.query_params.get('limit', '8')
+        raw_near_lat = request.query_params.get('near_lat')
+        raw_near_lng = request.query_params.get('near_lng')
+        if len(raw_query) < 3:
+            return Response({'results': []})
+
+        try:
+            limit = max(1, min(int(raw_limit), 12))
+        except (TypeError, ValueError):
+            limit = 8
+
+        near_lat: float | None = None
+        near_lng: float | None = None
+        try:
+            if raw_near_lat is not None and raw_near_lng is not None:
+                near_lat = float(raw_near_lat)
+                near_lng = float(raw_near_lng)
+        except (TypeError, ValueError):
+            near_lat = None
+            near_lng = None
+
+        try:
+            results = search_geocode_places(raw_query, limit=limit, near_lat=near_lat, near_lng=near_lng)
+        except Exception:
+            results = []
+        return Response({'results': results})
 
 
 class ReverseGeocodeView(APIView):

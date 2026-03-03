@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { searchGeocodePlaces, type GeocodeSearchResult } from '../../utils/geocodeSearch';
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import { fetchNearbyPlaces } from '../../utils/nearbyPlaces';
 import 'leaflet/dist/leaflet.css';
@@ -117,6 +118,17 @@ const mergeNearbyPlaceCollections = (base: NearbyPlacePoint[], incoming: NearbyP
   return Array.from(merged.values());
 };
 
+const formatSearchDistance = (distance?: number) => {
+  if (!Number.isFinite(Number(distance)) || Number(distance) < 0) {
+    return '';
+  }
+  const safeDistance = Number(distance);
+  if (safeDistance < 1000) {
+    return `${Math.round(safeDistance)} m`;
+  }
+  return `${(safeDistance / 1000).toFixed(1)} km`;
+};
+
 interface LeafletDestinationMapProps {
   center: LatLngPoint;
   marker?: LatLngPoint | null;
@@ -217,6 +229,11 @@ export default function LeafletDestinationMap({
   const [showNearbyPanel, setShowNearbyPanel] = useState(false);
   const [isHydratingNearbyPlaces, setIsHydratingNearbyPlaces] = useState(false);
   const [isLoadingNearbyPlaces, setIsLoadingNearbyPlaces] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<GeocodeSearchResult[]>([]);
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [mapBounds, setMapBounds] = useState<BoundsBox | null>(null);
   const activeCenter = useMemo<[number, number]>(
     () => (marker ? [marker.lat, marker.lng] : [center.lat, center.lng]),
@@ -318,6 +335,25 @@ export default function LeafletDestinationMap({
     [fallbackNearbyNames]
   );
   const nearbyCount = nearbyPlacesToRender.length;
+  const searchTermSafe = searchTerm.trim();
+  const shouldShowSearchDropdown = showSearchPanel && (
+    isSearchingPlaces ||
+    searchResults.length > 0 ||
+    Boolean(searchError) ||
+    searchTermSafe.length >= 3
+  );
+
+  const handleSelectSearchResult = (result: GeocodeSearchResult) => {
+    setSearchTerm(result.address);
+    setShowSearchPanel(false);
+    setSearchResults([]);
+    setSearchError('');
+    if (onMapClick) onMapClick({ lat: result.lat, lng: result.lng });
+  };
+  const handleMapSelection = (coords: LatLngPoint) => {
+    setShowSearchPanel(false);
+    if (onMapClick) onMapClick(coords);
+  };
 
   useEffect(() => {
     const seedPlaces = externalNearbyPlaces
@@ -328,6 +364,55 @@ export default function LeafletDestinationMap({
     }
     setNearbyPlaces((prev) => mergeNearbyPlaceCollections(prev, seedPlaces));
   }, [externalNearbyPlaces]);
+
+  useEffect(() => {
+    const query = searchTerm.trim();
+    if (query.length < 3) {
+      setSearchResults([]);
+      setSearchError('');
+      setIsSearchingPlaces(false);
+      return;
+    }
+
+    const anchor = marker ?? center;
+    const controller = new AbortController();
+    const debounceId = window.setTimeout(() => {
+      setIsSearchingPlaces(true);
+      setSearchError('');
+      void searchGeocodePlaces(query, {
+        limit: 8,
+        nearLat: anchor?.lat,
+        nearLng: anchor?.lng,
+        signal: controller.signal,
+      })
+        .then((results) => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          setSearchResults(results);
+          if (results.length === 0) {
+            setSearchError('No encontramos resultados para esa busqueda.');
+          }
+        })
+        .catch(() => {
+          if (controller.signal.aborted) {
+            return;
+          }
+          setSearchResults([]);
+          setSearchError('No se pudo buscar en este momento.');
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setIsSearchingPlaces(false);
+          }
+        });
+    }, 280);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(debounceId);
+    };
+  }, [searchTerm, marker?.lat, marker?.lng, center.lat, center.lng]);
 
   useEffect(() => {
     const anchor = marker ?? center;
@@ -387,6 +472,51 @@ export default function LeafletDestinationMap({
 
   return (
     <div className="relative h-full w-full">
+      <div className="pointer-events-auto absolute left-3 top-3 z-[1100] w-[min(33rem,calc(100%-6.5rem))] sm:w-[min(34rem,calc(100%-14rem))]">
+        <div className="rounded-2xl border border-slate-200/95 bg-white/95 p-1.5 shadow-xl backdrop-blur">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5">
+            <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6.04 6.04a7.5 7.5 0 0 0 10.61 10.61Z" />
+            </svg>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setShowSearchPanel(true);
+              }}
+              onFocus={() => setShowSearchPanel(true)}
+              placeholder="Buscar empresa, calle o direccion..."
+              className="w-full border-0 bg-transparent p-0 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+            />
+            {isSearchingPlaces ? (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
+            ) : null}
+          </div>
+          <p className="px-1.5 pt-1 text-[10px] text-slate-500">Escribe 3 letras o mas y elige una opcion para mover el mapa.</p>
+          {shouldShowSearchDropdown ? (
+            <div className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+              {searchResults.map((result) => (
+                <button
+                  key={`${result.name}:${result.lat.toFixed(6)}:${result.lng.toFixed(6)}`}
+                  type="button"
+                  onClick={() => handleSelectSearchResult(result)}
+                  className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-sky-50"
+                >
+                  <p className="text-xs font-semibold text-slate-800">{result.name}</p>
+                  <p className="truncate text-[10px] text-slate-500">{result.address}</p>
+                  {formatSearchDistance(result.distance) ? (
+                    <p className="text-[10px] font-medium text-sky-700">{formatSearchDistance(result.distance)} desde el punto actual</p>
+                  ) : null}
+                </button>
+              ))}
+              {searchError && !isSearchingPlaces && searchResults.length === 0 ? (
+                <p className="px-3 py-2 text-[10px] text-amber-700">{searchError}</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
       {showModeControl ? (
         <div className="pointer-events-auto absolute right-3 top-3 z-[1000] rounded-2xl border border-slate-200/90 bg-white/90 p-1 shadow-xl backdrop-blur">
           <p className="px-2 pb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Vista</p>
@@ -414,7 +544,7 @@ export default function LeafletDestinationMap({
         </div>
       ) : null}
       {currentZoom >= 12 && nearbyCount > 0 ? (
-        <div className="pointer-events-none absolute left-3 top-3 z-[1000] inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-3 py-1 text-[10px] font-semibold text-slate-700 shadow-lg backdrop-blur">
+        <div className="pointer-events-none absolute left-3 top-[92px] z-[1000] inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-3 py-1 text-[10px] font-semibold text-slate-700 shadow-lg backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           {nearbyCount} empresas visibles
         </div>
@@ -450,7 +580,7 @@ export default function LeafletDestinationMap({
             />
           </>
         ) : null}
-        {onMapClick ? <MapClickCapture onSelect={onMapClick} /> : null}
+        {onMapClick ? <MapClickCapture onSelect={handleMapSelection} /> : null}
         {marker ? (
           <CircleMarker
             center={[marker.lat, marker.lng]}
