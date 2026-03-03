@@ -129,6 +129,34 @@ const formatSearchDistance = (distance?: number) => {
   return `${(safeDistance / 1000).toFixed(1)} km`;
 };
 
+const buildViewportFetchAnchors = (
+  primary: LatLngPoint,
+  bounds: BoundsBox | null,
+  zoom: number
+): LatLngPoint[] => {
+  const anchors: LatLngPoint[] = [{ lat: primary.lat, lng: primary.lng }];
+  if (!bounds || zoom < 12) {
+    return anchors;
+  }
+  const midLat = (bounds.north + bounds.south) / 2;
+  const midLng = (bounds.east + bounds.west) / 2;
+  if (zoom >= 12) {
+    anchors.push({ lat: bounds.north, lng: midLng });
+    anchors.push({ lat: bounds.south, lng: midLng });
+    anchors.push({ lat: midLat, lng: bounds.east });
+    anchors.push({ lat: midLat, lng: bounds.west });
+  }
+
+  const unique = new Map<string, LatLngPoint>();
+  anchors.forEach((anchor) => {
+    const key = `${anchor.lat.toFixed(3)}:${anchor.lng.toFixed(3)}`;
+    if (!unique.has(key)) {
+      unique.set(key, anchor);
+    }
+  });
+  return Array.from(unique.values());
+};
+
 interface LeafletDestinationMapProps {
   center: LatLngPoint;
   marker?: LatLngPoint | null;
@@ -310,9 +338,10 @@ export default function LeafletDestinationMap({
       place.lng >= mapBounds.west
     ));
   }, [allNearbyPlaces, mapBounds]);
+  const labelAnchor = mapViewportCenter ?? marker ?? center;
   const nearbyPlacesToRender = useMemo(
-    () => buildReadableNearbyPlaces(visibleNearbyPlaces, marker ?? center, currentZoom),
-    [visibleNearbyPlaces, marker?.lat, marker?.lng, center.lat, center.lng, currentZoom]
+    () => buildReadableNearbyPlaces(visibleNearbyPlaces, labelAnchor, currentZoom),
+    [visibleNearbyPlaces, labelAnchor.lat, labelAnchor.lng, currentZoom]
   );
   const markerSubtitleSafe = useMemo(() => {
     const subtitle = String(markerSubtitle || '').trim();
@@ -420,8 +449,8 @@ export default function LeafletDestinationMap({
   }, [searchTerm, mapViewportCenter?.lat, mapViewportCenter?.lng, marker?.lat, marker?.lng, center.lat, center.lng]);
 
   useEffect(() => {
-    const anchor = mapViewportCenter ?? marker ?? center;
-    if (!anchor) {
+    const primaryAnchor = mapViewportCenter ?? marker ?? center;
+    if (!primaryAnchor) {
       setNearbyPlaces([]);
       return;
     }
@@ -431,13 +460,18 @@ export default function LeafletDestinationMap({
     setIsLoadingNearbyPlaces(true);
     setIsHydratingNearbyPlaces(false);
 
-    const normalizedAnchor = { lat: anchor.lat, lng: anchor.lng };
-    void fetchNearbyPlaces(normalizedAnchor.lat, normalizedAnchor.lng, 72, controller.signal, 'quick')
-      .then(async (quickPlaces) => {
+    const quickAnchors = buildViewportFetchAnchors(primaryAnchor, mapBounds, currentZoom);
+    const fullAnchors = quickAnchors.slice(0, Math.min(3, quickAnchors.length));
+    void Promise.all(
+      quickAnchors.map((anchor) => fetchNearbyPlaces(anchor.lat, anchor.lng, 72, controller.signal, 'quick').catch(() => []))
+    )
+      .then(async (quickGroups) => {
         if (controller.signal.aborted) {
           return;
         }
-        const normalizedQuick = quickPlaces.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }));
+        const normalizedQuick = quickGroups
+          .flat()
+          .map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }));
         if (normalizedQuick.length > 0) {
           setNearbyPlaces((prev) => mergeNearbyPlaceCollections(prev, normalizedQuick));
         }
@@ -447,7 +481,10 @@ export default function LeafletDestinationMap({
         }
 
         setIsHydratingNearbyPlaces(true);
-        const fullPlaces = await fetchNearbyPlaces(normalizedAnchor.lat, normalizedAnchor.lng, 220, controller.signal, 'full').catch(() => []);
+        const fullGroups = await Promise.all(
+          fullAnchors.map((anchor) => fetchNearbyPlaces(anchor.lat, anchor.lng, 220, controller.signal, 'full').catch(() => []))
+        );
+        const fullPlaces = fullGroups.flat();
         if (controller.signal.aborted || fullPlaces.length === 0) {
           return;
         }
@@ -467,7 +504,7 @@ export default function LeafletDestinationMap({
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [mapViewportCenter?.lat, mapViewportCenter?.lng, marker?.lat, marker?.lng, center.lat, center.lng]);
+  }, [mapViewportCenter?.lat, mapViewportCenter?.lng, marker?.lat, marker?.lng, center.lat, center.lng, mapBounds, currentZoom]);
 
   useEffect(() => {
     if (currentZoom < 13) {
