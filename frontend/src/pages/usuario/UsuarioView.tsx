@@ -392,6 +392,18 @@ const getVehicleAssignments = (): VehicleAssignment[] => {
   return [];
 };
 
+const dedupeAssignmentsById = (items: VehicleAssignment[]) => {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const id = String(item.id || '').trim();
+    if (!id || seen.has(id)) {
+      return false;
+    }
+    seen.add(id);
+    return true;
+  });
+};
+
 interface GastoDocumento {
   id: string;
   viaticoId: string;
@@ -472,12 +484,14 @@ export default function UsuarioView() {
   const destinoVehiculoSelectionRef = useRef(0);
   const destinoVehiculoAbortRef = useRef<AbortController | null>(null);
   const skipSolicitarVehiculoResetRef = useRef(false);
+  const solicitarVehiculoSubmitLockRef = useRef(false);
 
   useEffect(() => () => destinoVehiculoAbortRef.current?.abort(), []);
 
   const saveVehicleAssignments = (assignments: VehicleAssignment[]) => {
-    setVehicleAssignments(assignments);
-    localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(assignments));
+    const normalizedAssignments = dedupeAssignmentsById(assignments);
+    setVehicleAssignments(normalizedAssignments);
+    localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(normalizedAssignments));
     window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
   };
 
@@ -490,8 +504,9 @@ export default function UsuarioView() {
         if (!isActive) {
           return;
         }
-        setVehicleAssignments(remoteAssignments);
-        localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(remoteAssignments));
+        const normalizedAssignments = dedupeAssignmentsById(remoteAssignments);
+        setVehicleAssignments(normalizedAssignments);
+        localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(normalizedAssignments));
         window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
       } catch {
         // Keep local cache if backend is temporarily unavailable.
@@ -1207,7 +1222,7 @@ export default function UsuarioView() {
   };
 
   const handleSolicitarVehiculo = async () => {
-    if (isSubmittingSolicitarVehiculo) {
+    if (isSubmittingSolicitarVehiculo || solicitarVehiculoSubmitLockRef.current) {
       return;
     }
 
@@ -1223,6 +1238,7 @@ export default function UsuarioView() {
 
     const currentUserId = user ? String(user.id) : undefined;
     const snapshot = { ...formSolicitudVehiculo };
+    solicitarVehiculoSubmitLockRef.current = true;
     setIsSubmittingSolicitarVehiculo(true);
     setShowModalSolicitarVehiculo(false);
     setShowSolicitarVehiculoErrors(false);
@@ -1253,6 +1269,7 @@ export default function UsuarioView() {
       showToast(error instanceof Error ? error.message : 'No se pudo solicitar el vehiculo.', 'error');
     } finally {
       setIsSubmittingSolicitarVehiculo(false);
+      solicitarVehiculoSubmitLockRef.current = false;
     }
   };
 
@@ -2811,6 +2828,7 @@ export default function UsuarioView() {
 
             <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:justify-end sm:px-5">
               <button
+                type="button"
                 onClick={() => {
                   setShowModalSolicitarVehiculo(false);
                   setShowSolicitarVehiculoErrors(false);
@@ -2821,8 +2839,10 @@ export default function UsuarioView() {
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={handleSolicitarVehiculo}
-                className="w-full sm:w-auto rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 px-4 py-1.5 text-sm text-white transition-colors hover:from-blue-700 hover:via-indigo-700 hover:to-emerald-600"
+                disabled={isSubmittingSolicitarVehiculo}
+                className="w-full sm:w-auto rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 px-4 py-1.5 text-sm text-white transition-colors hover:from-blue-700 hover:via-indigo-700 hover:to-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Solicitar Vehículo
               </button>
