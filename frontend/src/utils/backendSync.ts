@@ -828,6 +828,10 @@ export const updateViatico = async (id: string, payload: Partial<Viatico>): Prom
   return mapViaticoFromApi(data);
 };
 
+export const deleteViatico = async (id: string): Promise<void> => {
+  await apiFetch(`/viaticos/${id}/`, { method: 'DELETE' });
+};
+
 export const createViaje = async (payload: Partial<SolicitudViaje>): Promise<SolicitudViaje> => {
   const data = (await apiFetch('/viajes/', {
     method: 'POST',
@@ -842,6 +846,10 @@ export const updateViaje = async (id: string, payload: Partial<SolicitudViaje>):
     body: JSON.stringify(toViajePayload(payload)),
   })) as RawRecord;
   return mapViajeFromApi(data);
+};
+
+export const deleteViaje = async (id: string): Promise<void> => {
+  await apiFetch(`/viajes/${id}/`, { method: 'DELETE' });
 };
 
 export const createFactura = async (payload: {
@@ -1022,6 +1030,10 @@ export const updateFlotillaAsignacion = async (
     body: JSON.stringify(toVehicleAssignmentPayload(payload)),
   })) as RawRecord;
   return mapVehicleAssignmentFromApi(data);
+};
+
+export const deleteFlotillaAsignacion = async (id: string): Promise<void> => {
+  await apiFetch(`/flotilla/asignaciones/${id}/`, { method: 'DELETE' });
 };
 
 export const uploadFlotillaEntregaFotos = async (

@@ -12,6 +12,9 @@ import {
   createFlotillaAsignacion,
   createViaje,
   createViatico,
+  deleteFlotillaAsignacion,
+  deleteViaje,
+  deleteViatico,
   fetchFlotillaAsignaciones,
   syncCoreAppData,
   uploadFlotillaEntregaFotos,
@@ -479,6 +482,10 @@ export default function UsuarioView() {
   const [showSubirDocumentosErrors, setShowSubirDocumentosErrors] = useState(false);
   const [isSavingExtension, setIsSavingExtension] = useState(false);
   const [isSubmittingSolicitarVehiculo, setIsSubmittingSolicitarVehiculo] = useState(false);
+  const [hiddenViaticoCards, setHiddenViaticoCards] = useLocalStorageState<string[]>('usuario:hiddenViaticoCards', []);
+  const [hiddenVehiculoCards, setHiddenVehiculoCards] = useLocalStorageState<string[]>('usuario:hiddenVehiculoCards', []);
+  const [hiddenViajeCards, setHiddenViajeCards] = useLocalStorageState<string[]>('usuario:hiddenViajeCards', []);
+  const [deletingCardKey, setDeletingCardKey] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const destinoVehiculoSelectionRef = useRef(0);
@@ -822,14 +829,21 @@ export default function UsuarioView() {
   };
 
   // Filtrar viáticos
+  const isHiddenCard = (hiddenIds: string[], id: string) => hiddenIds.includes(String(id));
+  const isCompletedViatico = (viatico: Viatico) => viatico.status === 'completado';
+  const isCompletedVehiculo = (assignment: VehicleAssignment) => assignment.status === 'completado';
+  const isCompletedViaje = (solicitud: SolicitudViaje) => solicitud.status === 'completado';
   const isViaticoActivo = (status: Viatico['status']) =>
     ['pendiente', 'aprobado', 'dispersado', 'en_viaje', 'viaje_finalizado', 'en_recuperacion'].includes(status);
   const isViaticoCompletado = (status: Viatico['status']) =>
     status === 'completado';
-  const totalViaticosActivos = viaticos.filter(v => isViaticoActivo(v.status)).length;
-  const totalViaticosCompletados = viaticos.filter(v => isViaticoCompletado(v.status)).length;
+  const visibleViaticos = viaticos.filter((item) => !isHiddenCard(hiddenViaticoCards, item.id));
+  const visibleVehicleAssignments = vehicleAssignments.filter((item) => !isHiddenCard(hiddenVehiculoCards, item.id));
+  const visibleSolicitudesViaje = solicitudesViaje.filter((item) => !isHiddenCard(hiddenViajeCards, item.id));
+  const totalViaticosActivos = visibleViaticos.filter(v => isViaticoActivo(v.status)).length;
+  const totalViaticosCompletados = visibleViaticos.filter(v => isViaticoCompletado(v.status)).length;
 
-  const viaticosFiltrados = viaticos.filter(v => {
+  const viaticosFiltrados = visibleViaticos.filter(v => {
     if (filtro === 'activos') {
       return isViaticoActivo(v.status);
     }
@@ -1337,6 +1351,115 @@ export default function UsuarioView() {
     }
   };
 
+  const handleEliminarTarjetaViatico = async (viatico: Viatico) => {
+    const id = String(viatico.id);
+    const isCompleted = isCompletedViatico(viatico);
+    const confirmMessage = isCompleted
+      ? 'Este viatico ya esta completado. Solo se ocultara la tarjeta de tu portal. Deseas continuar?'
+      : 'Este viatico no esta completado. Se eliminaran todos los datos relacionados. Deseas continuar?';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    if (isCompleted) {
+      setHiddenViaticoCards((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      if (viaticoSeleccionado === id) {
+        resetSubirDocumentosFlow();
+      }
+      showToast('Tarjeta de viatico ocultada.', 'success');
+      return;
+    }
+
+    const operationKey = `viatico:${id}`;
+    setDeletingCardKey(operationKey);
+    try {
+      await deleteViatico(id);
+      setViaticos((prev) => prev.filter((item) => String(item.id) !== id));
+      setGastos((prev) => prev.filter((item) => String(item.viaticoId) !== id));
+      setHiddenViaticoCards((prev) => prev.filter((itemId) => itemId !== id));
+      if (viaticoSeleccionado === id) {
+        resetSubirDocumentosFlow();
+      }
+      showToast('Viatico eliminado correctamente.', 'success');
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo eliminar el viatico.', 'error');
+    } finally {
+      setDeletingCardKey(null);
+    }
+  };
+
+  const handleEliminarTarjetaVehiculo = async (assignment: VehicleAssignment) => {
+    const id = String(assignment.id);
+    const isCompleted = isCompletedVehiculo(assignment);
+    const confirmMessage = isCompleted
+      ? 'Esta solicitud de vehiculo ya esta completada. Solo se ocultara la tarjeta. Deseas continuar?'
+      : 'Esta solicitud de vehiculo no esta completada. Se eliminaran todos sus datos. Deseas continuar?';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    if (isCompleted) {
+      setHiddenVehiculoCards((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      if (assignmentSeleccionado === id) {
+        setAssignmentSeleccionado(null);
+      }
+      showToast('Tarjeta de vehiculo ocultada.', 'success');
+      return;
+    }
+
+    const operationKey = `vehiculo:${id}`;
+    setDeletingCardKey(operationKey);
+    try {
+      await deleteFlotillaAsignacion(id);
+      const nextAssignments = vehicleAssignments.filter((item) => String(item.id) !== id);
+      saveVehicleAssignments(nextAssignments);
+      setHiddenVehiculoCards((prev) => prev.filter((itemId) => itemId !== id));
+      if (assignmentSeleccionado === id) {
+        setAssignmentSeleccionado(null);
+        setShowModalRecibirVehiculo(false);
+        setShowModalDevolverVehiculo(false);
+      }
+      showToast('Solicitud de vehiculo eliminada correctamente.', 'success');
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo eliminar la solicitud de vehiculo.', 'error');
+    } finally {
+      setDeletingCardKey(null);
+    }
+  };
+
+  const handleEliminarTarjetaViaje = async (solicitud: SolicitudViaje) => {
+    const id = String(solicitud.id);
+    const isCompleted = isCompletedViaje(solicitud);
+    const confirmMessage = isCompleted
+      ? 'Esta solicitud de viaje ya esta completada. Solo se ocultara la tarjeta. Deseas continuar?'
+      : 'Esta solicitud de viaje no esta completada. Se eliminaran todos sus datos. Deseas continuar?';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    if (isCompleted) {
+      setHiddenViajeCards((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      showToast('Tarjeta de viaje ocultada.', 'success');
+      return;
+    }
+
+    const operationKey = `viaje:${id}`;
+    setDeletingCardKey(operationKey);
+    try {
+      await deleteViaje(id);
+      setSolicitudesViaje((prev) => prev.filter((item) => String(item.id) !== id));
+      setHiddenViajeCards((prev) => prev.filter((itemId) => itemId !== id));
+      showToast('Solicitud de viaje eliminada correctamente.', 'success');
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'No se pudo eliminar la solicitud de viaje.', 'error');
+    } finally {
+      setDeletingCardKey(null);
+    }
+  };
+
   const handleRecibirVehiculo = async () => {
     if (kmInicial <= 0) {
       setShowRecibirErrors(true);
@@ -1540,7 +1663,7 @@ export default function UsuarioView() {
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  Todos ({viaticos.length})
+                  Todos ({visibleViaticos.length})
                 </button>
                 <button
                   onClick={() => setFiltro('activos')}
@@ -1577,6 +1700,7 @@ export default function UsuarioView() {
                 const estadoInfo = getEstadoInfo(viatico.status);
                 const procesoViatico = getProcesoViatico(viatico);
                 const accionBoton = getAccionBoton(viatico);
+                const deletingViatico = deletingCardKey === `viatico:${viatico.id}`;
                 const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
                 const extensionResuelta = !extensionPendiente
                   ? getLatestViaticoExtensionResolution(viatico.comentarios)
@@ -1599,9 +1723,21 @@ export default function UsuarioView() {
                             <span className="font-semibold text-gray-900">${viatico.montoAprobado?.toLocaleString() || viatico.montoSolicitado.toLocaleString()} MXN</span>
                           </div>
                         </div>
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
-                          {estadoInfo.label}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
+                            {estadoInfo.label}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={deletingViatico}
+                            onClick={() => {
+                              void handleEliminarTarjetaViatico(viatico);
+                            }}
+                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingViatico ? 'Eliminando...' : (isCompletedViatico(viatico) ? 'Ocultar' : 'Eliminar')}
+                          </button>
+                        </div>
                       </div>
 
                       <div>
@@ -1711,13 +1847,14 @@ export default function UsuarioView() {
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Vehículos</h2>
               <div className="grid grid-cols-1 gap-3">
-              {vehicleAssignments.length > 0 ? (
-                vehicleAssignments.map((assignment) => {
+              {visibleVehicleAssignments.length > 0 ? (
+                visibleVehicleAssignments.map((assignment) => {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
                   const proyecto = proyectos.find(p => p.id === assignment.proyectoId);
                   const proyectoLabel = formatProyectoLabel(proyecto?.nombre || assignment.proyectoNombre, assignment.proyectoId);
                   const vehiculoStatusIcon = getVehiculoStatusIcon(assignment.status);
                   const procesoVehiculo = getProcesoVehiculo(assignment.status);
+                  const deletingVehiculo = deletingCardKey === `vehiculo:${assignment.id}`;
 
                   return (
                     <div key={assignment.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
@@ -1750,6 +1887,16 @@ export default function UsuarioView() {
                               Completado
                             </span>
                           )}
+                          <button
+                            type="button"
+                            disabled={deletingVehiculo}
+                            onClick={() => {
+                              void handleEliminarTarjetaVehiculo(assignment);
+                            }}
+                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {deletingVehiculo ? 'Eliminando...' : (isCompletedVehiculo(assignment) ? 'Ocultar' : 'Eliminar')}
+                          </button>
                           </div>
                         </div>
 
@@ -1839,8 +1986,8 @@ export default function UsuarioView() {
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Solicitudes de Viaje</h2>
               <div className="grid grid-cols-1 gap-3">
-              {solicitudesViaje.length > 0 ? (
-                solicitudesViaje.map((solicitud) => {
+              {visibleSolicitudesViaje.length > 0 ? (
+                visibleSolicitudesViaje.map((solicitud) => {
                   const proyecto = proyectos.find(p => p.id === solicitud.proyectoId);
                   const proyectoLabel = formatProyectoLabel(proyecto?.nombre || solicitud.proyectoNombre, solicitud.proyectoId);
                   const confirmacionesAvion = solicitud.confirmaciones?.avion ?? [];
@@ -1849,6 +1996,7 @@ export default function UsuarioView() {
                   const tieneConfirmaciones = confirmacionesAvion.length > 0 || confirmacionesCamion.length > 0 || confirmacionesHotel.length > 0;
                   const viajeStatusIcon = getViajeStatusIcon(solicitud.status);
                   const procesoViaje = getProcesoViaje(solicitud.status);
+                  const deletingViaje = deletingCardKey === `viaje:${solicitud.id}`;
 
                   return (
                     <div key={solicitud.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
@@ -1857,20 +2005,32 @@ export default function UsuarioView() {
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                             <span className="text-base">{viajeStatusIcon}</span> {solicitud.destino}
                           </h3>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                            solicitud.status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                            solicitud.status === 'en_proceso' ? 'bg-blue-100 text-blue-800' :
-                            solicitud.status === 'confirmado' ? 'bg-green-100 text-green-800' :
-                            solicitud.status === 'rechazado' ? 'bg-red-100 text-red-800' :
-                            solicitud.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
-                            {solicitud.status === 'pendiente' ? '⏳ Pendiente' :
-                             solicitud.status === 'en_proceso' ? 'En Proceso' :
-                             solicitud.status === 'confirmado' ? 'Confirmado' :
-                             solicitud.status === 'rechazado' ? 'Rechazado' :
-                             solicitud.status === 'cancelado' ? 'Cancelado' : 'Completado'}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                              solicitud.status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                              solicitud.status === 'en_proceso' ? 'bg-blue-100 text-blue-800' :
+                              solicitud.status === 'confirmado' ? 'bg-green-100 text-green-800' :
+                              solicitud.status === 'rechazado' ? 'bg-red-100 text-red-800' :
+                              solicitud.status === 'cancelado' ? 'bg-red-100 text-red-800' :
+                              'bg-purple-100 text-purple-800'
+                            }`}>
+                              {solicitud.status === 'pendiente' ? '⏳ Pendiente' :
+                               solicitud.status === 'en_proceso' ? 'En Proceso' :
+                               solicitud.status === 'confirmado' ? 'Confirmado' :
+                               solicitud.status === 'rechazado' ? 'Rechazado' :
+                               solicitud.status === 'cancelado' ? 'Cancelado' : 'Completado'}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={deletingViaje}
+                              onClick={() => {
+                                void handleEliminarTarjetaViaje(solicitud);
+                              }}
+                              className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {deletingViaje ? 'Eliminando...' : (isCompletedViaje(solicitud) ? 'Ocultar' : 'Eliminar')}
+                            </button>
+                          </div>
                         </div>
 
                         <div>
