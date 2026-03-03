@@ -12,6 +12,7 @@ import type {
   Vehicle,
   VehicleAlert,
   VehicleAssignment,
+  VehicleExpense,
   Viatico,
 } from '../types';
 import { apiFetch } from './api';
@@ -415,6 +416,83 @@ const mapCargaGasolinaFromApi = (raw: RawRecord): CargaGasolina => ({
   eficiencia: toNullableNumber(raw.eficiencia),
 });
 
+const mapVehicleExpenseFromApi = (raw: RawRecord): VehicleExpense => ({
+  id: toStringId(raw.id),
+  vehicleId: toStringId(raw.vehicle),
+  assignmentId: toNullableString(raw.assignment ? toStringId(raw.assignment) : undefined),
+  tipo: (parseString(raw.tipo) || 'otro') as VehicleExpense['tipo'],
+  fecha: parseString(raw.fecha),
+  monto: parseNumber(raw.monto),
+  descripcion: parseString(raw.descripcion),
+  facturaId: toNullableString(raw.factura_id),
+  odometro: toNullableNumber(raw.odometro),
+  proveedor: toNullableString(raw.proveedor),
+});
+
+const DEFAULT_GAS_PRICE_PER_LITER = 23;
+
+const parseLitrosFromText = (value: string): number | undefined => {
+  const text = parseString(value).trim();
+  if (!text) return undefined;
+  const match = text.match(/(\d+(?:[.,]\d+)?)\s*(?:l|lt|lts|litro|litros)\b/i);
+  if (!match) return undefined;
+  const parsed = Number(match[1].replace(',', '.'));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+};
+
+const toCargaFromExpense = (expense: VehicleExpense): CargaGasolina => {
+  const litrosFromDesc = parseLitrosFromText(expense.descripcion);
+  const estimatedLiters = expense.monto > 0 ? expense.monto / DEFAULT_GAS_PRICE_PER_LITER : 0;
+  const litros = litrosFromDesc ?? Number(estimatedLiters.toFixed(2));
+  const precioLitro = litros > 0 ? Number((expense.monto / litros).toFixed(2)) : DEFAULT_GAS_PRICE_PER_LITER;
+
+  return {
+    id: `expense-${expense.id}`,
+    vehicleId: expense.vehicleId,
+    assignmentId: expense.assignmentId,
+    fecha: expense.fecha,
+    litros,
+    precioLitro,
+    total: expense.monto,
+    odometro: expense.odometro ?? 0,
+    estacion: expense.proveedor || expense.descripcion || 'Gasto de gasolina',
+    facturaId: expense.facturaId,
+  };
+};
+
+const normalizeStoredCarga = (item: unknown): CargaGasolina | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+  const raw = item as Record<string, unknown>;
+  const id = parseString(raw.id).trim();
+  const vehicleId = parseString(raw.vehicleId).trim();
+  if (!id || !vehicleId) {
+    return null;
+  }
+
+  return {
+    id,
+    vehicleId,
+    assignmentId: toNullableString(raw.assignmentId),
+    userId: toNullableString(raw.userId),
+    userName: toNullableString(raw.userName),
+    fecha: parseString(raw.fecha),
+    litros: parseNumber(raw.litros),
+    precioLitro: parseNumber(raw.precioLitro),
+    total: parseNumber(raw.total),
+    odometro: parseNumber(raw.odometro),
+    estacion: parseString(raw.estacion),
+    facturaId: toNullableString(raw.facturaId),
+    eficiencia: toNullableNumber(raw.eficiencia),
+  };
+};
+
+const fetchFlotillaGastos = async (): Promise<VehicleExpense[]> => {
+  const data = await apiFetch('/flotilla/gastos/');
+  return asArrayRecords(data).map(mapVehicleExpenseFromApi);
+};
+
 const mapMaintenanceRecordFromApi = (raw: RawRecord): MaintenanceRecord => ({
   id: toStringId(raw.id),
   vehicleId: toStringId(raw.vehicle),
@@ -673,7 +751,24 @@ export const fetchFlotillaAlertas = async (): Promise<VehicleAlert[]> => {
 
 export const fetchFlotillaCargasGasolina = async (): Promise<CargaGasolina[]> => {
   const data = await apiFetch('/flotilla/gasolina/');
-  return asArrayRecords(data).map(mapCargaGasolinaFromApi);
+  const cargas = asArrayRecords(data).map(mapCargaGasolinaFromApi);
+  if (cargas.length > 0) {
+    return cargas;
+  }
+
+  const legacyStored = readStorageList<unknown>('flotilla:cargasGasolina', { legacy: true })
+    .map(normalizeStoredCarga)
+    .filter((item): item is CargaGasolina => Boolean(item));
+  if (legacyStored.length > 0) {
+    return legacyStored;
+  }
+
+  try {
+    const gastos = await fetchFlotillaGastos();
+    return gastos.filter((item) => item.tipo === 'gasolina').map(toCargaFromExpense);
+  } catch {
+    return cargas;
+  }
 };
 
 export const fetchFlotillaMantenimiento = async (): Promise<MaintenanceRecord[]> => {
@@ -1022,11 +1117,11 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     loadOptional(fetchConsumos, [] as Consumo[]),
     loadOptional(fetchAlertasConciliacion, [] as AlertaConciliacion[]),
     loadOptional(fetchAmexTickets, [] as TicketAMEX[]),
-    loadOptional(fetchFlotillaVehiculos, [] as Vehicle[]),
-    loadOptional(fetchFlotillaAsignaciones, [] as VehicleAssignment[]),
-    loadOptional(fetchFlotillaAlertas, [] as VehicleAlert[]),
-    loadOptional(fetchFlotillaCargasGasolina, [] as CargaGasolina[]),
-    loadOptional(fetchFlotillaMantenimiento, [] as MaintenanceRecord[]),
+    loadOptional(fetchFlotillaVehiculos, readStorageList<Vehicle>('flotilla:vehiculos')),
+    loadOptional(fetchFlotillaAsignaciones, readStorageList<VehicleAssignment>('vehicle_assignments_data', { legacy: true })),
+    loadOptional(fetchFlotillaAlertas, readStorageList<VehicleAlert>('flotilla:alertas')),
+    loadOptional(fetchFlotillaCargasGasolina, readStorageList<CargaGasolina>('flotilla:cargasGasolina')),
+    loadOptional(fetchFlotillaMantenimiento, readStorageList<MaintenanceRecord>('flotilla:maintenanceHistory')),
   ]);
 
   writeStorageList('proyectos_data', proyectos);
