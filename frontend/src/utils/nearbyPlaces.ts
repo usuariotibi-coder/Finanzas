@@ -401,7 +401,7 @@ export const fetchNearbyPlaces = async (
   }
 
   const url = `${API_BASE}/geocode/nearby-places/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}&limit=${safeLimit}&mode=${safeMode}`;
-  const allowNominatimFallback = safeMode === 'full';
+  const allowNominatimFallback = true;
 
   const requestPromise = (async () => {
     try {

@@ -332,10 +332,9 @@ def get_nearby_places(lat: float, lng: float, limit: int, *, mode: str = 'full')
 
     fast_mode = safe_mode == 'quick'
     overpass_places = fetch_overpass_places(lat, lng, safe_limit, fast_mode=fast_mode)
-    # Quick mode should return fast and leave deep hydration to a full request.
+    # Keep quick mode responsive, but still provide a light fallback when Overpass is sparse.
     nominatim_places = (
-        []
-        if fast_mode
+        fetch_nominatim_places(lat, lng, min(safe_limit, 72), fast_mode=True) if fast_mode and len(overpass_places) < 10
         else fetch_nominatim_places(lat, lng, safe_limit, fast_mode=False) if len(overpass_places) < max(12, min(safe_limit, 30)) else []
     )
     merged = overpass_places + nominatim_places

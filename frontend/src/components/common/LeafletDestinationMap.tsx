@@ -337,7 +337,7 @@ export default function LeafletDestinationMap({
     }
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 26000);
     setIsLoadingNearbyPlaces(true);
     setIsHydratingNearbyPlaces(false);
 
@@ -352,12 +352,12 @@ export default function LeafletDestinationMap({
           setNearbyPlaces((prev) => mergeNearbyPlaceCollections(prev, normalizedQuick));
         }
         setIsLoadingNearbyPlaces(false);
-        if (normalizedQuick.length >= 52) {
+        if (normalizedQuick.length >= 120) {
           return;
         }
 
         setIsHydratingNearbyPlaces(true);
-        const fullPlaces = await fetchNearbyPlaces(normalizedAnchor.lat, normalizedAnchor.lng, 180, controller.signal, 'full').catch(() => []);
+        const fullPlaces = await fetchNearbyPlaces(normalizedAnchor.lat, normalizedAnchor.lng, 220, controller.signal, 'full').catch(() => []);
         if (controller.signal.aborted || fullPlaces.length === 0) {
           return;
         }
