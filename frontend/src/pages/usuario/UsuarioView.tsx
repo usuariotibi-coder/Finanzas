@@ -33,6 +33,16 @@ import LeafletDestinationMap from '../../components/common/LeafletDestinationMap
 const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
+const SOLICITAR_VEHICULO_INITIAL_FORM = {
+  proyectoId: '',
+  origen: '',
+  destino: '',
+  motivo: '',
+  fechaInicio: '',
+  fechaFin: '',
+  proposito: 'operaciones' as 'operaciones' | 'visita' | 'viaje',
+  requiereGasolina: false,
+};
 
 type VehicleMapPoint = { lat: number; lng: number };
 const normalizeText = (value: string) =>
@@ -390,14 +400,7 @@ export default function UsuarioView() {
   }, []);
 
   const [formSolicitudVehiculo, setFormSolicitudVehiculo] = useLocalStorageState('usuario:formSolicitudVehiculo', {
-    proyectoId: '',
-    origen: '',
-    destino: '',
-    motivo: '',
-    fechaInicio: '',
-    fechaFin: '',
-    proposito: 'operaciones' as 'operaciones' | 'visita' | 'viaje',
-    requiereGasolina: false,
+    ...SOLICITAR_VEHICULO_INITIAL_FORM,
   });
   const [showDestinoVehiculoMap, setShowDestinoVehiculoMap] = useState(false);
   const [showDestinoVehiculoMapExpanded, setShowDestinoVehiculoMapExpanded] = useState(false);
@@ -405,6 +408,23 @@ export default function UsuarioView() {
   const [destinoVehiculoDetalles, setDestinoVehiculoDetalles] = useState<VehicleDestinationDetails | null>(null);
   const [isResolviendoDestinoVehiculo, setIsResolviendoDestinoVehiculo] = useState(false);
   const [destinoVehiculoMapMensaje, setDestinoVehiculoMapMensaje] = useState('');
+
+  useEffect(() => {
+    if (!showModalSolicitarVehiculo) {
+      return;
+    }
+    destinoVehiculoSelectionRef.current += 1;
+    destinoVehiculoAbortRef.current?.abort();
+    destinoVehiculoAbortRef.current = null;
+    setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM });
+    setShowSolicitarVehiculoErrors(false);
+    setShowDestinoVehiculoMap(false);
+    setShowDestinoVehiculoMapExpanded(false);
+    setDestinoVehiculoCoords(null);
+    setDestinoVehiculoDetalles(null);
+    setIsResolviendoDestinoVehiculo(false);
+    setDestinoVehiculoMapMensaje('');
+  }, [showModalSolicitarVehiculo, setFormSolicitudVehiculo]);
 
   // Estado para solicitud de viaje
   const [showModalSolicitarViaje, setShowModalSolicitarViaje] = useLocalStorageState('usuario:showModalSolicitarViaje', false);
@@ -1055,16 +1075,7 @@ export default function UsuarioView() {
       saveVehicleAssignments([nuevaSolicitud, ...vehicleAssignments]);
       setShowModalSolicitarVehiculo(false);
       resetSolicitarVehiculoMapState();
-      setFormSolicitudVehiculo({
-        proyectoId: '',
-        origen: '',
-        destino: '',
-        motivo: '',
-        fechaInicio: '',
-        fechaFin: '',
-        proposito: 'operaciones',
-        requiereGasolina: false,
-      });
+      setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM });
       setShowSolicitarVehiculoErrors(false);
       showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
       void syncCoreAppData({ userId: currentUserId }).catch(() => {});
