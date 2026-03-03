@@ -46,6 +46,12 @@ type OverpassElement = {
   tags?: Record<string, string | undefined>;
 };
 
+type NominatimSearchItem = {
+  display_name?: string;
+  lat?: string;
+  lon?: string;
+};
+
 const toNearbyPlace = (value: unknown): NearbyPlace | null => {
   if (!value || typeof value !== 'object') {
     return null;
@@ -65,6 +71,73 @@ const toNearbyPlace = (value: unknown): NearbyPlace | null => {
     score: Number.isFinite(Number(payload.score)) ? Number(payload.score) : undefined,
     source: typeof payload.source === 'string' ? payload.source : undefined,
   };
+};
+
+const fetchNearbyPlacesFromNominatimFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
+  const delta = 0.06;
+  const left = lng - delta;
+  const right = lng + delta;
+  const top = lat + delta;
+  const bottom = lat - delta;
+  const queries = ['parque industrial', 'industrial', 'fabrica', 'empresa', 'planta'];
+  const unique = new Set<string>();
+  const places: NearbyPlace[] = [];
+
+  for (const query of queries) {
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      limit: '25',
+      'accept-language': 'es',
+      bounded: '1',
+      viewbox: `${left},${top},${right},${bottom}`,
+      q: query,
+    });
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+        method: 'GET',
+        signal,
+      });
+      if (!response.ok) {
+        continue;
+      }
+      const payload = (await response.json()) as NominatimSearchItem[];
+      for (const item of payload) {
+        const rawDisplay = String(item.display_name || '');
+        const name = rawDisplay.split(',')[0]?.trim() || '';
+        if (!name || !isLikelyBusinessName(name)) {
+          continue;
+        }
+        const canonicalName = normalizeText(name);
+        if (!canonicalName || unique.has(canonicalName)) {
+          continue;
+        }
+        const placeLat = Number(item.lat);
+        const placeLng = Number(item.lon);
+        if (!Number.isFinite(placeLat) || !Number.isFinite(placeLng)) {
+          continue;
+        }
+        const distance = getDistanceMeters(lat, lng, placeLat, placeLng);
+        if (distance > 8000) {
+          continue;
+        }
+        unique.add(canonicalName);
+        places.push({
+          name,
+          lat: placeLat,
+          lng: placeLng,
+          distance,
+          score: distance + 1200,
+          source: 'nominatim-fallback',
+        });
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return places
+    .sort((a, b) => (a.score ?? Number.POSITIVE_INFINITY) - (b.score ?? Number.POSITIVE_INFINITY))
+    .slice(0, limit);
 };
 
 const fetchNearbyPlacesFromOverpassFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
@@ -105,7 +178,7 @@ out center 1200;
     }
   }
   if (!data) {
-    return [];
+    return fetchNearbyPlacesFromNominatimFallback(lat, lng, limit, signal);
   }
 
   const unique = new Set<string>();
@@ -175,7 +248,10 @@ out center 1200;
     .slice(0, limit)
     .map(({ score, ...item }) => item);
 
-  return places;
+  if (places.length > 0) {
+    return places;
+  }
+  return fetchNearbyPlacesFromNominatimFallback(lat, lng, limit, signal);
 };
 
 export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, signal?: AbortSignal): Promise<NearbyPlace[]> => {

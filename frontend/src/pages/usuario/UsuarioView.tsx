@@ -69,9 +69,23 @@ const isLikelyBusinessName = (name: string) => {
   return true;
 };
 
+const getDistanceMeters = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+  const toRad = (numberValue: number) => (numberValue * Math.PI) / 180;
+  const earthRadiusMeters = 6_371_000;
+  const deltaLat = toRad(toLat - fromLat);
+  const deltaLng = toRad(toLng - fromLng);
+  const latA = toRad(fromLat);
+  const latB = toRad(toLat);
+  const value =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(latA) * Math.cos(latB) * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+  return earthRadiusMeters * (2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value)));
+};
+
 type VehicleDestinationDetails = {
   poi?: string;
   road?: string;
+  industrial?: string;
   neighborhood?: string;
   city?: string;
   state?: string;
@@ -956,6 +970,8 @@ export default function UsuarioView() {
     setDestinoVehiculoMapMensaje('');
 
     const coordenadasFallback = `Lat ${lat.toFixed(5)}, Lon ${lng.toFixed(5)}`;
+    setFormSolicitudVehiculo((prev) => ({ ...prev, destino: coordenadasFallback }));
+    setDestinoVehiculoDetalles(null);
 
     try {
       const response = await fetch(
@@ -967,10 +983,20 @@ export default function UsuarioView() {
       }
 
       const data = (await response.json()) as {
+        lat?: string;
+        lon?: string;
         display_name?: string;
         name?: string;
         address?: Record<string, string | undefined>;
       };
+      const reverseLat = Number(data.lat);
+      const reverseLon = Number(data.lon);
+      if (Number.isFinite(reverseLat) && Number.isFinite(reverseLon)) {
+        const reverseDistance = getDistanceMeters(lat, lng, reverseLat, reverseLon);
+        if (reverseDistance > 1500) {
+          throw new Error('La geocodificacion devolvio un punto lejano al seleccionado.');
+        }
+      }
       const address = data.address ?? {};
       const displayNameParts = toUniqueTextParts((data.display_name || '').split(','));
       const displayNameMain = displayNameParts[0] || '';
@@ -993,6 +1019,7 @@ export default function UsuarioView() {
       const rawNeighborhood = address.neighbourhood || address.suburb || address.quarter || address.hamlet;
       const rawCity = address.city || address.town || address.village || address.municipality || address.county;
       const rawState = address.state;
+      const industrial = address.industrial || address.commercial;
       const postcode = address.postcode;
       const country = address.country;
       const nearbyPlaceCandidates = await fetchNearbyPlaceCandidates(lat, lng, controller.signal);
@@ -1011,7 +1038,7 @@ export default function UsuarioView() {
 
       const [neighborhood, city, state] = toUniqueTextParts([rawNeighborhood, rawCity, rawState]);
       const roadLine = joinUniqueTextParts([road]);
-      const zoneLine = joinUniqueTextParts([neighborhood, city]);
+      const zoneLine = joinUniqueTextParts([industrial, neighborhood, city]);
       const stateLine = joinUniqueTextParts([state, postcode, country]);
       const direccion =
         joinUniqueTextParts([resolvedPoi, roadLine, zoneLine, stateLine]) ||
@@ -1022,6 +1049,7 @@ export default function UsuarioView() {
       setDestinoVehiculoDetalles({
         poi: resolvedPoi || undefined,
         road,
+        industrial,
         neighborhood,
         city,
         state,
@@ -2557,6 +2585,11 @@ export default function UsuarioView() {
                             Calle: {destinoVehiculoDetalles.road}
                           </span>
                         )}
+                        {destinoVehiculoDetalles?.industrial && (
+                          <span className="rounded bg-indigo-50 px-2 py-0.5 text-indigo-700">
+                            Parque/Zona: {destinoVehiculoDetalles.industrial}
+                          </span>
+                        )}
                         {destinoVehiculoDetalles?.poi && (
                           <span className="rounded bg-emerald-50 px-2 py-0.5 text-emerald-700">
                             Punto: {destinoVehiculoDetalles.poi}
@@ -2704,6 +2737,9 @@ export default function UsuarioView() {
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {destinoVehiculoDetalles?.road && (
                     <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Calle: {destinoVehiculoDetalles.road}</span>
+                  )}
+                  {destinoVehiculoDetalles?.industrial && (
+                    <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-indigo-700">Parque/Zona: {destinoVehiculoDetalles.industrial}</span>
                   )}
                   {destinoVehiculoDetalles?.poi && (
                     <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">Empresa/Punto: {destinoVehiculoDetalles.poi}</span>

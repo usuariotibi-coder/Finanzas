@@ -165,12 +165,12 @@ out center 1200;
 
 
 def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    delta = 0.05
+    delta = 0.06
     left = lng - delta
     right = lng + delta
     top = lat + delta
     bottom = lat - delta
-    queries = ('parque industrial', 'empresa')
+    queries = ('parque industrial', 'industrial', 'fabrica', 'empresa', 'planta')
     places: list[dict[str, float | str]] = []
     seen_names: set[str] = set()
 
@@ -204,7 +204,7 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
             except (TypeError, ValueError):
                 continue
             distance = get_distance_meters(lat, lng, point_lat, point_lng)
-            if distance > 3000:
+            if distance > 8000:
                 continue
             places.append({
                 'name': place_name,
