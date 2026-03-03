@@ -90,14 +90,17 @@ type VehicleDestinationDetails = {
   postcode?: string;
   country?: string;
   nearbyPlaces?: string[];
+  nearbyPoints?: Array<{ name: string; lat: number; lng: number }>;
 };
 
 type NearbyPlaceCandidate = {
   name: string;
   distance: number;
+  lat: number;
+  lng: number;
 };
 
-const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 6): NearbyPlaceCandidate[] => {
+const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 40): NearbyPlaceCandidate[] => {
   const seen = new Set<string>();
   const unique: NearbyPlaceCandidate[] = [];
   for (const place of places) {
@@ -119,13 +122,16 @@ const dedupeNearbyPlaceCandidates = (places: NearbyPlaceCandidate[], limit = 6):
 
 const fetchNearbyPlaceCandidates = async (lat: number, lng: number, signal?: AbortSignal): Promise<NearbyPlaceCandidate[]> => {
   try {
-    const places = await fetchNearbyPlaces(lat, lng, 18, signal);
+    const places = await fetchNearbyPlaces(lat, lng, 60, signal);
     const normalized = places
       .filter((item) => isLikelyBusinessName(item.name))
       .map((item) => ({
         name: item.name.trim(),
         distance: Number.isFinite(Number(item.distance)) ? Number(item.distance) : Number.POSITIVE_INFINITY,
+        lat: Number(item.lat),
+        lng: Number(item.lng),
       }))
+      .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
       .sort((a, b) => a.distance - b.distance);
     return dedupeNearbyPlaceCandidates(normalized);
   } catch {
@@ -142,6 +148,25 @@ const formatNearbyPlacesLabel = (nearbyPlaces: string[]) => {
   return hiddenCount > 0 ? `${preview} | +${hiddenCount} mas` : preview;
 };
 
+const normalizeNearbyPoints = (
+  points: Array<{ name?: string; lat?: number; lng?: number }>
+): Array<{ name: string; lat: number; lng: number }> => {
+  const unique = new Map<string, { name: string; lat: number; lng: number }>();
+  points.forEach((point) => {
+    const name = String(point.name || '').trim();
+    const lat = Number(point.lat);
+    const lng = Number(point.lng);
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return;
+    }
+    const key = `${normalizeText(name)}:${lat.toFixed(5)}:${lng.toFixed(5)}`;
+    if (!unique.has(key)) {
+      unique.set(key, { name, lat, lng });
+    }
+  });
+  return Array.from(unique.values());
+};
+
 const GEOCODE_API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api/geocode`;
 const reverseGeocodeCache = new Map<string, ReverseGeocodeResult>();
 
@@ -149,6 +174,7 @@ type ReverseGeocodeResult = {
   formatted_address?: string;
   details?: Partial<VehicleDestinationDetails>;
   nearby_places?: string[];
+  nearby_points?: Array<{ name?: string; lat?: number; lng?: number }>;
 };
 
 type NominatimReverseResponse = {
@@ -168,15 +194,20 @@ const resolveWithTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fa
   return result;
 };
 
-const reverseGeocodeDestination = async (lat: number, lng: number, signal?: AbortSignal): Promise<ReverseGeocodeResult | null> => {
+const reverseGeocodeDestination = async (
+  lat: number,
+  lng: number,
+  signal?: AbortSignal,
+  includeNearby = false
+): Promise<ReverseGeocodeResult | null> => {
   const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const cached = reverseGeocodeCache.get(cacheKey);
+  const cached = reverseGeocodeCache.get(`${cacheKey}:${includeNearby ? '1' : '0'}`);
   if (cached) {
     return cached;
   }
   const url =
     `${GEOCODE_API_BASE}/reverse/?lat=${encodeURIComponent(String(lat))}` +
-    `&lng=${encodeURIComponent(String(lng))}&include_nearby=0`;
+    `&lng=${encodeURIComponent(String(lng))}&include_nearby=${includeNearby ? '1' : '0'}`;
   try {
     const response = await fetch(url, { method: 'GET', credentials: 'omit', signal });
     if (!response.ok) {
@@ -184,7 +215,7 @@ const reverseGeocodeDestination = async (lat: number, lng: number, signal?: Abor
     }
     const payload = (await response.json()) as ReverseGeocodeResult;
     if (payload?.formatted_address) {
-      reverseGeocodeCache.set(cacheKey, payload);
+      reverseGeocodeCache.set(`${cacheKey}:${includeNearby ? '1' : '0'}`, payload);
     }
     return payload;
   } catch {
@@ -194,7 +225,7 @@ const reverseGeocodeDestination = async (lat: number, lng: number, signal?: Abor
 
 const reverseGeocodeDirectNominatim = async (lat: number, lng: number, signal?: AbortSignal): Promise<ReverseGeocodeResult | null> => {
   const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
-  const cached = reverseGeocodeCache.get(cacheKey);
+  const cached = reverseGeocodeCache.get(`${cacheKey}:0`);
   if (cached) {
     return cached;
   }
@@ -235,7 +266,7 @@ const reverseGeocodeDirectNominatim = async (lat: number, lng: number, signal?: 
       },
       nearby_places: [],
     };
-    reverseGeocodeCache.set(cacheKey, reversePayload);
+    reverseGeocodeCache.set(`${cacheKey}:0`, reversePayload);
     return reversePayload;
   } catch {
     return null;
@@ -270,6 +301,7 @@ function VehicleDestinationLayeredMap({
       markerTitle={markerTitle}
       markerSubtitle={markerSubtitle}
       fallbackNearbyNames={destinationDetails?.nearbyPlaces || []}
+      externalNearbyPlaces={destinationDetails?.nearbyPoints || []}
       defaultZoom={compact ? 15 : 17}
       fallbackZoom={5}
       onMapClick={onSelect}
@@ -1099,6 +1131,7 @@ export default function UsuarioView() {
         return;
       }
       const reverseDetails = reverseData?.details || {};
+      const reverseNearbyPoints = normalizeNearbyPoints(reverseData?.nearby_points || []);
       const nearbyPlaces = toUniqueTextParts([
         ...(reverseData?.nearby_places || []),
         String(reverseDetails.poi || ''),
@@ -1118,17 +1151,29 @@ export default function UsuarioView() {
         postcode: (reverseDetails.postcode || '') || undefined,
         country: (reverseDetails.country || '') || undefined,
         nearbyPlaces,
+        nearbyPoints: reverseNearbyPoints,
       });
       setDestinoVehiculoMapMensaje(reverseData ? 'Destino tomado del mapa.' : 'Se cargo una direccion aproximada.');
 
       // Nearby names should not block the address update; enrich in background.
-      void resolveWithTimeout(fetchNearbyPlaceCandidates(lat, lng, controller.signal), 15000, [])
-        .then((candidates) => {
+      const nearbyFromApiPromise = resolveWithTimeout(
+        reverseGeocodeDestination(lat, lng, controller.signal, true),
+        15000,
+        null
+      );
+      const nearbyFromPlacesPromise = resolveWithTimeout(fetchNearbyPlaceCandidates(lat, lng, controller.signal), 15000, []);
+      void Promise.all([nearbyFromApiPromise, nearbyFromPlacesPromise])
+        .then(([apiNearby, candidates]) => {
           if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {
             return;
           }
           const candidateNames = candidates.map((item) => item.name);
-          if (!candidateNames.length) {
+          const candidatePoints = candidates.map((item) => ({ name: item.name, lat: item.lat, lng: item.lng }));
+          const apiNames = apiNearby?.nearby_places || [];
+          const apiPoints = normalizeNearbyPoints(apiNearby?.nearby_points || []);
+          const mergedNames = toUniqueTextParts([...candidateNames, ...apiNames]);
+          const mergedPoints = normalizeNearbyPoints([...candidatePoints, ...apiPoints]);
+          if (!mergedNames.length && !mergedPoints.length) {
             return;
           }
           setDestinoVehiculoDetalles((prev) => {
@@ -1137,7 +1182,8 @@ export default function UsuarioView() {
             }
             return {
               ...prev,
-              nearbyPlaces: toUniqueTextParts([...(prev.nearbyPlaces || []), ...candidateNames]),
+              nearbyPlaces: toUniqueTextParts([...(prev.nearbyPlaces || []), ...mergedNames]),
+              nearbyPoints: normalizeNearbyPoints([...(prev.nearbyPoints || []), ...mergedPoints]),
             };
           });
         })

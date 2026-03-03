@@ -56,8 +56,16 @@ const buildReadableNearbyPlaces = (
   anchor: LatLngPoint,
   currentZoom: number
 ) => {
-  const maxVisible = currentZoom >= 16 ? 12 : currentZoom >= 14 ? 9 : 6;
-  const minGapMeters = currentZoom >= 16 ? 120 : currentZoom >= 14 ? 180 : 260;
+  const maxVisible =
+    currentZoom >= 16 ? 80 :
+      currentZoom >= 15 ? 60 :
+        currentZoom >= 14 ? 40 :
+          currentZoom >= 13 ? 28 : 16;
+  const minGapMeters =
+    currentZoom >= 16 ? 20 :
+      currentZoom >= 15 ? 30 :
+        currentZoom >= 14 ? 45 :
+          currentZoom >= 13 ? 65 : 90;
 
   const sorted = places
     .filter((place) => Number.isFinite(place.lat) && Number.isFinite(place.lng) && place.name.trim())
@@ -96,6 +104,7 @@ interface LeafletDestinationMapProps {
   markerTitle?: string;
   markerSubtitle?: string;
   fallbackNearbyNames?: string[];
+  externalNearbyPlaces?: NearbyPlacePoint[];
   defaultZoom?: number;
   fallbackZoom?: number;
   showModeControl?: boolean;
@@ -177,6 +186,7 @@ export default function LeafletDestinationMap({
   markerTitle = 'Destino seleccionado',
   markerSubtitle = '',
   fallbackNearbyNames = [],
+  externalNearbyPlaces = [],
   defaultZoom = 17,
   fallbackZoom = 5,
   showModeControl = true,
@@ -229,17 +239,34 @@ export default function LeafletDestinationMap({
     setCurrentZoom(activeZoom);
   }, [activeZoom, marker?.lat, marker?.lng, center.lat, center.lng]);
 
+  const allNearbyPlaces = useMemo(() => {
+    const unique = new Map<string, NearbyPlacePoint>();
+    [...nearbyPlaces, ...externalNearbyPlaces].forEach((place) => {
+      const name = String(place.name || '').trim();
+      const lat = Number(place.lat);
+      const lng = Number(place.lng);
+      if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return;
+      }
+      const key = `${normalizeBusinessKey(name)}:${lat.toFixed(5)}:${lng.toFixed(5)}`;
+      if (!unique.has(key)) {
+        unique.set(key, { name, lat, lng });
+      }
+    });
+    return Array.from(unique.values());
+  }, [nearbyPlaces, externalNearbyPlaces]);
+
   const visibleNearbyPlaces = useMemo(() => {
     if (!mapBounds) {
-      return nearbyPlaces;
+      return allNearbyPlaces;
     }
-    return nearbyPlaces.filter((place) => (
+    return allNearbyPlaces.filter((place) => (
       place.lat <= mapBounds.north &&
       place.lat >= mapBounds.south &&
       place.lng <= mapBounds.east &&
       place.lng >= mapBounds.west
     ));
-  }, [nearbyPlaces, mapBounds]);
+  }, [allNearbyPlaces, mapBounds]);
   const nearbyPlacesToRender = useMemo(
     () => buildReadableNearbyPlaces(visibleNearbyPlaces, marker ?? center, currentZoom),
     [visibleNearbyPlaces, marker?.lat, marker?.lng, center.lat, center.lng, currentZoom]
@@ -367,7 +394,7 @@ export default function LeafletDestinationMap({
             </Tooltip>
           </CircleMarker>
         ) : null}
-        {currentZoom >= 12 &&
+        {currentZoom >= 11 &&
           nearbyPlacesToRender.map((place) => (
           <CircleMarker
             key={`${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}`}
@@ -381,11 +408,11 @@ export default function LeafletDestinationMap({
           </CircleMarker>
           ))}
       </MapContainer>
-      {currentZoom >= 12 && nearbyPlacesToRender.length > 0 ? (
+      {currentZoom >= 11 && nearbyPlacesToRender.length > 0 ? (
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
           <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
           <div className="space-y-0.5">
-            {nearbyPlacesToRender.slice(0, 12).map((place) => (
+            {nearbyPlacesToRender.slice(0, 30).map((place) => (
               <p key={`list:${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`} className="text-[10px] text-slate-700">
                 {place.name}
               </p>
@@ -393,7 +420,7 @@ export default function LeafletDestinationMap({
           </div>
         </div>
       ) : null}
-      {currentZoom >= 12 && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length > 0 ? (
+      {currentZoom >= 11 && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length > 0 ? (
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
           <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
           <div className="space-y-0.5">
@@ -405,7 +432,7 @@ export default function LeafletDestinationMap({
           </div>
         </div>
       ) : null}
-      {currentZoom >= 12 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
+      {currentZoom >= 11 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
         <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] rounded-md border border-slate-300 bg-white/95 px-2 py-1 shadow">
           <p className="text-[10px] text-slate-700">No hay nombres OSM en esta zona.</p>
         </div>

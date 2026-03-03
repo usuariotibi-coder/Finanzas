@@ -370,7 +370,8 @@ def reverse_geocode_details(lat: float, lng: float, include_nearby: bool = False
             'postcode': postcode,
             'country': country,
         },
-        'nearby_places': nearby_names[:8],
+        'nearby_places': nearby_names[:40],
+        'nearby_points': nearby_places[:40] if include_nearby else [],
     }
 
 
