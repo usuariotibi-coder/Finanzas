@@ -583,13 +583,15 @@ export default function LeafletDestinationMap({
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), 6500);
     setIsLoadingReferencePlaces(true);
-    const fallbackQueries = ['parque industrial', 'avenida'];
+    const fallbackQueries = ['industrial', 'empresa', 'avenida'];
     void Promise.all(
       fallbackQueries.map((query) => (
         searchGeocodePlaces(query, {
-          limit: 6,
+          limit: 7,
           nearLat: anchor.lat,
           nearLng: anchor.lng,
+          bounds: mapBounds ?? undefined,
+          bounded: Boolean(mapBounds),
           signal: controller.signal,
         }).catch(() => [])
       ))
@@ -628,6 +630,10 @@ export default function LeafletDestinationMap({
     marker?.lng,
     center.lat,
     center.lng,
+    mapBounds?.north,
+    mapBounds?.south,
+    mapBounds?.east,
+    mapBounds?.west,
     lastReferenceHydrationKey,
   ]);
 

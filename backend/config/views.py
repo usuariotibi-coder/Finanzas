@@ -358,6 +358,11 @@ def search_geocode_places(
     limit: int = 8,
     near_lat: float | None = None,
     near_lng: float | None = None,
+    north: float | None = None,
+    south: float | None = None,
+    east: float | None = None,
+    west: float | None = None,
+    bounded: bool = False,
 ) -> list[dict[str, float | str]]:
     safe_query = str(query or '').strip()
     if len(safe_query) < 3:
@@ -370,7 +375,15 @@ def search_geocode_places(
         'limit': str(safe_limit),
         'q': safe_query,
     }
-    if near_lat is not None and near_lng is not None:
+    has_bbox = (
+        north is not None and south is not None and east is not None and west is not None
+        and north > south and east > west
+    )
+    if has_bbox:
+        params['viewbox'] = f'{west},{north},{east},{south}'
+        if bounded:
+            params['bounded'] = '1'
+    elif near_lat is not None and near_lng is not None:
         delta = 0.35
         left = near_lng - delta
         right = near_lng + delta
@@ -569,6 +582,12 @@ class GeocodeSearchView(APIView):
         raw_limit = request.query_params.get('limit', '8')
         raw_near_lat = request.query_params.get('near_lat')
         raw_near_lng = request.query_params.get('near_lng')
+        raw_north = request.query_params.get('north')
+        raw_south = request.query_params.get('south')
+        raw_east = request.query_params.get('east')
+        raw_west = request.query_params.get('west')
+        raw_bounded = str(request.query_params.get('bounded', '0')).strip().lower()
+        bounded = raw_bounded in {'1', 'true', 'yes', 'si'}
         if len(raw_query) < 3:
             return Response({'results': []})
 
@@ -579,6 +598,10 @@ class GeocodeSearchView(APIView):
 
         near_lat: float | None = None
         near_lng: float | None = None
+        north: float | None = None
+        south: float | None = None
+        east: float | None = None
+        west: float | None = None
         try:
             if raw_near_lat is not None and raw_near_lng is not None:
                 near_lat = float(raw_near_lat)
@@ -586,9 +609,30 @@ class GeocodeSearchView(APIView):
         except (TypeError, ValueError):
             near_lat = None
             near_lng = None
+        try:
+            if raw_north is not None and raw_south is not None and raw_east is not None and raw_west is not None:
+                north = float(raw_north)
+                south = float(raw_south)
+                east = float(raw_east)
+                west = float(raw_west)
+        except (TypeError, ValueError):
+            north = None
+            south = None
+            east = None
+            west = None
 
         try:
-            results = search_geocode_places(raw_query, limit=limit, near_lat=near_lat, near_lng=near_lng)
+            results = search_geocode_places(
+                raw_query,
+                limit=limit,
+                near_lat=near_lat,
+                near_lng=near_lng,
+                north=north,
+                south=south,
+                east=east,
+                west=west,
+                bounded=bounded,
+            )
         except Exception:
             results = []
         return Response({'results': results})

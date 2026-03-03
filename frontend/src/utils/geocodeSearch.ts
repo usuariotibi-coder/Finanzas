@@ -13,6 +13,13 @@ type SearchOptions = {
   limit?: number;
   nearLat?: number;
   nearLng?: number;
+  bounds?: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  bounded?: boolean;
   signal?: AbortSignal;
 };
 
@@ -52,7 +59,7 @@ const toSearchResult = (value: unknown): GeocodeSearchResult | null => {
 
 export const searchGeocodePlaces = async (
   query: string,
-  { limit = 8, nearLat, nearLng, signal }: SearchOptions = {}
+  { limit = 8, nearLat, nearLng, bounds, bounded = false, signal }: SearchOptions = {}
 ): Promise<GeocodeSearchResult[]> => {
   const safeQuery = normalizeSearchText(query);
   if (safeQuery.length < 3) {
@@ -81,6 +88,24 @@ export const searchGeocodePlaces = async (
     params.set('near_lat', String(nearLatSafe));
     params.set('near_lng', String(nearLngSafe));
   }
+  const hasBounds = Boolean(
+    bounds &&
+    Number.isFinite(Number(bounds.north)) &&
+    Number.isFinite(Number(bounds.south)) &&
+    Number.isFinite(Number(bounds.east)) &&
+    Number.isFinite(Number(bounds.west)) &&
+    Number(bounds.north) > Number(bounds.south) &&
+    Number(bounds.east) > Number(bounds.west)
+  );
+  if (hasBounds && bounds) {
+    params.set('north', String(bounds.north));
+    params.set('south', String(bounds.south));
+    params.set('east', String(bounds.east));
+    params.set('west', String(bounds.west));
+    if (bounded) {
+      params.set('bounded', '1');
+    }
+  }
   const url = `${API_BASE}/geocode/search/?${params.toString()}`;
 
   const requestPromise = (async () => {
@@ -108,4 +133,3 @@ export const searchGeocodePlaces = async (
     searchInFlight.delete(cacheKey);
   }
 };
-
