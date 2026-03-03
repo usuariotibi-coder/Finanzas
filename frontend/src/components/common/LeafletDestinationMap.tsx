@@ -180,13 +180,17 @@ function MapClickCapture({ onSelect }: { onSelect: (coords: LatLngPoint) => void
 function MapViewWatcher({
   onZoomChange,
   onBoundsChange,
+  onCenterChange,
 }: {
   onZoomChange: (zoom: number) => void;
   onBoundsChange: (bounds: BoundsBox) => void;
+  onCenterChange: (coords: LatLngPoint) => void;
 }) {
   const emitState = (mapInstance: ReturnType<typeof useMapEvents>) => {
     const bounds = mapInstance.getBounds();
+    const center = mapInstance.getCenter();
     onZoomChange(mapInstance.getZoom());
+    onCenterChange({ lat: center.lat, lng: center.lng });
     onBoundsChange({
       north: bounds.getNorth(),
       south: bounds.getSouth(),
@@ -235,6 +239,7 @@ export default function LeafletDestinationMap({
   const [searchError, setSearchError] = useState('');
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [mapBounds, setMapBounds] = useState<BoundsBox | null>(null);
+  const [mapViewportCenter, setMapViewportCenter] = useState<LatLngPoint | null>(null);
   const activeCenter = useMemo<[number, number]>(
     () => (marker ? [marker.lat, marker.lng] : [center.lat, center.lng]),
     [marker?.lat, marker?.lng, center.lat, center.lng]
@@ -374,7 +379,7 @@ export default function LeafletDestinationMap({
       return;
     }
 
-    const anchor = marker ?? center;
+    const anchor = mapViewportCenter ?? marker ?? center;
     const controller = new AbortController();
     const debounceId = window.setTimeout(() => {
       setIsSearchingPlaces(true);
@@ -412,10 +417,10 @@ export default function LeafletDestinationMap({
       controller.abort();
       window.clearTimeout(debounceId);
     };
-  }, [searchTerm, marker?.lat, marker?.lng, center.lat, center.lng]);
+  }, [searchTerm, mapViewportCenter?.lat, mapViewportCenter?.lng, marker?.lat, marker?.lng, center.lat, center.lng]);
 
   useEffect(() => {
-    const anchor = marker ?? center;
+    const anchor = mapViewportCenter ?? marker ?? center;
     if (!anchor) {
       setNearbyPlaces([]);
       return;
@@ -462,7 +467,7 @@ export default function LeafletDestinationMap({
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [marker?.lat, marker?.lng, center.lat, center.lng]);
+  }, [mapViewportCenter?.lat, mapViewportCenter?.lng, marker?.lat, marker?.lng, center.lat, center.lng]);
 
   useEffect(() => {
     if (currentZoom < 13) {
@@ -560,7 +565,11 @@ export default function LeafletDestinationMap({
         className="h-full w-full"
       >
         <MapViewportSync center={activeCenter} zoom={activeZoom} />
-        <MapViewWatcher onZoomChange={setCurrentZoom} onBoundsChange={setMapBounds} />
+        <MapViewWatcher
+          onZoomChange={setCurrentZoom}
+          onBoundsChange={setMapBounds}
+          onCenterChange={setMapViewportCenter}
+        />
         <TileLayer
           key={baseLayer.key}
           attribution={baseLayer.attribution}
