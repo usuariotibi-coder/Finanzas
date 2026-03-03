@@ -168,7 +168,9 @@ const resolveWithTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, fa
 };
 
 const reverseGeocodeDestination = async (lat: number, lng: number, signal?: AbortSignal): Promise<ReverseGeocodeResult | null> => {
-  const url = `${GEOCODE_API_BASE}/reverse/?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`;
+  const url =
+    `${GEOCODE_API_BASE}/reverse/?lat=${encodeURIComponent(String(lat))}` +
+    `&lng=${encodeURIComponent(String(lng))}&include_nearby=0`;
   try {
     const response = await fetch(url, { method: 'GET', credentials: 'omit', signal });
     if (!response.ok) {
@@ -1066,12 +1068,12 @@ export default function UsuarioView() {
     try {
       const reverseFromApi = await resolveWithTimeout(
         reverseGeocodeDestination(lat, lng, controller.signal),
-        6500,
+        3200,
         null
       );
       const reverseData = reverseFromApi || await resolveWithTimeout(
         reverseGeocodeDirectNominatim(lat, lng, controller.signal),
-        6500,
+        3200,
         null
       );
       if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {

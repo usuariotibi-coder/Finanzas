@@ -264,9 +264,10 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
     return deduped
 
 
-def reverse_geocode_details(lat: float, lng: float) -> dict[str, object]:
+def reverse_geocode_details(lat: float, lng: float, include_nearby: bool = False) -> dict[str, object]:
     data = None
-    for zoom in ('18', '17', '16', '15'):
+    # Keep reverse-geocode fast: try only a couple zoom levels with short timeouts.
+    for zoom in ('18', '16'):
         params = {
             'format': 'jsonv2',
             'addressdetails': '1',
@@ -277,7 +278,7 @@ def reverse_geocode_details(lat: float, lng: float) -> dict[str, object]:
         }
         url = f"https://nominatim.openstreetmap.org/reverse?{urlencode(params)}"
         try:
-            candidate = _http_get_json(url, timeout_seconds=10)
+            candidate = _http_get_json(url, timeout_seconds=4)
             if candidate:
                 data = candidate
                 break
@@ -303,15 +304,16 @@ def reverse_geocode_details(lat: float, lng: float) -> dict[str, object]:
     postcode = str(address.get('postcode') or '').strip()
     country = str(address.get('country') or '').strip()
 
-    nearby_places = get_nearby_places(lat, lng, 8)
+    nearby_places = get_nearby_places(lat, lng, 8) if include_nearby else []
     nearby_names = [str(place.get('name') or '').strip() for place in nearby_places if str(place.get('name') or '').strip()]
     nearby_poi = ''
-    for place in nearby_places:
-        distance = float(place.get('distance') or 999999)
-        name = str(place.get('name') or '').strip()
-        if name and distance <= 500:
-            nearby_poi = name
-            break
+    if include_nearby:
+        for place in nearby_places:
+            distance = float(place.get('distance') or 999999)
+            name = str(place.get('name') or '').strip()
+            if name and distance <= 500:
+                nearby_poi = name
+                break
 
     generic_tokens = {normalize_text(value) for value in to_unique_text_parts([neighborhood, city, state, country])}
     poi_candidates = to_unique_text_parts([
@@ -404,13 +406,15 @@ class ReverseGeocodeView(APIView):
     def get(self, request):
         raw_lat = request.query_params.get('lat')
         raw_lng = request.query_params.get('lng')
+        include_nearby_raw = str(request.query_params.get('include_nearby', '0')).strip().lower()
+        include_nearby = include_nearby_raw in {'1', 'true', 'yes', 'si'}
         try:
             lat = float(raw_lat)
             lng = float(raw_lng)
         except (TypeError, ValueError):
             return Response({'detail': 'Parametros invalidos. Usa lat y lng numericos.'}, status=400)
 
-        payload = reverse_geocode_details(lat=lat, lng=lng)
+        payload = reverse_geocode_details(lat=lat, lng=lng, include_nearby=include_nearby)
         return Response(payload)
 
 
