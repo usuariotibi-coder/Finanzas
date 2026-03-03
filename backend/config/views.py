@@ -21,6 +21,7 @@ from viaticos.models import Viatico
 
 NEARBY_PLACES_CACHE: dict[str, tuple[float, list[dict[str, float | str]]]] = {}
 NEARBY_PLACES_CACHE_TTL_SECONDS = 300
+NEARBY_PLACES_EMPTY_CACHE_TTL_SECONDS = 20
 NEARBY_PLACES_MAX_LIMIT = 50
 ROAD_PREFIXES = ('calle', 'av', 'avenida', 'blvd', 'boulevard', 'carretera', 'camino', 'autopista', 'ruta')
 HTTP_HEADERS = {
@@ -84,9 +85,9 @@ def _http_post_form_json(url: str, form_data: dict[str, str], timeout_seconds: i
 
 
 def fetch_overpass_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    radius_meters = 4500
+    radius_meters = 9000
     query = f"""
-[out:json][timeout:10];
+[out:json][timeout:6];
 (
   nwr(around:{radius_meters},{lat},{lng})["name"];
   nwr(around:{radius_meters},{lat},{lng})["brand"];
@@ -104,9 +105,13 @@ out center 2400;
         'https://overpass.kumi.systems/api/interpreter',
     )
     data = None
+    started_at = time.monotonic()
+    max_total_seconds = 8.0
     for endpoint in endpoints:
+        if time.monotonic() - started_at > max_total_seconds:
+            break
         try:
-            data = _http_post_form_json(endpoint, {'data': query}, timeout_seconds=12)
+            data = _http_post_form_json(endpoint, {'data': query}, timeout_seconds=4)
             break
         except Exception:
             continue
@@ -168,7 +173,7 @@ out center 2400;
             continue
 
         distance = get_distance_meters(lat, lng, point_lat, point_lng)
-        if distance > 6000:
+        if distance > 12000:
             continue
 
         seen_names.add(normalized)
@@ -187,7 +192,7 @@ out center 2400;
 
 
 def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str]]:
-    delta = 0.06
+    delta = 0.09
     left = lng - delta
     right = lng + delta
     top = lat + delta
@@ -232,7 +237,7 @@ def fetch_nominatim_places(lat: float, lng: float) -> list[dict[str, float | str
         }
         url = f"https://nominatim.openstreetmap.org/search?{urlencode(params)}"
         try:
-            data = _http_get_json(url, timeout_seconds=2)
+            data = _http_get_json(url, timeout_seconds=3)
         except Exception:
             continue
 
@@ -273,8 +278,11 @@ def get_nearby_places(lat: float, lng: float, limit: int) -> list[dict[str, floa
     cache_key = f'{round(lat, 4)}:{round(lng, 4)}:{safe_limit}'
     now = time.time()
     cache_entry = NEARBY_PLACES_CACHE.get(cache_key)
-    if cache_entry and now - cache_entry[0] < NEARBY_PLACES_CACHE_TTL_SECONDS:
-        return cache_entry[1]
+    if cache_entry:
+        cached_places = cache_entry[1]
+        ttl = NEARBY_PLACES_CACHE_TTL_SECONDS if cached_places else NEARBY_PLACES_EMPTY_CACHE_TTL_SECONDS
+        if now - cache_entry[0] < ttl:
+            return cached_places
 
     overpass_places = fetch_overpass_places(lat, lng)
     # Skip expensive fallback when Overpass already returns enough nearby business names.

@@ -12,6 +12,7 @@ export type NearbyPlace = {
 const API_BASE = `${API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '')}/api`;
 const NEARBY_PLACES_MAX_LIMIT = 50;
 const NEARBY_PLACES_CACHE_TTL_MS = 10 * 60 * 1000;
+const NEARBY_PLACES_EMPTY_CACHE_TTL_MS = 20 * 1000;
 const nearbyPlacesCache = new Map<string, { expiresAt: number; places: NearbyPlace[] }>();
 const nearbyPlacesInFlight = new Map<string, Promise<NearbyPlace[]>>();
 
@@ -183,9 +184,9 @@ const fetchNearbyPlacesFromNominatimFallback = async (lat: number, lng: number, 
 };
 
 const fetchNearbyPlacesFromOverpassFallback = async (lat: number, lng: number, limit: number, signal?: AbortSignal): Promise<NearbyPlace[]> => {
-  const radiusMeters = 4500;
+  const radiusMeters = 9000;
   const query = `
-[out:json][timeout:10];
+[out:json][timeout:6];
 (
   nwr(around:${radiusMeters},${lat},${lng})["name"];
   nwr(around:${radiusMeters},${lat},${lng})["brand"];
@@ -274,7 +275,7 @@ out center 2400;
         return null;
       }
       const distance = getDistanceMeters(lat, lng, latValue, lngValue);
-      if (distance > 6000) {
+      if (distance > 12000) {
         return null;
       }
       const item: ScoredPlace = {
@@ -345,7 +346,7 @@ export const fetchNearbyPlaces = async (lat: number, lng: number, limit = 18, si
   try {
     const places = await requestPromise;
     nearbyPlacesCache.set(cacheKey, {
-      expiresAt: Date.now() + NEARBY_PLACES_CACHE_TTL_MS,
+      expiresAt: Date.now() + (places.length ? NEARBY_PLACES_CACHE_TTL_MS : NEARBY_PLACES_EMPTY_CACHE_TTL_MS),
       places,
     });
     return places;

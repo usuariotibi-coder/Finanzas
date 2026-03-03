@@ -1159,10 +1159,10 @@ export default function UsuarioView() {
       // Nearby names should not block the address update; enrich in background.
       const nearbyFromApiPromise = resolveWithTimeout(
         reverseGeocodeDestination(lat, lng, controller.signal, true),
-        15000,
+        30000,
         null
       );
-      const nearbyFromPlacesPromise = resolveWithTimeout(fetchNearbyPlaceCandidates(lat, lng, controller.signal), 15000, []);
+      const nearbyFromPlacesPromise = resolveWithTimeout(fetchNearbyPlaceCandidates(lat, lng, controller.signal), 30000, []);
       void Promise.all([nearbyFromApiPromise, nearbyFromPlacesPromise])
         .then(([apiNearby, candidates]) => {
           if (controller.signal.aborted || selectionId !== destinoVehiculoSelectionRef.current) {

@@ -304,12 +304,20 @@ export default function LeafletDestinationMap({
       return;
     }
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 30000);
     setIsLoadingNearbyPlaces(true);
 
     void fetchNearbyPlaces(anchor.lat, anchor.lng, 60, controller.signal)
-      .then((places) => {
-        setNearbyPlaces(places.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng })));
+      .then(async (places) => {
+        if (places.length > 0) {
+          setNearbyPlaces(places.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng })));
+          return;
+        }
+        // Quick retry to avoid intermittent empty payloads from public OSM services.
+        const retryPlaces = await fetchNearbyPlaces(anchor.lat, anchor.lng, 60, controller.signal).catch(() => []);
+        if (retryPlaces.length > 0) {
+          setNearbyPlaces(retryPlaces.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng })));
+        }
       })
       .catch(() => {
         // Preserve the previous labels if a network timeout occurs.
