@@ -266,6 +266,8 @@ export default function LeafletDestinationMap({
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [showSearchPanel, setShowSearchPanel] = useState(false);
+  const [isLoadingReferencePlaces, setIsLoadingReferencePlaces] = useState(false);
+  const [lastReferenceHydrationKey, setLastReferenceHydrationKey] = useState('');
   const [mapBounds, setMapBounds] = useState<BoundsBox | null>(null);
   const [mapViewportCenter, setMapViewportCenter] = useState<LatLngPoint | null>(null);
   const activeCenter = useMemo<[number, number]>(
@@ -512,6 +514,71 @@ export default function LeafletDestinationMap({
     }
   }, [currentZoom]);
 
+  useEffect(() => {
+    if (currentZoom < 12 || isLoadingNearbyPlaces || isHydratingNearbyPlaces || nearbyPlacesToRender.length > 0) {
+      return;
+    }
+    const anchor = mapViewportCenter ?? marker ?? center;
+    if (!anchor) {
+      return;
+    }
+    const hydrationKey = `${anchor.lat.toFixed(3)}:${anchor.lng.toFixed(3)}:${Math.floor(currentZoom)}`;
+    if (lastReferenceHydrationKey === hydrationKey) {
+      return;
+    }
+    setLastReferenceHydrationKey(hydrationKey);
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+    setIsLoadingReferencePlaces(true);
+    const fallbackQueries = ['parque industrial', 'fraccionamiento', 'avenida', 'carretera'];
+    void Promise.all(
+      fallbackQueries.map((query) => (
+        searchGeocodePlaces(query, {
+          limit: 8,
+          nearLat: anchor.lat,
+          nearLng: anchor.lng,
+          signal: controller.signal,
+        }).catch(() => [])
+      ))
+    )
+      .then((groups) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        const referencePlaces = groups
+          .flat()
+          .filter((result) => !Number.isFinite(Number(result.distance)) || Number(result.distance) <= 16000)
+          .map((result) => ({ name: result.name, lat: result.lat, lng: result.lng }));
+        if (referencePlaces.length > 0) {
+          setNearbyPlaces((prev) => mergeNearbyPlaceCollections(prev, referencePlaces));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoadingReferencePlaces(false);
+        }
+        window.clearTimeout(timeoutId);
+      });
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    currentZoom,
+    isLoadingNearbyPlaces,
+    isHydratingNearbyPlaces,
+    nearbyPlacesToRender.length,
+    mapViewportCenter?.lat,
+    mapViewportCenter?.lng,
+    marker?.lat,
+    marker?.lng,
+    center.lat,
+    center.lng,
+    lastReferenceHydrationKey,
+  ]);
+
   return (
     <div className="relative h-full w-full">
       <div className="pointer-events-auto absolute left-3 top-3 z-[1100] w-[min(33rem,calc(100%-6.5rem))] sm:w-[min(34rem,calc(100%-14rem))]">
@@ -695,15 +762,19 @@ export default function LeafletDestinationMap({
           {fallbackNearbyNamesSafe.length} lugares detectados sin coordenadas visibles
         </div>
       ) : null}
-      {currentZoom >= 12 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
+      {currentZoom >= 12 && !isLoadingNearbyPlaces && !isLoadingReferencePlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
         <div className="absolute bottom-7 right-3 z-[1000] rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-[10px] font-medium text-slate-700 shadow">
-          Sin etiquetas de empresas en esta zona
+          Sin etiquetas de empresas en esta zona, intentando referencias cercanas
         </div>
       ) : null}
-      {currentZoom >= 12 && (isLoadingNearbyPlaces || isHydratingNearbyPlaces) ? (
+      {currentZoom >= 12 && (isLoadingNearbyPlaces || isHydratingNearbyPlaces || isLoadingReferencePlaces) ? (
         <div className="absolute bottom-16 right-3 z-[1000] inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50/95 px-3 py-1.5 text-[10px] font-medium text-sky-700 shadow">
           <span className="h-2 w-2 animate-pulse rounded-full bg-sky-500" />
-          {isHydratingNearbyPlaces ? 'Cargando mas empresas...' : 'Buscando empresas cercanas...'}
+          {isHydratingNearbyPlaces
+            ? 'Cargando mas empresas...'
+            : isLoadingReferencePlaces
+              ? 'Buscando referencias de la zona...'
+              : 'Buscando empresas cercanas...'}
         </div>
       ) : null}
       {currentZoom < 12 ? (
