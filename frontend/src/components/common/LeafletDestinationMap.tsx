@@ -268,6 +268,7 @@ export default function LeafletDestinationMap({
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [isLoadingReferencePlaces, setIsLoadingReferencePlaces] = useState(false);
   const [lastReferenceHydrationKey, setLastReferenceHydrationKey] = useState('');
+  const [lastNearbyFetchKey, setLastNearbyFetchKey] = useState('');
   const [mapBounds, setMapBounds] = useState<BoundsBox | null>(null);
   const [mapViewportCenter, setMapViewportCenter] = useState<LatLngPoint | null>(null);
   const activeCenter = useMemo<[number, number]>(
@@ -456,57 +457,108 @@ export default function LeafletDestinationMap({
       setNearbyPlaces([]);
       return;
     }
+    const roundedAnchor = {
+      lat: Number(primaryAnchor.lat.toFixed(3)),
+      lng: Number(primaryAnchor.lng.toFixed(3)),
+    };
+    const nearbyFetchKey = `${roundedAnchor.lat}:${roundedAnchor.lng}:${Math.floor(currentZoom)}`;
+    if (lastNearbyFetchKey === nearbyFetchKey) {
+      return;
+    }
+    setLastNearbyFetchKey(nearbyFetchKey);
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 26000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 18000);
     setIsLoadingNearbyPlaces(true);
     setIsHydratingNearbyPlaces(false);
 
-    const quickAnchors = buildViewportFetchAnchors(primaryAnchor, mapBounds, currentZoom);
-    const fullAnchors = quickAnchors.slice(0, Math.min(3, quickAnchors.length));
-    void Promise.all(
-      quickAnchors.map((anchor) => fetchNearbyPlaces(anchor.lat, anchor.lng, 72, controller.signal, 'quick').catch(() => []))
-    )
-      .then(async (quickGroups) => {
+    const quickAnchors = buildViewportFetchAnchors(roundedAnchor, mapBounds, currentZoom);
+    const sideQuickAnchors = quickAnchors.slice(1, Math.min(4, quickAnchors.length));
+    void (async () => {
+      try {
+        // Prioritize one fast request from center so labels appear quickly.
+        const centerQuick = await fetchNearbyPlaces(
+          roundedAnchor.lat,
+          roundedAnchor.lng,
+          72,
+          controller.signal,
+          'quick'
+        ).catch(() => []);
         if (controller.signal.aborted) {
           return;
         }
-        const normalizedQuick = quickGroups
-          .flat()
-          .map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }));
-        if (normalizedQuick.length > 0) {
-          setNearbyPlaces((prev) => mergeNearbyPlaceCollections(prev, normalizedQuick));
+        let mergedCount = centerQuick.length;
+        if (centerQuick.length > 0) {
+          setNearbyPlaces((prev) => mergeNearbyPlaceCollections(
+            prev,
+            centerQuick.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }))
+          ));
         }
         setIsLoadingNearbyPlaces(false);
-        if (normalizedQuick.length >= 120) {
-          return;
+
+        // Only query additional anchors when center is sparse.
+        if (mergedCount < 36 && sideQuickAnchors.length > 0) {
+          setIsHydratingNearbyPlaces(true);
+          const sideQuickGroups = await Promise.all(
+            sideQuickAnchors.map((anchor) => (
+              fetchNearbyPlaces(anchor.lat, anchor.lng, 54, controller.signal, 'quick').catch(() => [])
+            ))
+          );
+          if (controller.signal.aborted) {
+            return;
+          }
+          const sideQuickPlaces = sideQuickGroups.flat();
+          mergedCount += sideQuickPlaces.length;
+          if (sideQuickPlaces.length > 0) {
+            setNearbyPlaces((prev) => mergeNearbyPlaceCollections(
+              prev,
+              sideQuickPlaces.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }))
+            ));
+          }
         }
 
-        setIsHydratingNearbyPlaces(true);
-        const fullGroups = await Promise.all(
-          fullAnchors.map((anchor) => fetchNearbyPlaces(anchor.lat, anchor.lng, 220, controller.signal, 'full').catch(() => []))
-        );
-        const fullPlaces = fullGroups.flat();
-        if (controller.signal.aborted || fullPlaces.length === 0) {
-          return;
+        // Deep hydration only when still sparse after quick passes.
+        if (mergedCount < 90) {
+          setIsHydratingNearbyPlaces(true);
+          const fullAnchors = [roundedAnchor, ...sideQuickAnchors.slice(0, 1)];
+          const fullGroups = await Promise.all(
+            fullAnchors.map((anchor) => (
+              fetchNearbyPlaces(anchor.lat, anchor.lng, 180, controller.signal, 'full').catch(() => [])
+            ))
+          );
+          if (controller.signal.aborted) {
+            return;
+          }
+          const fullPlaces = fullGroups.flat();
+          if (fullPlaces.length > 0) {
+            setNearbyPlaces((prev) => mergeNearbyPlaceCollections(
+              prev,
+              fullPlaces.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }))
+            ));
+          }
         }
-        const normalizedFull = fullPlaces.map((place) => ({ name: place.name, lat: place.lat, lng: place.lng }));
-        setNearbyPlaces((prev) => mergeNearbyPlaceCollections(prev, normalizedFull));
-      })
-      .catch(() => {
-        // Preserve previous labels on network issues.
-      })
-      .finally(() => {
+      } finally {
         setIsLoadingNearbyPlaces(false);
         setIsHydratingNearbyPlaces(false);
         window.clearTimeout(timeoutId);
-      });
+      }
+    })();
 
     return () => {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [mapViewportCenter?.lat, mapViewportCenter?.lng, marker?.lat, marker?.lng, center.lat, center.lng, mapBounds, currentZoom]);
+  }, [
+    mapViewportCenter?.lat,
+    mapViewportCenter?.lng,
+    marker?.lat,
+    marker?.lng,
+    center.lat,
+    center.lng,
+    mapBounds,
+    currentZoom,
+    lastNearbyFetchKey,
+  ]);
 
   useEffect(() => {
     if (currentZoom < 13) {
@@ -529,13 +581,13 @@ export default function LeafletDestinationMap({
     setLastReferenceHydrationKey(hydrationKey);
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 12000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 6500);
     setIsLoadingReferencePlaces(true);
-    const fallbackQueries = ['parque industrial', 'fraccionamiento', 'avenida', 'carretera'];
+    const fallbackQueries = ['parque industrial', 'avenida'];
     void Promise.all(
       fallbackQueries.map((query) => (
         searchGeocodePlaces(query, {
-          limit: 8,
+          limit: 6,
           nearLat: anchor.lat,
           nearLng: anchor.lng,
           signal: controller.signal,
