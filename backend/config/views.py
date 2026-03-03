@@ -428,6 +428,7 @@ out center {out_limit};
         score = distance + (0 if has_business_tag else 380) + (120 if is_mostly_infrastructure else 0)
         places.append({
             'name': name,
+            'address': name,
             'lat': lat_value,
             'lng': lng_value,
             'distance': round(distance, 2),

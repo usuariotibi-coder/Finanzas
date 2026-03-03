@@ -40,7 +40,7 @@ const toSearchResult = (value: unknown): GeocodeSearchResult | null => {
   }
   const raw = value as Record<string, unknown>;
   const name = String(raw.name || '').trim();
-  const address = String(raw.address || '').trim();
+  const address = String(raw.address || raw.display_name || raw.name || '').trim();
   const lat = Number(raw.lat);
   const lng = Number(raw.lng);
   if (!name || !address || !Number.isFinite(lat) || !Number.isFinite(lng)) {

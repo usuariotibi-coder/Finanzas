@@ -583,7 +583,8 @@ export default function LeafletDestinationMap({
     setLastReferenceHydrationKey(hydrationKey);
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 6500);
+    let isActive = true;
+    const timeoutId = window.setTimeout(() => controller.abort(), 9500);
     setIsLoadingReferencePlaces(true);
     void searchGeocodePlaces('__any__', {
       limit: 64,
@@ -605,13 +606,14 @@ export default function LeafletDestinationMap({
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
+        if (isActive) {
           setIsLoadingReferencePlaces(false);
         }
         window.clearTimeout(timeoutId);
       });
 
     return () => {
+      isActive = false;
       controller.abort();
       window.clearTimeout(timeoutId);
     };
