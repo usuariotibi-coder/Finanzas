@@ -195,6 +195,7 @@ export default function LeafletDestinationMap({
 }: LeafletDestinationMapProps) {
   const [mapMode, setMapMode] = useState<MapMode>(initialMode);
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlacePoint[]>([]);
+  const [showNearbyPanel, setShowNearbyPanel] = useState(false);
   const [isLoadingNearbyPlaces, setIsLoadingNearbyPlaces] = useState(false);
   const [mapBounds, setMapBounds] = useState<BoundsBox | null>(null);
   const activeCenter = useMemo<[number, number]>(
@@ -333,6 +334,12 @@ export default function LeafletDestinationMap({
     };
   }, [marker?.lat, marker?.lng, center.lat, center.lng]);
 
+  useEffect(() => {
+    if (currentZoom < 13) {
+      setShowNearbyPanel(false);
+    }
+  }, [currentZoom]);
+
   return (
     <div className="relative h-full w-full">
       {showModeControl ? (
@@ -402,7 +409,7 @@ export default function LeafletDestinationMap({
             </Tooltip>
           </CircleMarker>
         ) : null}
-        {currentZoom >= 11 &&
+        {currentZoom >= 13 &&
           nearbyPlacesToRender.map((place) => (
           <CircleMarker
             key={`${place.name}:${place.lat.toFixed(6)}:${place.lng.toFixed(6)}`}
@@ -410,39 +417,48 @@ export default function LeafletDestinationMap({
             radius={2}
             pathOptions={{ color: '#1f2937', fillColor: '#1f2937', fillOpacity: 0.65, weight: 1 }}
           >
-            <Tooltip direction="top" offset={[0, -6]} opacity={0.92} permanent>
-              <span className="text-[10px] font-semibold text-slate-800">{place.name}</span>
+            <Tooltip direction="top" offset={[0, -6]} opacity={1} permanent className="gm-place-tooltip">
+              <span className="gm-place-label-text">{place.name}</span>
             </Tooltip>
           </CircleMarker>
           ))}
       </MapContainer>
-      {currentZoom >= 11 && nearbyPlacesToRender.length > 0 ? (
-        <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
-          <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
-          <div className="space-y-0.5">
-            {nearbyPlacesToRender.slice(0, 140).map((place) => (
-              <p key={`list:${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`} className="text-[10px] text-slate-700">
-                {place.name}
-              </p>
-            ))}
-          </div>
+      {currentZoom >= 13 && nearbyPlacesToRender.length > 0 ? (
+        <div className="absolute bottom-8 right-2 z-[1000] flex flex-col items-end gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowNearbyPanel((prev) => !prev)}
+            className="rounded-full border border-slate-300 bg-white/95 px-3 py-1 text-[10px] font-semibold text-slate-700 shadow hover:bg-white"
+          >
+            {showNearbyPanel ? 'Ocultar empresas' : `Empresas (${nearbyPlacesToRender.length})`}
+          </button>
+          {showNearbyPanel ? (
+            <div className="max-h-44 w-64 overflow-y-auto rounded-lg border border-slate-300 bg-white/95 p-2 shadow-xl backdrop-blur">
+              <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
+              <div className="space-y-0.5">
+                {nearbyPlacesToRender.slice(0, 140).map((place) => (
+                  <p key={`list:${place.name}:${place.lat.toFixed(5)}:${place.lng.toFixed(5)}`} className="text-[10px] text-slate-700">
+                    {place.name}
+                  </p>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
-      {currentZoom >= 11 && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length > 0 ? (
-        <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] max-h-36 w-56 overflow-y-auto rounded-md border border-slate-300 bg-white/95 p-2 shadow">
-          <p className="mb-1 text-[10px] font-semibold text-slate-800">Empresas/Lugares cercanos</p>
-          <div className="space-y-0.5">
-            {fallbackNearbyNamesSafe.map((name) => (
-              <p key={`fallback:${name}`} className="text-[10px] text-slate-700">
-                {name}
-              </p>
-            ))}
-          </div>
+      {currentZoom >= 13 && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length > 0 ? (
+        <div className="absolute bottom-8 right-2 z-[1000] rounded-full border border-slate-300 bg-white/95 px-3 py-1 text-[10px] font-semibold text-slate-700 shadow">
+          {fallbackNearbyNamesSafe.length} lugares cercanos
         </div>
       ) : null}
-      {currentZoom >= 11 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
-        <div className="pointer-events-none absolute bottom-8 right-2 z-[1000] rounded-md border border-slate-300 bg-white/95 px-2 py-1 shadow">
-          <p className="text-[10px] text-slate-700">No hay nombres OSM en esta zona.</p>
+      {currentZoom >= 13 && !isLoadingNearbyPlaces && nearbyPlacesToRender.length === 0 && fallbackNearbyNamesSafe.length === 0 ? (
+        <div className="absolute bottom-8 right-2 z-[1000] rounded-full border border-slate-300 bg-white/95 px-3 py-1 text-[10px] font-medium text-slate-700 shadow">
+          Sin etiquetas OSM en esta zona
+        </div>
+      ) : null}
+      {currentZoom < 13 ? (
+        <div className="absolute bottom-8 right-2 z-[1000] rounded-full border border-slate-300 bg-white/95 px-3 py-1 text-[10px] font-medium text-slate-700 shadow">
+          Acerca para ver etiquetas de empresas
         </div>
       ) : null}
     </div>
