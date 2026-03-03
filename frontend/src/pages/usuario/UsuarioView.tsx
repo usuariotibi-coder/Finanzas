@@ -139,15 +139,6 @@ const fetchNearbyPlaceCandidates = async (lat: number, lng: number, signal?: Abo
   }
 };
 
-const formatNearbyPlacesLabel = (nearbyPlaces: string[]) => {
-  if (!nearbyPlaces.length) {
-    return '';
-  }
-  const preview = nearbyPlaces.slice(0, 4).join(' | ');
-  const hiddenCount = nearbyPlaces.length - 4;
-  return hiddenCount > 0 ? `${preview} | +${hiddenCount} mas` : preview;
-};
-
 const normalizeNearbyPoints = (
   points: Array<{ name?: string; lat?: number; lng?: number }>
 ): Array<{ name: string; lat: number; lng: number }> => {
@@ -475,10 +466,12 @@ export default function UsuarioView() {
   const [showGastoDocumentoErrors, setShowGastoDocumentoErrors] = useState(false);
   const [showSubirDocumentosErrors, setShowSubirDocumentosErrors] = useState(false);
   const [isSavingExtension, setIsSavingExtension] = useState(false);
+  const [isSubmittingSolicitarVehiculo, setIsSubmittingSolicitarVehiculo] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const destinoVehiculoSelectionRef = useRef(0);
   const destinoVehiculoAbortRef = useRef<AbortController | null>(null);
+  const skipSolicitarVehiculoResetRef = useRef(false);
 
   useEffect(() => () => destinoVehiculoAbortRef.current?.abort(), []);
 
@@ -523,6 +516,10 @@ export default function UsuarioView() {
 
   useEffect(() => {
     if (!showModalSolicitarVehiculo) {
+      return;
+    }
+    if (skipSolicitarVehiculoResetRef.current) {
+      skipSolicitarVehiculoResetRef.current = false;
       return;
     }
     destinoVehiculoSelectionRef.current += 1;
@@ -1210,6 +1207,10 @@ export default function UsuarioView() {
   };
 
   const handleSolicitarVehiculo = async () => {
+    if (isSubmittingSolicitarVehiculo) {
+      return;
+    }
+
     if (!formSolicitudVehiculo.proyectoId || !formSolicitudVehiculo.origen || !formSolicitudVehiculo.destino || !formSolicitudVehiculo.motivo || !formSolicitudVehiculo.fechaInicio) {
       setShowSolicitarVehiculoErrors(true);
       return;
@@ -1221,30 +1222,37 @@ export default function UsuarioView() {
     });
 
     const currentUserId = user ? String(user.id) : undefined;
+    const snapshot = { ...formSolicitudVehiculo };
+    setIsSubmittingSolicitarVehiculo(true);
+    setShowModalSolicitarVehiculo(false);
+    setShowSolicitarVehiculoErrors(false);
+    resetSolicitarVehiculoMapState();
+    setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM });
 
     try {
       const nuevaSolicitud = await createFlotillaAsignacion({
         userId: currentUserId,
-        proyectoId: formSolicitudVehiculo.proyectoId,
-        origen: formSolicitudVehiculo.origen,
-        destino: formSolicitudVehiculo.destino,
-        fechaInicio: formSolicitudVehiculo.fechaInicio,
-        fechaFin: formSolicitudVehiculo.fechaFin || undefined,
-        motivo: formSolicitudVehiculo.motivo,
-        proposito: formSolicitudVehiculo.proposito,
+        proyectoId: snapshot.proyectoId,
+        origen: snapshot.origen,
+        destino: snapshot.destino,
+        fechaInicio: snapshot.fechaInicio,
+        fechaFin: snapshot.fechaFin || undefined,
+        motivo: snapshot.motivo,
+        proposito: snapshot.proposito,
         kmInicial: 0,
         status: 'solicitado',
       });
 
       saveVehicleAssignments([nuevaSolicitud, ...vehicleAssignments]);
-      setShowModalSolicitarVehiculo(false);
-      resetSolicitarVehiculoMapState();
-      setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM });
-      setShowSolicitarVehiculoErrors(false);
       showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
       void syncCoreAppData({ userId: currentUserId }).catch(() => {});
     } catch (error) {
+      skipSolicitarVehiculoResetRef.current = true;
+      setFormSolicitudVehiculo(snapshot);
+      setShowModalSolicitarVehiculo(true);
       showToast(error instanceof Error ? error.message : 'No se pudo solicitar el vehiculo.', 'error');
+    } finally {
+      setIsSubmittingSolicitarVehiculo(false);
     }
   };
 
@@ -2714,7 +2722,7 @@ export default function UsuarioView() {
                         )}
                         {destinoVehiculoDetalles?.nearbyPlaces?.length ? (
                           <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-800">
-                            Negocios cercanos: {formatNearbyPlacesLabel(destinoVehiculoDetalles.nearbyPlaces)}
+                            Empresas detectadas: {destinoVehiculoDetalles.nearbyPlaces.length}
                           </span>
                         ) : null}
                         {(destinoVehiculoDetalles?.city || destinoVehiculoDetalles?.state) && (
@@ -2858,7 +2866,7 @@ export default function UsuarioView() {
                   )}
                   {destinoVehiculoDetalles?.nearbyPlaces?.length ? (
                     <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
-                      Negocios cercanos: {formatNearbyPlacesLabel(destinoVehiculoDetalles.nearbyPlaces)}
+                      Empresas detectadas: {destinoVehiculoDetalles.nearbyPlaces.length}
                     </span>
                   ) : null}
                   {(destinoVehiculoDetalles?.neighborhood || destinoVehiculoDetalles?.city) && (
