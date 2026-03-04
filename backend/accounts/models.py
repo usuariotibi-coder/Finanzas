@@ -46,7 +46,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=120)
-    department = models.CharField(max_length=50, choices=Department.choices)
+    department = models.CharField(max_length=50)
     position = models.CharField(max_length=50, default='Colaborador')
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STAFF)
 

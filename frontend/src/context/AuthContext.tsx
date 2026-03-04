@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthUser, UserRole } from '../types';
+import { DEPARTMENT_OPTIONS } from '../data/departments';
 import { syncCoreAppData } from '../utils/backendSync';
 import { api } from '../utils/api';
 
@@ -20,17 +21,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const departmentOptions = [
-  { value: 'finanzas', label: 'Finanzas' },
-  { value: 'operaciones', label: 'Operaciones' },
-  { value: 'business_intelligence', label: 'Business Intelligence' },
-  { value: 'diseno_mecanico', label: 'Diseno Mecanico' },
-  { value: 'hardware_design', label: 'Hardware Design' },
-  { value: 'ensamble', label: 'Ensamble' },
-  { value: 'programacion_plc', label: 'Programacion PLC' },
-  { value: 'manufactura', label: 'Manufactura' },
-  { value: 'otro', label: 'Otro' },
-];
+export const departmentOptions = DEPARTMENT_OPTIONS;
 
 export const roleLabels: Record<UserRole, string> = {
   admin: 'Administrador',

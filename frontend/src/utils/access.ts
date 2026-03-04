@@ -4,6 +4,7 @@ const ACCESS_MAP: Record<string, UserRole[]> = {
   '/': ['admin', 'finance', 'pm', 'staff'],
   '/mi-portal': ['admin', 'pm', 'staff'],
   '/admin/usuarios': ['admin'],
+  '/portal-dropdowns': ['admin', 'finance'],
   '/portal-pm': ['admin', 'pm'],
   '/proyectos': ['admin', 'pm'],
   '/viaticos': ['admin', 'finance', 'pm', 'staff'],

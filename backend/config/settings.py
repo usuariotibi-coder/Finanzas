@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'flotilla',
     'conciliacion',
     'amex',
+    'catalogos',
     'recuperacion',
     'dispersion',
 ]

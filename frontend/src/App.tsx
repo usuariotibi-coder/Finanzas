@@ -16,6 +16,7 @@ import Reportes from './pages/reportes/Reportes';
 import UsuarioView from './pages/usuario/UsuarioView';
 import PMPortal from './pages/pm-portal/PMPortal';
 import AdminUsuarios from './pages/admin/AdminUsuarios';
+import CatalogosPortal from './pages/catalogos/CatalogosPortal';
 
 function App() {
   return (
@@ -32,6 +33,14 @@ function App() {
             element={
               <RequireRole allowed={['admin']}>
                 <AdminUsuarios />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/portal-dropdowns"
+            element={
+              <RequireRole allowed={['admin', 'finance']}>
+                <CatalogosPortal />
               </RequireRole>
             }
           />

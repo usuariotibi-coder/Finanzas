@@ -6,6 +6,7 @@ from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 
 from amex.views import TarjetaAMEXViewSet, TicketAMEXViewSet
+from catalogos.views import CuentaContableViewSet, DepartmentOptionViewSet, GSActivityViewSet
 from conciliacion.views import (
     AlertaConciliacionViewSet,
     ConciliacionViewSet,
@@ -46,6 +47,9 @@ router.register('conciliacion/alertas', AlertaConciliacionViewSet, basename='con
 router.register('conciliacion', ConciliacionViewSet, basename='conciliacion')
 router.register('amex/tickets', TicketAMEXViewSet, basename='amex-ticket')
 router.register('amex/tarjetas', TarjetaAMEXViewSet, basename='amex-tarjeta')
+router.register('catalogos/gs-activities', GSActivityViewSet, basename='catalogos-gs-activity')
+router.register('catalogos/cuentas-contables', CuentaContableViewSet, basename='catalogos-cuenta-contable')
+router.register('catalogos/departamentos', DepartmentOptionViewSet, basename='catalogos-departamento')
 
 urlpatterns = [
     path('', HealthCheckView.as_view(), name='root-health'),

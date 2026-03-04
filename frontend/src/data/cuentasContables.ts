@@ -1,15 +1,14 @@
 import type { CuentaContable } from '../types';
+import { readCatalog, replaceCatalog } from '../utils/dropdownCatalog';
 
-/**
- * Catálogo de cuentas contables
- * Este catálogo es flexible y puede ser modificado/ampliado según las necesidades
- */
-export const CUENTAS_CONTABLES: CuentaContable[] = [
+const CUENTAS_STORAGE_KEY = 'catalogs:cuentas-contables';
+
+const DEFAULT_CUENTAS_CONTABLES: CuentaContable[] = [
   {
     codigo: '5450',
     nombre: 'Travel Expenses/Meals',
-    descripcion: 'Gastos de viaje y alimentos relacionados a proyectos específicos',
-    categoria: 'Viáticos',
+    descripcion: 'Gastos de viaje y alimentos relacionados a proyectos especificos',
+    categoria: 'Viaticos',
     proyectoRequerido: true,
     keywords: [
       'hotel',
@@ -34,14 +33,14 @@ export const CUENTAS_CONTABLES: CuentaContable[] = [
       'gasolina',
       'pemex',
       'shell',
-      'bp'
+      'bp',
     ],
-    activa: true
+    activa: true,
   },
   {
     codigo: '6090',
     nombre: 'Office Supplies',
-    descripcion: 'Papelería y suministros de oficina',
+    descripcion: 'Papeleria y suministros de oficina',
     categoria: 'Administrativo',
     proyectoRequerido: false,
     keywords: [
@@ -60,66 +59,76 @@ export const CUENTAS_CONTABLES: CuentaContable[] = [
       'notebook',
       'escritorio',
       'silla',
-      'muebles'
+      'muebles',
     ],
-    activa: true
+    activa: true,
   },
   {
     codigo: '6200',
     nombre: 'Expense - Non Project',
-    descripcion: 'Gastos no relacionados a proyectos específicos',
+    descripcion: 'Gastos no relacionados a proyectos especificos',
     categoria: 'General',
     proyectoRequerido: false,
     keywords: [],
-    activa: true
-  }
+    activa: true,
+  },
 ];
 
-/**
- * Obtener todas las cuentas activas
- */
+const sanitizeCuentas = (items: CuentaContable[]) =>
+  items
+    .map((item) => ({
+      codigo: String(item.codigo || '').trim(),
+      nombre: String(item.nombre || '').trim(),
+      descripcion: String(item.descripcion || '').trim(),
+      categoria: String(item.categoria || '').trim() || 'General',
+      proyectoRequerido: Boolean(item.proyectoRequerido),
+      keywords: Array.isArray(item.keywords)
+        ? item.keywords.map((keyword) => String(keyword || '').trim()).filter(Boolean)
+        : [],
+      activa: Boolean(item.activa),
+    }))
+    .filter((item) => item.codigo && item.nombre);
+
+export const CUENTAS_CONTABLES: CuentaContable[] = sanitizeCuentas(
+  readCatalog<CuentaContable>(CUENTAS_STORAGE_KEY, DEFAULT_CUENTAS_CONTABLES)
+);
+
+if (CUENTAS_CONTABLES.length === 0) {
+  replaceCatalog(CUENTAS_CONTABLES, CUENTAS_STORAGE_KEY, DEFAULT_CUENTAS_CONTABLES);
+}
+
+export const replaceCuentasContables = (next: CuentaContable[]) => {
+  replaceCatalog(CUENTAS_CONTABLES, CUENTAS_STORAGE_KEY, sanitizeCuentas(next));
+};
+
 export function getCuentasActivas(): CuentaContable[] {
-  return CUENTAS_CONTABLES.filter(cuenta => cuenta.activa);
+  return CUENTAS_CONTABLES.filter((cuenta) => cuenta.activa);
 }
 
-/**
- * Buscar cuenta por código
- */
 export function getCuentaByCodigo(codigo: string): CuentaContable | undefined {
-  return CUENTAS_CONTABLES.find(cuenta => cuenta.codigo === codigo);
+  return CUENTAS_CONTABLES.find((cuenta) => cuenta.codigo === codigo);
 }
 
-/**
- * Obtener cuentas por categoría
- */
 export function getCuentasByCategoria(categoria: string): CuentaContable[] {
-  return CUENTAS_CONTABLES.filter(cuenta => cuenta.categoria === categoria && cuenta.activa);
+  return CUENTAS_CONTABLES.filter((cuenta) => cuenta.categoria === categoria && cuenta.activa);
 }
 
-/**
- * Agregar nueva cuenta contable
- * NOTA: En producción, esto debería conectarse al backend
- */
 export function agregarCuenta(nuevaCuenta: CuentaContable): void {
-  CUENTAS_CONTABLES.push(nuevaCuenta);
+  replaceCuentasContables([...CUENTAS_CONTABLES, nuevaCuenta]);
 }
 
-/**
- * Actualizar cuenta existente
- * NOTA: En producción, esto debería conectarse al backend
- */
 export function actualizarCuenta(codigo: string, datosActualizados: Partial<CuentaContable>): boolean {
-  const index = CUENTAS_CONTABLES.findIndex(cuenta => cuenta.codigo === codigo);
-  if (index !== -1) {
-    CUENTAS_CONTABLES[index] = { ...CUENTAS_CONTABLES[index], ...datosActualizados };
-    return true;
+  const index = CUENTAS_CONTABLES.findIndex((cuenta) => cuenta.codigo === codigo);
+  if (index === -1) {
+    return false;
   }
-  return false;
+  const next = [...CUENTAS_CONTABLES];
+  next[index] = { ...next[index], ...datosActualizados };
+  replaceCuentasContables(next);
+  return true;
 }
 
-/**
- * Desactivar cuenta (no se elimina, solo se marca como inactiva)
- */
 export function desactivarCuenta(codigo: string): boolean {
   return actualizarCuenta(codigo, { activa: false });
 }
+

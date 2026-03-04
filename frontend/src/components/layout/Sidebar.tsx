@@ -21,6 +21,7 @@ const menuItems: MenuItem[] = [
   { path: '/', label: 'Dashboard', icon: 'home' },
   { path: '/mi-portal', label: 'Mi Portal', icon: 'user' },
   { path: '/admin/usuarios', label: 'Usuarios', icon: 'users' },
+  { path: '/portal-dropdowns', label: 'Dropdowns', icon: 'sliders' },
   { path: '/portal-pm', label: 'Portal PM', icon: 'pm' },
   { path: '/proyectos', label: 'Proyectos', icon: 'briefcase' },
   { path: '/viaticos', label: 'Viáticos', icon: 'money' },
@@ -154,6 +155,14 @@ const icons: Record<string, React.JSX.Element> = {
       strokeLinejoin="round"
       strokeWidth={2}
       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z M16 2v6h6"
+    />
+  ),
+  sliders: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 6h16M4 12h16M4 18h16M9 4v4m6-4v4m-8 8v4m8-4v4"
     />
   ),
 };

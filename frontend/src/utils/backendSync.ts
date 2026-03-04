@@ -1,6 +1,7 @@
 import type {
   AlertaConciliacion,
   CargaGasolina,
+  CuentaContable,
   Consumo,
   DashboardMetrics,
   Dispersion,
@@ -8,6 +9,7 @@ import type {
   MaintenanceRecord,
   Proyecto,
   SolicitudViaje,
+  TarjetaAMEX,
   TicketAMEX,
   Vehicle,
   VehicleAlert,
@@ -15,6 +17,12 @@ import type {
   VehicleExpense,
   Viatico,
 } from '../types';
+import type { DepartmentOption } from '../data/departments';
+import type { GSActivity } from '../data/gsActivities';
+import { CUENTAS_CONTABLES, replaceCuentasContables } from '../data/cuentasContables';
+import { DEPARTMENT_OPTIONS, replaceDepartmentOptions } from '../data/departments';
+import { GS_ACTIVITIES, replaceGSActivities } from '../data/gsActivities';
+import { replaceTarjetasAmex, TARJETAS_AMEX } from '../data/tarjetasAMEX';
 import { apiFetch } from './api';
 import { sanitizeProyectoMontos } from './proyectoMetrics';
 import { toStorageKey } from './storage';
@@ -303,6 +311,39 @@ const mapTicketAmexFromApi = (raw: RawRecord): TicketAMEX => ({
   duplicado: parseBoolean(raw.duplicado),
   clasificacionAuto: parseBoolean(raw.clasificacion_auto),
   observaciones: toNullableString(raw.observaciones),
+});
+
+const mapTarjetaAmexFromApi = (raw: RawRecord): TarjetaAMEX => ({
+  id: toStringId(raw.id),
+  cardNumber: parseString(raw.card_number) || parseString(raw.cardNumber),
+  cardHolder: parseString(raw.card_holder) || parseString(raw.cardHolder),
+  department: parseString(raw.department),
+  activa: parseBoolean(raw.activa, true),
+});
+
+const mapGSActivityFromApi = (raw: RawRecord): GSActivity => ({
+  id: parseNumber(raw.id),
+  label: parseString(raw.label),
+  account: parseString(raw.account) || '5450',
+  code: parseString(raw.code) || 'N/A',
+  category: (parseString(raw.category) || 'travel') as GSActivity['category'],
+  proyectoRequerido: parseBoolean(raw.proyecto_requerido, true),
+  note: toNullableString(raw.note),
+});
+
+const mapCuentaContableFromApi = (raw: RawRecord): CuentaContable => ({
+  codigo: parseString(raw.codigo),
+  nombre: parseString(raw.nombre),
+  descripcion: parseString(raw.descripcion),
+  categoria: parseString(raw.categoria) || 'General',
+  proyectoRequerido: parseBoolean(raw.proyecto_requerido, false),
+  keywords: Array.isArray(raw.keywords) ? raw.keywords.map((item) => parseString(item)).filter(Boolean) : [],
+  activa: parseBoolean(raw.activa, true),
+});
+
+const mapDepartmentOptionFromApi = (raw: RawRecord): DepartmentOption => ({
+  value: parseString(raw.value),
+  label: parseString(raw.label),
 });
 
 const mapVehicleFromApi = (raw: RawRecord): Vehicle => ({
@@ -760,6 +801,26 @@ export const fetchAmexTickets = async (): Promise<TicketAMEX[]> => {
   return Array.isArray(data) ? data.map(mapTicketAmexFromApi) : [];
 };
 
+export const fetchAmexTarjetas = async (): Promise<TarjetaAMEX[]> => {
+  const data = await apiFetch('/amex/tarjetas/');
+  return asArrayRecords(data).map(mapTarjetaAmexFromApi);
+};
+
+export const fetchCatalogGSActivities = async (): Promise<GSActivity[]> => {
+  const data = await apiFetch('/catalogos/gs-activities/');
+  return asArrayRecords(data).map(mapGSActivityFromApi);
+};
+
+export const fetchCatalogCuentasContables = async (): Promise<CuentaContable[]> => {
+  const data = await apiFetch('/catalogos/cuentas-contables/');
+  return asArrayRecords(data).map(mapCuentaContableFromApi);
+};
+
+export const fetchCatalogDepartments = async (): Promise<DepartmentOption[]> => {
+  const data = await apiFetch('/catalogos/departamentos/');
+  return asArrayRecords(data).map(mapDepartmentOptionFromApi);
+};
+
 export const fetchFlotillaVehiculos = async (): Promise<Vehicle[]> => {
   const data = await apiFetch('/flotilla/vehiculos/');
   return asArrayRecords(data).map(mapVehicleFromApi);
@@ -948,6 +1009,97 @@ export const updateConsumo = async (id: string, payload: Partial<Consumo>): Prom
     body: JSON.stringify(toConsumoPayload(payload)),
   })) as RawRecord;
   return mapConsumoFromApi(data);
+};
+
+export const createCatalogGSActivity = async (payload: {
+  label: string;
+  account: string;
+  code: string;
+  category: GSActivity['category'];
+  proyectoRequerido: boolean;
+  note?: string;
+}): Promise<GSActivity> => {
+  const data = (await apiFetch('/catalogos/gs-activities/', {
+    method: 'POST',
+    body: JSON.stringify({
+      label: payload.label,
+      account: payload.account,
+      code: payload.code,
+      category: payload.category,
+      proyecto_requerido: payload.proyectoRequerido,
+      note: payload.note || '',
+    }),
+  })) as RawRecord;
+  return mapGSActivityFromApi(data);
+};
+
+export const deleteCatalogGSActivity = async (id: number): Promise<void> => {
+  await apiFetch(`/catalogos/gs-activities/${id}/`, { method: 'DELETE' });
+};
+
+export const createCatalogCuentaContable = async (payload: {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  categoria: string;
+  proyectoRequerido: boolean;
+  keywords: string[];
+  activa: boolean;
+}): Promise<CuentaContable> => {
+  const data = (await apiFetch('/catalogos/cuentas-contables/', {
+    method: 'POST',
+    body: JSON.stringify({
+      codigo: payload.codigo,
+      nombre: payload.nombre,
+      descripcion: payload.descripcion,
+      categoria: payload.categoria,
+      proyecto_requerido: payload.proyectoRequerido,
+      keywords: payload.keywords,
+      activa: payload.activa,
+    }),
+  })) as RawRecord;
+  return mapCuentaContableFromApi(data);
+};
+
+export const deleteCatalogCuentaContable = async (codigo: string): Promise<void> => {
+  await apiFetch(`/catalogos/cuentas-contables/${encodeURIComponent(codigo)}/`, { method: 'DELETE' });
+};
+
+export const createCatalogDepartment = async (payload: {
+  value: string;
+  label: string;
+}): Promise<DepartmentOption> => {
+  const data = (await apiFetch('/catalogos/departamentos/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })) as RawRecord;
+  return mapDepartmentOptionFromApi(data);
+};
+
+export const deleteCatalogDepartment = async (value: string): Promise<void> => {
+  await apiFetch(`/catalogos/departamentos/${encodeURIComponent(value)}/`, { method: 'DELETE' });
+};
+
+export const createAmexTarjeta = async (payload: {
+  cardNumber: string;
+  cardHolder: string;
+  department: string;
+  activa: boolean;
+}): Promise<TarjetaAMEX> => {
+  const data = (await apiFetch('/amex/tarjetas/', {
+    method: 'POST',
+    body: JSON.stringify({
+      card_number: payload.cardNumber,
+      card_holder: payload.cardHolder,
+      department: payload.department,
+      activa: payload.activa,
+    }),
+  })) as RawRecord;
+  return mapTarjetaAmexFromApi(data);
+};
+
+export const deleteAmexTarjeta = async (id: string): Promise<void> => {
+  await apiFetch(`/amex/tarjetas/${id}/`, { method: 'DELETE' });
 };
 
 export const createAmexTicket = async (payload: Partial<TicketAMEX>): Promise<TicketAMEX> => {
@@ -1180,6 +1332,10 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     consumos,
     alertasConciliacion,
     amexTickets,
+    amexTarjetas,
+    gsActivities,
+    cuentasContables,
+    departments,
     flotillaVehiculos,
     flotillaAsignaciones,
     flotillaAlertas,
@@ -1194,6 +1350,10 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     loadOptional(fetchConsumos, [] as Consumo[]),
     loadOptional(fetchAlertasConciliacion, [] as AlertaConciliacion[]),
     loadOptional(fetchAmexTickets, [] as TicketAMEX[]),
+    loadOptional(fetchAmexTarjetas, [...TARJETAS_AMEX]),
+    loadOptional(fetchCatalogGSActivities, [...GS_ACTIVITIES]),
+    loadOptional(fetchCatalogCuentasContables, [...CUENTAS_CONTABLES]),
+    loadOptional(fetchCatalogDepartments, [...DEPARTMENT_OPTIONS]),
     loadOptional(fetchFlotillaVehiculos, readStorageList<Vehicle>('flotilla:vehiculos')),
     loadOptional(fetchFlotillaAsignaciones, readStorageList<VehicleAssignment>('vehicle_assignments_data', { legacy: true })),
     loadOptional(fetchFlotillaAlertas, readStorageList<VehicleAlert>('flotilla:alertas')),
@@ -1222,6 +1382,10 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
   writeStorageList('conciliacion:amex', amexTickets);
 
   writeStorageList('amex:tickets', amexTickets);
+  replaceTarjetasAmex(amexTarjetas);
+  replaceGSActivities(gsActivities);
+  replaceCuentasContables(cuentasContables);
+  replaceDepartmentOptions(departments);
 
   writeStorageList('flotilla:vehiculos', flotillaVehiculos);
   writeStorageList('flotilla:alertas', flotillaAlertas);
