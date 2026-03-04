@@ -12,6 +12,65 @@ import {
 } from '../../utils/backendSync';
 import { toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
+
+const buildFacturaAssetUrl = (tipo: 'PDF' | 'XML', archivoPath?: string | null) => {
+  const raw = String(archivoPath || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const hasPath = raw.includes('/') || /^https?:\/\//i.test(raw);
+  const folder = tipo === 'PDF' ? 'pdf' : 'xml';
+  const candidate = hasPath ? raw : `/media/conciliacion/${folder}/${raw.replace(/^\/+/, '')}`;
+  const fileUrl = toApiAssetUrl(candidate);
+  if (!fileUrl) {
+    return '';
+  }
+
+  try {
+    const parsed = new URL(fileUrl, window.location.origin);
+    const isHttpsPage = window.location.protocol === 'https:';
+    const isHttpAsset = parsed.protocol === 'http:';
+    const isLocalAsset = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+    if (isHttpsPage && isHttpAsset && !isLocalAsset) {
+      parsed.protocol = 'https:';
+    }
+    return parsed.toString();
+  } catch {
+    return encodeURI(fileUrl);
+  }
+};
+
+const openFacturaAsset = (tipo: 'PDF' | 'XML', archivoPath?: string | null) => {
+  const fileUrl = buildFacturaAssetUrl(tipo, archivoPath);
+  if (!fileUrl) {
+    window.alert(`No se encontro el archivo ${tipo}.`);
+    return;
+  }
+  const opened = window.open(fileUrl, '_blank', 'noopener,noreferrer');
+  if (!opened) {
+    window.alert('Tu navegador bloqueo la apertura del archivo. Permite ventanas emergentes para este sitio.');
+  }
+};
+
+const downloadFacturaAsset = (tipo: 'PDF' | 'XML', archivoPath?: string | null, fallbackName?: string) => {
+  const fileUrl = buildFacturaAssetUrl(tipo, archivoPath);
+  if (!fileUrl) {
+    window.alert(`No se encontro el archivo ${tipo}.`);
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = fileUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  if (fallbackName) {
+    link.download = fallbackName;
+  }
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 export default function Conciliacion() {
   const { user } = useAuth();
   const [facturas, setFacturas] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
@@ -226,18 +285,7 @@ export default function Conciliacion() {
     if (!archivoPath) {
       return;
     }
-    const normalizedPath = String(archivoPath).trim();
-    const hasBackendPath = normalizedPath.includes('/') || /^https?:\/\//i.test(normalizedPath);
-    if (!hasBackendPath) {
-      window.alert(`El archivo ${tipo} no tiene una ruta disponible en backend.`);
-      return;
-    }
-    const fileUrl = toApiAssetUrl(normalizedPath);
-    if (!fileUrl) {
-      window.alert(`No se encontró el archivo ${tipo}.`);
-      return;
-    }
-    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+    openFacturaAsset(tipo, archivoPath);
   };
 
   useEscapeKey(() => closeUploadModal(), showUploadModal);
@@ -924,22 +972,12 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
   const consumoMatch = consumos.find(c => c.facturaId === factura.id);
   const pdfName = factura.archivoPDF ?? consumoMatch?.facturaPdfName;
   const xmlName = factura.archivoXML ?? consumoMatch?.facturaXmlName;
+  const handleAbrirArchivo = (tipo: 'PDF' | 'XML', nombre?: string) => {
+    openFacturaAsset(tipo, nombre);
+  };
   const handleDescargarArchivo = (tipo: 'PDF' | 'XML', nombre?: string) => {
-    if (!nombre) {
-      return;
-    }
-    const normalizedPath = String(nombre).trim();
-    const hasBackendPath = normalizedPath.includes('/') || /^https?:\/\//i.test(normalizedPath);
-    if (!hasBackendPath) {
-      window.alert(`El archivo ${tipo} no tiene una ruta disponible en backend.`);
-      return;
-    }
-    const fileUrl = toApiAssetUrl(normalizedPath);
-    if (!fileUrl) {
-      window.alert(`No se encontró el archivo ${tipo}.`);
-      return;
-    }
-    window.open(fileUrl, '_blank', 'noopener,noreferrer');
+    const defaultName = `${factura.folio || factura.id}.${tipo.toLowerCase()}`;
+    downloadFacturaAsset(tipo, nombre, defaultName);
   };
 
   const handleStatusChange = (status: FacturaStatus) => {
@@ -1037,40 +1075,76 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
               <div className="rounded-lg border border-slate-200 bg-white p-4">
                 <p className="text-sm font-medium text-slate-800">PDF</p>
                 <p className="text-xs text-slate-500 mt-1">{pdfName ?? 'Sin archivo'}</p>
-                <button
-                  type="button"
-                  onClick={() => handleDescargarArchivo('PDF', pdfName)}
-                  disabled={!pdfName}
-                  className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
-                    pdfName
-                      ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
-                      : 'border-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-3-3m3 3l3-3" />
-                  </svg>
-                  Descargar PDF
-                </button>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAbrirArchivo('PDF', pdfName)}
+                    disabled={!pdfName}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
+                      pdfName
+                        ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Ver PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDescargarArchivo('PDF', pdfName)}
+                    disabled={!pdfName}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
+                      pdfName
+                        ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-3-3m3 3l3-3" />
+                    </svg>
+                    Descargar PDF
+                  </button>
+                </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white p-4">
                 <p className="text-sm font-medium text-slate-800">XML</p>
                 <p className="text-xs text-slate-500 mt-1">{xmlName ?? 'Sin archivo'}</p>
-                <button
-                  type="button"
-                  onClick={() => handleDescargarArchivo('XML', xmlName)}
-                  disabled={!xmlName}
-                  className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
-                    xmlName
-                      ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                      : 'border-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-3-3m3 3l3-3" />
-                  </svg>
-                  Descargar XML
-                </button>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAbrirArchivo('XML', xmlName)}
+                    disabled={!xmlName}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
+                      xmlName
+                        ? 'border-teal-200 text-teal-700 hover:bg-teal-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Ver XML
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDescargarArchivo('XML', xmlName)}
+                    disabled={!xmlName}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
+                      xmlName
+                        ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                        : 'border-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-3-3m3 3l3-3" />
+                    </svg>
+                    Descargar XML
+                  </button>
+                </div>
               </div>
             </div>
           </div>

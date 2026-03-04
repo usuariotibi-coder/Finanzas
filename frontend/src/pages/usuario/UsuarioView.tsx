@@ -441,6 +441,43 @@ interface ConfirmDialogState {
   tone: 'danger' | 'info';
 }
 
+interface UploadDocumentosSummary {
+  totalGastos: number;
+  montoTotal: number;
+}
+
+const parseCurrencyAmount = (value: string): number => {
+  const raw = String(value || '')
+    .trim()
+    .replace(/\$/g, '')
+    .replace(/\s+/g, '');
+  if (!raw) {
+    return Number.NaN;
+  }
+
+  let normalized = raw;
+  const hasComma = normalized.includes(',');
+  const hasDot = normalized.includes('.');
+
+  if (hasComma && hasDot) {
+    if (normalized.lastIndexOf(',') > normalized.lastIndexOf('.')) {
+      normalized = normalized.replace(/\./g, '').replace(',', '.');
+    } else {
+      normalized = normalized.replace(/,/g, '');
+    }
+  } else if (hasComma) {
+    const commaCount = (normalized.match(/,/g) || []).length;
+    if (commaCount === 1 && /,\d{1,2}$/.test(normalized)) {
+      normalized = normalized.replace(',', '.');
+    } else {
+      normalized = normalized.replace(/,/g, '');
+    }
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+};
+
 export default function UsuarioView() {
   const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -472,6 +509,7 @@ export default function UsuarioView() {
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [ticketFile, setTicketFile] = useState<File | null>(null);
   const [descripcionGasto, setDescripcionGasto] = useState('');
+  const [montoGasto, setMontoGasto] = useState('');
 
   // Estado para vehículos
   const [vehicles] = useLocalStorageState<Vehicle[]>('usuario:vehicles', []);
@@ -496,6 +534,8 @@ export default function UsuarioView() {
   const [deletingCardKey, setDeletingCardKey] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubiendoDocumentos, setIsSubiendoDocumentos] = useState(false);
+  const [uploadDocumentosSummary, setUploadDocumentosSummary] = useState<UploadDocumentosSummary | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const confirmResolverRef = useRef<((accepted: boolean) => void) | null>(null);
   const destinoVehiculoSelectionRef = useRef(0);
@@ -713,6 +753,10 @@ export default function UsuarioView() {
   const gastoDescripcionError = showGastoDocumentoErrors && !descripcionGasto.trim()
     ? 'Agrega una descripcion del gasto.'
     : '';
+  const montoGastoCapturado = parseCurrencyAmount(montoGasto);
+  const gastoMontoError = showGastoDocumentoErrors && (!Number.isFinite(montoGastoCapturado) || montoGastoCapturado <= 0)
+    ? 'Agrega un monto mayor a 0.'
+    : '';
   const subirDocumentosError = showSubirDocumentosErrors && gastos.length === 0
     ? 'Agrega al menos un gasto.'
     : '';
@@ -826,6 +870,7 @@ export default function UsuarioView() {
   useEscapeKey(() => setShowDestinoVehiculoMapExpanded(false), showDestinoVehiculoMapExpanded);
   useEscapeKey(resetExtensionState, showModalExtenderViaje);
   useEscapeKey(() => setShowVehicleReturnSuccess(false), showVehicleReturnSuccess);
+  useEscapeKey(() => setUploadDocumentosSummary(null), Boolean(uploadDocumentosSummary));
   useEscapeKey(() => {
     if (!confirmDialog) {
       return;
@@ -998,6 +1043,7 @@ export default function UsuarioView() {
     setXmlFile(null);
     setTicketFile(null);
     setDescripcionGasto('');
+    setMontoGasto('');
     setShowGastoDocumentoErrors(false);
   };
 
@@ -1021,7 +1067,8 @@ export default function UsuarioView() {
 
   const handleAgregarGasto = () => {
     const descripcionCapturada = descripcionGasto.trim();
-    if ((!pdfFile && !ticketFile) || !descripcionCapturada) {
+    const montoCapturado = parseCurrencyAmount(montoGasto);
+    if ((!pdfFile && !ticketFile) || !descripcionCapturada || !Number.isFinite(montoCapturado) || montoCapturado <= 0) {
       setShowGastoDocumentoErrors(true);
       return;
     }
@@ -1031,7 +1078,7 @@ export default function UsuarioView() {
       viaticoId: viaticoSeleccionado!,
       tipo: xmlFile ? 'completo' : 'sin_xml',
       descripcion: descripcionCapturada,
-      monto: 0,
+      monto: Number(montoCapturado.toFixed(2)),
       pdfName: pdfFile?.name,
       xmlName: xmlFile?.name,
       ticketName: ticketFile?.name,
@@ -1058,19 +1105,28 @@ export default function UsuarioView() {
     }
 
     const currentUserId = user ? String(user.id) : undefined;
-    const gastosSinArchivos = gastos.filter((gasto) => {
-      const files = gastoFiles[gasto.id];
+    const gastosSnapshot = [...gastos];
+    const gastoFilesSnapshot = { ...gastoFiles };
+    const gastosSinArchivos = gastosSnapshot.filter((gasto) => {
+      const files = gastoFilesSnapshot[gasto.id];
       return !files || (!files.pdf && !files.ticket);
     });
     if (gastosSinArchivos.length > 0) {
       showToast('Hay gastos sin archivo para subir. Vuelve a agregarlos.', 'error');
       return;
     }
+    const gastosSinMonto = gastosSnapshot.filter((gasto) => !Number.isFinite(gasto.monto) || gasto.monto <= 0);
+    if (gastosSinMonto.length > 0) {
+      showToast('Hay gastos sin monto. Capturalos nuevamente antes de subir.', 'error');
+      return;
+    }
 
+    const montoTotal = gastosSnapshot.reduce((acc, gasto) => acc + (Number.isFinite(gasto.monto) ? gasto.monto : 0), 0);
+    setIsSubiendoDocumentos(true);
     try {
       const baseTimestamp = Date.now();
-      await Promise.all(gastos.map((gasto, index) => {
-        const files = gastoFiles[gasto.id] || {};
+      await Promise.all(gastosSnapshot.map((gasto, index) => {
+        const files = gastoFilesSnapshot[gasto.id] || {};
         const monto = Number.isFinite(gasto.monto) ? gasto.monto : 0;
         const fechaFactura = parseDateOnly(gasto.fecha) || new Date();
         return createFactura({
@@ -1091,10 +1147,16 @@ export default function UsuarioView() {
       }));
 
       void syncCoreAppData({ userId: currentUserId }).catch(() => {});
-      showToast(`${gastos.length} gasto(s) subido(s) exitosamente`, 'success');
+      setUploadDocumentosSummary({
+        totalGastos: gastosSnapshot.length,
+        montoTotal: Number(montoTotal.toFixed(2)),
+      });
+      showToast(`${gastosSnapshot.length} gasto(s) subido(s) exitosamente`, 'success');
       resetSubirDocumentosFlow();
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'No se pudieron subir los documentos.', 'error');
+    } finally {
+      setIsSubiendoDocumentos(false);
     }
   };
 
@@ -1702,6 +1764,48 @@ export default function UsuarioView() {
                   }`}
                 >
                   {confirmDialog.confirmLabel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isSubiendoDocumentos && (
+        <div className="fixed inset-0 z-[96] flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm sm:p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500" />
+            <div className="px-5 py-5 text-center">
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-sky-100 border-t-sky-600" />
+              <h3 className="mt-4 text-base font-semibold text-slate-900">Subiendo documentos...</h3>
+              <p className="mt-1 text-sm text-slate-600">Estamos registrando tus facturas y comprobantes.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {uploadDocumentosSummary && !isSubiendoDocumentos && (
+        <div className="fixed inset-0 z-[96] flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm sm:p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-2xl">
+            <div className="h-1 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-sky-500" />
+            <div className="px-5 py-5 sm:px-6">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700">
+                  OK
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold text-slate-900">Documentos subidos correctamente</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {uploadDocumentosSummary.totalGastos} gasto(s) registrados por un total de $
+                    {uploadDocumentosSummary.montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setUploadDocumentosSummary(null)}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>
@@ -2463,6 +2567,21 @@ export default function UsuarioView() {
                   }`}
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-900">
+                  5. Monto del gasto (MXN) <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={montoGasto}
+                  onChange={(e) => setMontoGasto(e.target.value)}
+                  placeholder="Ej. 350.00"
+                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    gastoMontoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
+                  }`}
+                />
+              </div>
               <div className="flex justify-end">
                 <button
                   onClick={handleAgregarGasto}
@@ -2477,6 +2596,9 @@ export default function UsuarioView() {
               {gastoDescripcionError && (
                 <p className="text-xs text-rose-600">{gastoDescripcionError}</p>
               )}
+              {gastoMontoError && (
+                <p className="text-xs text-rose-600">{gastoMontoError}</p>
+              )}
 
               {/* Lista de gastos agregados */}
               {gastos.length > 0 && (
@@ -2490,6 +2612,9 @@ export default function UsuarioView() {
                         <div className="flex items-center space-x-2">
                           <div>
                             <p className="text-xs font-medium text-gray-900">{gasto.descripcion}</p>
+                            <p className="text-xs font-semibold text-slate-700">
+                              ${gasto.monto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                            </p>
                             <div className="flex items-center space-x-1.5 mt-1">
                               {gasto.pdfName && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">PDF</span>}
                               {gasto.xmlName && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">XML</span>}
@@ -2521,10 +2646,10 @@ export default function UsuarioView() {
                 </button>
                 <button
                   onClick={handleSubirDocumentos}
-                  disabled={gastos.length === 0}
+                  disabled={gastos.length === 0 || isSubiendoDocumentos}
                   className="px-4 py-1.5 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
                 >
-                  Subir Documentos ({gastos.length})
+                  {isSubiendoDocumentos ? 'Subiendo...' : `Subir Documentos (${gastos.length})`}
                 </button>
               </div>
               {subirDocumentosError && (
