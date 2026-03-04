@@ -382,6 +382,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
   });
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [optimisticClosing, setOptimisticClosing] = useState(false);
   const [error, setError] = useState('');
 
   const selectedActivity = selectedActivityId ? getActivityById(selectedActivityId) : undefined;
@@ -422,6 +423,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
     }
 
     setSubmitting(true);
+    setOptimisticClosing(true);
     try {
       const created = await createViatico({
         userId: currentUser ? String(currentUser.id) : undefined,
@@ -443,11 +445,16 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
       });
       onClose();
     } catch (submitError) {
+      setOptimisticClosing(false);
       setError(submitError instanceof Error ? submitError.message : 'No se pudo crear el viatico.');
     } finally {
       setSubmitting(false);
     }
   };
+
+  if (optimisticClosing) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">

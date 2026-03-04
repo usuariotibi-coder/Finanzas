@@ -187,20 +187,25 @@ export default function PMPortal() {
       return;
     }
 
+    const snapshotNuevoProyecto = { ...nuevoProyecto };
+    setShowModalCrearProyecto(false);
+    resetNuevoProyecto();
+    setShowProyectoErrors(false);
+
     try {
       const nuevo = await createProyecto({
-        codigo: nuevoProyecto.codigo.trim(),
+        codigo: snapshotNuevoProyecto.codigo.trim(),
         nombre: nombreProyecto,
-        cliente: nuevoProyecto.cliente.trim(),
+        cliente: snapshotNuevoProyecto.cliente.trim(),
         estado: 'activo',
         presupuesto: presupuestoValue,
         gastado: 0,
-        fechaInicio: nuevoProyecto.fechaInicio,
-        fechaFinEstimada: nuevoProyecto.fechaFinEstimada,
-        responsable: nuevoProyecto.responsable.trim(),
+        fechaInicio: snapshotNuevoProyecto.fechaInicio,
+        fechaFinEstimada: snapshotNuevoProyecto.fechaFinEstimada,
+        responsable: snapshotNuevoProyecto.responsable.trim(),
         departamento: user?.department?.trim() || 'operaciones',
-        descripcion: nuevoProyecto.cliente.trim(),
-        notas: nuevoProyecto.notas.trim() || undefined,
+        descripcion: snapshotNuevoProyecto.cliente.trim(),
+        notas: snapshotNuevoProyecto.notas.trim() || undefined,
       });
 
       setProyectos((prev) => {
@@ -209,11 +214,11 @@ export default function PMPortal() {
         return Array.from(map.values());
       });
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
-      setShowModalCrearProyecto(false);
-      resetNuevoProyecto();
-      setShowProyectoErrors(false);
       showToast('Proyecto creado correctamente.', 'success');
     } catch (error) {
+      setNuevoProyecto(snapshotNuevoProyecto);
+      setShowProyectoErrors(false);
+      setShowModalCrearProyecto(true);
       showToast(error instanceof Error ? error.message : 'No se pudo crear el proyecto.', 'error');
     }
   };

@@ -257,6 +257,7 @@ export default function Viajes() {
           solicitud={selectedSolicitud}
           onClose={() => setSelectedSolicitud(null)}
           onSave={async (updatedSolicitud) => {
+            setSelectedSolicitud(null);
             try {
               const persisted = await updateViaje(updatedSolicitud.id, updatedSolicitud);
               setSolicitudes((prev) => {
@@ -272,8 +273,8 @@ export default function Viajes() {
                 return Array.from(map.values());
               });
               void syncCoreAppData({ userId: persisted.userId }).catch(() => {});
-              setSelectedSolicitud(null);
             } catch (error) {
+              setSelectedSolicitud(updatedSolicitud);
               window.alert(error instanceof Error ? error.message : 'No se pudo guardar la solicitud.');
             }
           }}

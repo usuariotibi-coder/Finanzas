@@ -268,7 +268,20 @@ export default function AdminUsuarios() {
       }
     }
 
+    const snapshot = {
+      editingUser,
+      editFullName,
+      editEmail,
+      editDepartment,
+      editPosition,
+      editPassword,
+      editConfirmPassword,
+      showEditPassword,
+      showEditConfirmPassword,
+    };
+
     setEditSubmitting(true);
+    closeEditModal();
     try {
       await api.csrf();
       const payload: {
@@ -278,16 +291,16 @@ export default function AdminUsuarios() {
         position: string;
         password?: string;
       } = {
-        full_name: editFullName.trim(),
+        full_name: snapshot.editFullName.trim(),
         email: normalizedEditEmail,
-        department: editDepartment,
-        position: editPosition.trim(),
+        department: snapshot.editDepartment,
+        position: snapshot.editPosition.trim(),
       };
-      if (wantsToChangePassword && editPassword) {
-        payload.password = editPassword;
+      if (wantsToChangePassword && snapshot.editPassword) {
+        payload.password = snapshot.editPassword;
       }
 
-      const updatedUser = (await api.adminUpdateUser(editingUser.id, {
+      const updatedUser = (await api.adminUpdateUser(snapshot.editingUser.id, {
         ...payload,
       })) as AuthUser;
 
@@ -297,8 +310,16 @@ export default function AdminUsuarios() {
           ? `Usuario actualizado: ${updatedUser.full_name} (contrasena renovada)`
           : `Usuario actualizado: ${updatedUser.full_name}`
       );
-      closeEditModal();
     } catch (err) {
+      setEditingUser(snapshot.editingUser);
+      setEditFullName(snapshot.editFullName);
+      setEditEmail(snapshot.editEmail);
+      setEditDepartment(snapshot.editDepartment);
+      setEditPosition(snapshot.editPosition);
+      setEditPassword(snapshot.editPassword);
+      setEditConfirmPassword(snapshot.editConfirmPassword);
+      setShowEditPassword(snapshot.showEditPassword);
+      setShowEditConfirmPassword(snapshot.showEditConfirmPassword);
       setEditError(formatUserError(err instanceof Error ? err.message : 'No se pudo actualizar.'));
     } finally {
       setEditSubmitting(false);

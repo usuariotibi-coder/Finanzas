@@ -2118,6 +2118,7 @@ function NewVehicleModal({
   const [previewSourceIndex, setPreviewSourceIndex] = useState(0);
   const [showErrors, setShowErrors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [optimisticClosing, setOptimisticClosing] = useState(false);
 
   useEffect(() => {
     setPreviewSourceIndex(0);
@@ -2159,6 +2160,7 @@ function NewVehicleModal({
       return;
     }
     setSubmitting(true);
+    setOptimisticClosing(true);
     try {
       const payload = {
         brand: formData.brand.trim(),
@@ -2182,6 +2184,7 @@ function NewVehicleModal({
       onClose();
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
+      setOptimisticClosing(false);
       window.alert(
         error instanceof Error
           ? error.message
@@ -2193,6 +2196,10 @@ function NewVehicleModal({
       setSubmitting(false);
     }
   };
+
+  if (optimisticClosing) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">

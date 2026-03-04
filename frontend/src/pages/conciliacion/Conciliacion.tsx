@@ -127,13 +127,19 @@ export default function Conciliacion() {
       setShowUploadErrors(true);
       return;
     }
+    const snapshotTarget = uploadTarget;
+    const snapshotPdfFile = uploadPdfFile;
+    const snapshotXmlFile = uploadXmlFile;
+    const snapshotNotas = uploadNotas;
+
+    closeUploadModal();
     setUploadSaving(true);
     try {
-      const targetConsumo = uploadTarget.type === 'consumo'
-        ? consumos.find((item) => item.id === uploadTarget.id) ?? null
+      const targetConsumo = snapshotTarget.type === 'consumo'
+        ? consumos.find((item) => item.id === snapshotTarget.id) ?? null
         : null;
-      const targetTicket = uploadTarget.type === 'amex'
-        ? ticketsAMEX.find((item) => item.id === uploadTarget.id) ?? null
+      const targetTicket = snapshotTarget.type === 'amex'
+        ? ticketsAMEX.find((item) => item.id === snapshotTarget.id) ?? null
         : null;
 
       if (!targetConsumo && !targetTicket) {
@@ -169,18 +175,18 @@ export default function Conciliacion() {
         total: baseData.monto,
         formaPago: 'NA',
         metodoPago: 'NA',
-        archivoPdf: uploadPdfFile,
-        archivoXml: uploadXmlFile,
+        archivoPdf: snapshotPdfFile,
+        archivoXml: snapshotXmlFile,
       });
 
       const facturaId = String(facturaCreada.id);
-      const notas = uploadNotas.trim() || undefined;
+      const notas = snapshotNotas.trim() || undefined;
 
       if (targetConsumo) {
         const consumoActualizado = await updateConsumo(targetConsumo.id, {
           facturaId,
-          facturaPdfName: uploadPdfFile.name,
-          facturaXmlName: uploadXmlFile.name,
+          facturaPdfName: snapshotPdfFile.name,
+          facturaXmlName: snapshotXmlFile.name,
           facturaNotas: notas,
           matched: false,
         });
@@ -188,8 +194,8 @@ export default function Conciliacion() {
       } else if (targetTicket) {
         const ticketActualizado = await updateAmexTicket(targetTicket.id, {
           facturaId,
-          facturaPdfName: uploadPdfFile.name,
-          facturaXmlName: uploadXmlFile.name,
+          facturaPdfName: snapshotPdfFile.name,
+          facturaXmlName: snapshotXmlFile.name,
           facturaNotas: notas,
           matched: false,
         });
@@ -198,8 +204,13 @@ export default function Conciliacion() {
 
       upsertFactura(facturaCreada);
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
-      closeUploadModal();
     } catch (error) {
+      setUploadTarget(snapshotTarget);
+      setUploadPdfFile(snapshotPdfFile);
+      setUploadXmlFile(snapshotXmlFile);
+      setUploadNotas(snapshotNotas);
+      setShowUploadErrors(false);
+      setShowUploadModal(true);
       window.alert(error instanceof Error ? error.message : 'No se pudo subir la factura.');
     } finally {
       setUploadSaving(false);

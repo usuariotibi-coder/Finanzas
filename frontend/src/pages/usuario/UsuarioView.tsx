@@ -1117,42 +1117,48 @@ export default function UsuarioView() {
     }
 
     const currentUserId = user ? String(user.id) : '';
+    const snapshotFormNuevoViatico = { ...formNuevoViatico };
+    const snapshotTotalAlimentos = totalAlimentos;
+
+    setShowModalNuevoViatico(false);
+    setFormNuevoViatico({
+      proyectoId: '',
+      gsActivityId: null,
+      motivo: '',
+      origen: 'Queretaro',
+      destino: '',
+      destinoPais: 'Mexico',
+      tipoViatico: 'efectifintech',
+      fechaInicio: '',
+      fechaFin: '',
+      desayunos: 0,
+      comidas: 0,
+      cenas: 0,
+    });
+    setShowNuevoViaticoErrors(false);
 
     try {
       const nuevoViatico = await createViatico({
         userId: currentUserId || undefined,
-        proyectoId: formNuevoViatico.proyectoId || undefined,
-        gsActivityId: formNuevoViatico.gsActivityId || undefined,
-        motivo: formNuevoViatico.motivo,
-        origen: formNuevoViatico.origen,
-        destino: formNuevoViatico.destino,
-        destinoPais: formNuevoViatico.destinoPais,
-        tipoViatico: formNuevoViatico.tipoViatico,
-        fechaInicio: formNuevoViatico.fechaInicio,
-        fechaFin: formNuevoViatico.fechaFin,
-        montoSolicitado: totalAlimentos,
+        proyectoId: snapshotFormNuevoViatico.proyectoId || undefined,
+        gsActivityId: snapshotFormNuevoViatico.gsActivityId || undefined,
+        motivo: snapshotFormNuevoViatico.motivo,
+        origen: snapshotFormNuevoViatico.origen,
+        destino: snapshotFormNuevoViatico.destino,
+        destinoPais: snapshotFormNuevoViatico.destinoPais,
+        tipoViatico: snapshotFormNuevoViatico.tipoViatico,
+        fechaInicio: snapshotFormNuevoViatico.fechaInicio,
+        fechaFin: snapshotFormNuevoViatico.fechaFin,
+        montoSolicitado: snapshotTotalAlimentos,
         status: 'pendiente',
       });
 
       setViaticos((prev) => [...prev, nuevoViatico]);
-      setShowModalNuevoViatico(false);
-      setFormNuevoViatico({
-        proyectoId: '',
-        gsActivityId: null,
-        motivo: '',
-        origen: 'Queretaro',
-        destino: '',
-        destinoPais: 'Mexico',
-        tipoViatico: 'efectifintech',
-        fechaInicio: '',
-        fechaFin: '',
-        desayunos: 0,
-        comidas: 0,
-        cenas: 0,
-      });
-      setShowNuevoViaticoErrors(false);
       void syncCoreAppData({ userId: currentUserId || undefined }).catch(() => {});
     } catch (error) {
+      setFormNuevoViatico(snapshotFormNuevoViatico);
+      setShowNuevoViaticoErrors(false);
+      setShowModalNuevoViatico(true);
       showToast(error instanceof Error ? error.message : 'No se pudo crear el viatico.', 'error');
     }
   };
@@ -1347,53 +1353,58 @@ export default function UsuarioView() {
     }
 
     const currentUserId = user ? String(user.id) : '';
+    const snapshotFormSolicitudViaje = { ...formSolicitudViaje };
     const proyectoLabel = formatProyectoLabel(
-      proyectos.find((p) => p.id === formSolicitudViaje.proyectoId)?.nombre,
-      formSolicitudViaje.proyectoId
+      proyectos.find((p) => p.id === snapshotFormSolicitudViaje.proyectoId)?.nombre,
+      snapshotFormSolicitudViaje.proyectoId
     );
+
+    setShowModalSolicitarViaje(false);
+    setFormSolicitudViaje({
+      proyectoId: '',
+      motivo: '',
+      origen: '',
+      destino: '',
+      fechaInicio: '',
+      fechaFin: '',
+      necesitaAvion: false,
+      necesitaCamion: false,
+      necesitaHotel: false,
+      detallesAvion: '',
+      detallesCamion: '',
+      detallesHotel: '',
+    });
+    setShowSolicitarViajeErrors(false);
 
     try {
       const nuevaSolicitud = await createViaje({
         userId: currentUserId || undefined,
-        proyectoId: formSolicitudViaje.proyectoId,
+        proyectoId: snapshotFormSolicitudViaje.proyectoId,
         proyectoNombre: proyectoLabel,
-        origen: formSolicitudViaje.origen,
-        destino: formSolicitudViaje.destino,
-        fechaInicio: formSolicitudViaje.fechaInicio,
-        fechaFin: formSolicitudViaje.fechaFin,
-        motivo: formSolicitudViaje.motivo,
-        necesitaAvion: formSolicitudViaje.necesitaAvion,
-        necesitaCamion: formSolicitudViaje.necesitaCamion,
-        necesitaHotel: formSolicitudViaje.necesitaHotel,
-        detallesAvion: formSolicitudViaje.detallesAvion || undefined,
-        detallesCamion: formSolicitudViaje.detallesCamion || undefined,
-        detallesHotel: formSolicitudViaje.detallesHotel || undefined,
+        origen: snapshotFormSolicitudViaje.origen,
+        destino: snapshotFormSolicitudViaje.destino,
+        fechaInicio: snapshotFormSolicitudViaje.fechaInicio,
+        fechaFin: snapshotFormSolicitudViaje.fechaFin,
+        motivo: snapshotFormSolicitudViaje.motivo,
+        necesitaAvion: snapshotFormSolicitudViaje.necesitaAvion,
+        necesitaCamion: snapshotFormSolicitudViaje.necesitaCamion,
+        necesitaHotel: snapshotFormSolicitudViaje.necesitaHotel,
+        detallesAvion: snapshotFormSolicitudViaje.detallesAvion || undefined,
+        detallesCamion: snapshotFormSolicitudViaje.detallesCamion || undefined,
+        detallesHotel: snapshotFormSolicitudViaje.detallesHotel || undefined,
         status: 'pendiente',
-        statusAvion: formSolicitudViaje.necesitaAvion ? 'pendiente' : undefined,
-        statusCamion: formSolicitudViaje.necesitaCamion ? 'pendiente' : undefined,
-        statusHotel: formSolicitudViaje.necesitaHotel ? 'pendiente' : undefined,
+        statusAvion: snapshotFormSolicitudViaje.necesitaAvion ? 'pendiente' : undefined,
+        statusCamion: snapshotFormSolicitudViaje.necesitaCamion ? 'pendiente' : undefined,
+        statusHotel: snapshotFormSolicitudViaje.necesitaHotel ? 'pendiente' : undefined,
       });
 
       setSolicitudesViaje((prev) => [...prev, nuevaSolicitud]);
-      setShowModalSolicitarViaje(false);
-      setFormSolicitudViaje({
-        proyectoId: '',
-        motivo: '',
-        origen: '',
-        destino: '',
-        fechaInicio: '',
-        fechaFin: '',
-        necesitaAvion: false,
-        necesitaCamion: false,
-        necesitaHotel: false,
-        detallesAvion: '',
-        detallesCamion: '',
-        detallesHotel: '',
-      });
-      setShowSolicitarViajeErrors(false);
       showToast('Solicitud de viaje enviada. El administrador te contactara para coordinar los servicios.', 'success');
       void syncCoreAppData({ userId: currentUserId || undefined }).catch(() => {});
     } catch (error) {
+      setFormSolicitudViaje(snapshotFormSolicitudViaje);
+      setShowSolicitarViajeErrors(false);
+      setShowModalSolicitarViaje(true);
       showToast(error instanceof Error ? error.message : 'No se pudo crear la solicitud de viaje.', 'error');
     }
   };

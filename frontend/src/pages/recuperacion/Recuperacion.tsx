@@ -94,6 +94,8 @@ export default function Recuperacion() {
       setShowGastoErrors(true);
       return;
     }
+    const snapshotViatico = selectedGastoViatico;
+    const snapshotMonto = gastoMonto;
     const montoDispersado = selectedGastoViatico.montoDispersado ?? 0;
     const saldoRestante = Math.max(montoDispersado - gastoMontoValue, 0);
     const applyUpdate = (viatico: Viatico): Viatico => ({
@@ -103,6 +105,11 @@ export default function Recuperacion() {
       gastoFuente: 'manual',
       efectifintechStatus: viatico.efectifintechStatus ?? 'pendiente',
     });
+
+    setShowGastoModal(false);
+    setSelectedGastoViatico(null);
+    setGastoMonto('');
+    setShowGastoErrors(false);
 
     try {
       const persisted = await updateViatico(selectedGastoViatico.id, {
@@ -116,11 +123,10 @@ export default function Recuperacion() {
         prev.map((viatico) => (viatico.id === selectedGastoViatico.id ? { ...applyUpdate(viatico), ...persisted } : viatico))
       );
       void syncCoreAppData({ userId: persisted.userId }).catch(() => {});
-      setShowGastoModal(false);
-      setSelectedGastoViatico(null);
-      setGastoMonto('');
-      setShowGastoErrors(false);
     } catch (error) {
+      setSelectedGastoViatico(snapshotViatico);
+      setGastoMonto(snapshotMonto);
+      setShowGastoModal(true);
       window.alert(error instanceof Error ? error.message : 'No se pudo guardar el gasto.');
     }
   };
@@ -709,8 +715,8 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
     window.open(url, '_blank', 'noopener,noreferrer');
   };
   const handleConfirmar = async () => {
-    await onConfirm(viatico, comentarios);
     onClose();
+    await onConfirm(viatico, comentarios);
   };
 
   return (

@@ -179,10 +179,18 @@ export default function Proyectos() {
       return;
     }
 
+    const snapshot = {
+      modoEdicion,
+      proyectoSeleccionado,
+      formData,
+    };
+
+    cerrarModal();
+
     try {
-      if (modoEdicion && proyectoSeleccionado) {
-        const actualizado = await updateProyecto(proyectoSeleccionado.id, {
-          ...formData,
+      if (snapshot.modoEdicion && snapshot.proyectoSeleccionado) {
+        const actualizado = await updateProyecto(snapshot.proyectoSeleccionado.id, {
+          ...snapshot.formData,
           nombre: clienteDescripcion,
           descripcion: clienteDescripcion,
         });
@@ -193,7 +201,7 @@ export default function Proyectos() {
         );
       } else {
         const nuevoProyecto = await createProyecto({
-          ...formData,
+          ...snapshot.formData,
           nombre: clienteDescripcion,
           descripcion: clienteDescripcion,
         });
@@ -201,8 +209,11 @@ export default function Proyectos() {
       }
 
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
-      cerrarModal();
     } catch (error) {
+      setModoEdicion(snapshot.modoEdicion);
+      setProyectoSeleccionado(snapshot.proyectoSeleccionado);
+      setFormData(snapshot.formData);
+      setIsModalOpen(true);
       window.alert(error instanceof Error ? error.message : 'No se pudo guardar el proyecto.');
     }
   };

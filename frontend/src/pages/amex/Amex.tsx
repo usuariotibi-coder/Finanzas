@@ -469,20 +469,26 @@ export default function Amex() {
       return;
     }
 
+    const snapshotFacturaTicketId = facturaTicketId;
+    const snapshotFacturaValue = facturaValue;
     const facturaId = facturaValue.trim();
+    setShowFacturaModal(false);
+    setFacturaTicketId(null);
+    setFacturaValue('');
+
     try {
-      const updated = await updateAmexTicket(facturaTicketId, {
+      const updated = await updateAmexTicket(snapshotFacturaTicketId, {
         facturaId: facturaId || undefined,
         matched: Boolean(facturaId),
       });
       setTickets((prevTickets) =>
-        prevTickets.map((ticket) => (ticket.id === facturaTicketId ? { ...ticket, ...updated } : ticket))
+        prevTickets.map((ticket) => (ticket.id === snapshotFacturaTicketId ? { ...ticket, ...updated } : ticket))
       );
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
-      setShowFacturaModal(false);
-      setFacturaTicketId(null);
-      setFacturaValue('');
     } catch (error) {
+      setFacturaTicketId(snapshotFacturaTicketId);
+      setFacturaValue(snapshotFacturaValue);
+      setShowFacturaModal(true);
       window.alert(error instanceof Error ? error.message : 'No se pudo actualizar la factura del ticket.');
     }
   };
@@ -583,36 +589,41 @@ export default function Amex() {
     const monto = parsedMonto;
     const montoUSD = newTicket.montoUSD ? parsedMontoUSD : undefined;
     const tipoCambio = newTicket.tipoCambio ? parsedTipoCambio : undefined;
+    const snapshotNewTicket = { ...newTicket };
+
+    setShowAddModal(false);
+    setShowAddErrors(false);
+    resetNewTicket();
 
     try {
       const created = await createAmexTicket({
         userId: user ? String(user.id) : undefined,
-        fecha: newTicket.fecha,
-        comercio: newTicket.comercio,
+        fecha: snapshotNewTicket.fecha,
+        comercio: snapshotNewTicket.comercio,
         monto,
         montoUSD,
         tipoCambio,
-        categoria: newTicket.categoria,
-        matched: newTicket.matched,
-        autorizado: newTicket.autorizado,
-        duplicado: newTicket.duplicado,
-        facturaId: newTicket.facturaId || undefined,
-        cardNumber: newTicket.cardNumber,
-        cardHolder: newTicket.cardHolder,
-        cuentaContable: newTicket.cuentaContable,
-        proyectoId: newTicket.proyectoId || undefined,
-        proyectoNombre: newTicket.proyectoNombre || undefined,
-        paisComercio: newTicket.paisComercio,
+        categoria: snapshotNewTicket.categoria,
+        matched: snapshotNewTicket.matched,
+        autorizado: snapshotNewTicket.autorizado,
+        duplicado: snapshotNewTicket.duplicado,
+        facturaId: snapshotNewTicket.facturaId || undefined,
+        cardNumber: snapshotNewTicket.cardNumber,
+        cardHolder: snapshotNewTicket.cardHolder,
+        cuentaContable: snapshotNewTicket.cuentaContable,
+        proyectoId: snapshotNewTicket.proyectoId || undefined,
+        proyectoNombre: snapshotNewTicket.proyectoNombre || undefined,
+        paisComercio: snapshotNewTicket.paisComercio,
         clasificacionAuto: false,
-        observaciones: newTicket.observaciones || undefined,
+        observaciones: snapshotNewTicket.observaciones || undefined,
       });
 
       setTickets((prevTickets) => [created, ...prevTickets]);
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
-      setShowAddModal(false);
-      resetNewTicket();
-      setShowAddErrors(false);
     } catch (error) {
+      setNewTicket(snapshotNewTicket);
+      setShowAddErrors(false);
+      setShowAddModal(true);
       window.alert(error instanceof Error ? error.message : 'No se pudo guardar el ticket AMEX.');
     }
   };
