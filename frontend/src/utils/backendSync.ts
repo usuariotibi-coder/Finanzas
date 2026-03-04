@@ -971,6 +971,35 @@ export const createFlotillaAsignacion = async (payload: Partial<VehicleAssignmen
   return mapVehicleAssignmentFromApi(data);
 };
 
+export const createFlotillaGasto = async (payload: {
+  vehicleId: string;
+  assignmentId?: string;
+  tipo: VehicleExpense['tipo'];
+  fecha: string;
+  monto: number;
+  descripcion: string;
+  facturaId?: string;
+  odometro?: number;
+  proveedor?: string;
+}): Promise<VehicleExpense> => {
+  const data = (await apiFetch('/flotilla/gastos/', {
+    method: 'POST',
+    body: JSON.stringify({
+      vehicle: toApiId(payload.vehicleId),
+      assignment: payload.assignmentId ? toApiId(payload.assignmentId) ?? null : null,
+      tipo: payload.tipo,
+      fecha: payload.fecha,
+      monto: parseNumber(payload.monto),
+      descripcion: parseString(payload.descripcion),
+      factura_id: payload.facturaId || '',
+      odometro: payload.odometro ?? null,
+      proveedor: payload.proveedor || '',
+    }),
+  })) as RawRecord;
+
+  return mapVehicleExpenseFromApi(data);
+};
+
 export const createFlotillaVehiculo = async (payload: {
   brand: string;
   model: string;

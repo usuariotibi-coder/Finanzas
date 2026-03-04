@@ -8,6 +8,7 @@ import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import LeafletDestinationMap from '../../components/common/LeafletDestinationMap';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import {
+  createFlotillaGasto,
   createFlotillaVehiculo,
   fetchFlotillaAsignaciones,
   fetchFlotillaCargasGasolina,
@@ -597,7 +598,17 @@ export default function Flotilla() {
     window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
   };
 
-  const handleAssignVehicle = async (requestId: string, vehicleId: string, vehiculoLabel: string) => {
+  const handleAssignVehicle = async (
+    requestId: string,
+    vehicleId: string,
+    vehiculoLabel: string,
+    fuelRequest?: {
+      monto: number;
+      tag?: string;
+      fuelSource?: string;
+      comentarios?: string;
+    }
+  ) => {
     try {
       const persisted = await updateFlotillaAsignacion(requestId, {
         vehicleId,
@@ -614,6 +625,30 @@ export default function Flotilla() {
         : [{ ...persisted, vehiculoLabel: persisted.vehiculoLabel || vehiculoLabel }, ...assignments];
 
       saveAssignments(updatedAssignments);
+
+      if (fuelRequest && fuelRequest.monto > 0) {
+        try {
+          const extra = [fuelRequest.comentarios?.trim(), fuelRequest.tag?.trim()]
+            .filter(Boolean)
+            .join(' | ');
+          const descripcionBase = 'Solicitud de gasolina al asignar vehiculo';
+          const descripcion = extra ? `${descripcionBase} - ${extra}` : descripcionBase;
+          await createFlotillaGasto({
+            vehicleId,
+            assignmentId: persisted.id,
+            tipo: 'gasolina',
+            fecha: persisted.fechaInicio || new Date().toISOString().slice(0, 10),
+            monto: fuelRequest.monto,
+            descripcion,
+            proveedor: fuelRequest.fuelSource?.trim() || 'Solicitud interna',
+          });
+          const remoteCargas = await fetchFlotillaCargasGasolina();
+          setCargasGasolina(remoteCargas);
+        } catch {
+          window.alert('La asignacion se guardo, pero no se pudo registrar el gasto de gasolina.');
+        }
+      }
+
       setShowAssignmentForm(false);
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
@@ -2475,7 +2510,17 @@ function AssignmentModal({
 }: {
   vehicles: Vehicle[];
   requests: VehicleAssignment[];
-  onAssign: (requestId: string, vehicleId: string, vehiculoLabel: string) => Promise<void> | void;
+  onAssign: (
+    requestId: string,
+    vehicleId: string,
+    vehiculoLabel: string,
+    fuelRequest?: {
+      monto: number;
+      tag?: string;
+      fuelSource?: string;
+      comentarios?: string;
+    }
+  ) => Promise<void> | void;
   onClose: () => void;
 }) {
   const [showExpandedMap, setShowExpandedMap] = useState(false);
@@ -2578,9 +2623,18 @@ function AssignmentModal({
       return;
     }
     const label = selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model} - ${selectedVehicle.plates}` : '';
+    const montoGasolina = Number(solicitudGasolina);
+    const fuelRequest = Number.isFinite(montoGasolina) && montoGasolina > 0
+      ? {
+          monto: montoGasolina,
+          tag: selectedTag || undefined,
+          fuelSource: selectedFuelSource || undefined,
+          comentarios: comentarios || undefined,
+        }
+      : undefined;
     setSubmitting(true);
     try {
-      await onAssign(selectedRequestId, selectedVehicleId, label);
+      await onAssign(selectedRequestId, selectedVehicleId, label, fuelRequest);
     } finally {
       setSubmitting(false);
     }
