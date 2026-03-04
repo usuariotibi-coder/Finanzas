@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import Role
 from accounts.permissions import IsAdminOrPMOrFinanceOrReadOnly
+from .cfdi_parser import parse_cfdi_xml
 from .models import AlertaConciliacion, Conciliacion, Consumo, Factura
 from .serializers import (
     AlertaConciliacionSerializer,
@@ -28,10 +29,36 @@ class FacturaViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         request_user = self.request.user
         payload_user = serializer.validated_data.get('user')
+        archivo_xml = serializer.validated_data.get('archivo_xml')
+        cfdi_data = parse_cfdi_xml(archivo_xml) if archivo_xml else None
+
+        extra_fields = {}
+        if cfdi_data:
+            if cfdi_data.subtotal is not None:
+                extra_fields['subtotal'] = cfdi_data.subtotal
+            if cfdi_data.iva is not None:
+                extra_fields['iva'] = cfdi_data.iva
+            if cfdi_data.total is not None:
+                extra_fields['total'] = cfdi_data.total
+            if cfdi_data.fecha is not None:
+                extra_fields['fecha'] = cfdi_data.fecha
+            if cfdi_data.folio:
+                extra_fields['folio'] = cfdi_data.folio
+            if cfdi_data.uuid:
+                extra_fields['uuid'] = cfdi_data.uuid
+            if cfdi_data.rfc:
+                extra_fields['rfc'] = cfdi_data.rfc
+            if cfdi_data.razon_social:
+                extra_fields['razon_social'] = cfdi_data.razon_social
+            if cfdi_data.forma_pago:
+                extra_fields['forma_pago'] = cfdi_data.forma_pago
+            if cfdi_data.metodo_pago:
+                extra_fields['metodo_pago'] = cfdi_data.metodo_pago
+
         if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
-            serializer.save(user=payload_user or request_user)
+            serializer.save(user=payload_user or request_user, **extra_fields)
         else:
-            serializer.save(user=request_user)
+            serializer.save(user=request_user, **extra_fields)
 
 
 class ConsumoViewSet(viewsets.ModelViewSet):

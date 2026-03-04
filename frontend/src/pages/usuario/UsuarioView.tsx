@@ -478,6 +478,44 @@ const parseCurrencyAmount = (value: string): number => {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 };
 
+const getXmlAttributeValue = (node: Element | null, attributeName: string): string => {
+  if (!node) {
+    return '';
+  }
+  const wanted = attributeName.toLowerCase();
+  for (const attribute of Array.from(node.attributes)) {
+    if (attribute.name.toLowerCase() === wanted) {
+      return attribute.value;
+    }
+  }
+  return '';
+};
+
+const findXmlNodeByName = (xmlDoc: Document, tagName: string): Element | null => {
+  const wanted = tagName.toLowerCase();
+  return Array.from(xmlDoc.getElementsByTagName('*')).find((node) => {
+    const raw = String(node.tagName || '');
+    const normalized = raw.includes(':') ? raw.split(':').pop() || raw : raw;
+    return normalized.toLowerCase() === wanted;
+  }) || null;
+};
+
+const parseCfdiAmountFromXmlFile = async (file: File): Promise<number> => {
+  try {
+    const xmlText = await file.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+    if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+      return Number.NaN;
+    }
+    const comprobante = findXmlNodeByName(xmlDoc, 'Comprobante') || xmlDoc.documentElement;
+    const totalRaw = getXmlAttributeValue(comprobante, 'Total');
+    return parseCurrencyAmount(totalRaw);
+  } catch {
+    return Number.NaN;
+  }
+};
+
 export default function UsuarioView() {
   const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -754,8 +792,8 @@ export default function UsuarioView() {
     ? 'Agrega una descripcion del gasto.'
     : '';
   const montoGastoCapturado = parseCurrencyAmount(montoGasto);
-  const gastoMontoError = showGastoDocumentoErrors && (!Number.isFinite(montoGastoCapturado) || montoGastoCapturado <= 0)
-    ? 'Agrega un monto mayor a 0.'
+  const gastoMontoError = showGastoDocumentoErrors && !xmlFile && (!Number.isFinite(montoGastoCapturado) || montoGastoCapturado <= 0)
+    ? 'Agrega un monto mayor a 0 o sube el XML.'
     : '';
   const subirDocumentosError = showSubirDocumentosErrors && gastos.length === 0
     ? 'Agrega al menos un gasto.'
@@ -1065,11 +1103,18 @@ export default function UsuarioView() {
     }
   };
 
-  const handleAgregarGasto = () => {
+  const handleAgregarGasto = async () => {
     const descripcionCapturada = descripcionGasto.trim();
-    const montoCapturado = parseCurrencyAmount(montoGasto);
+    let montoCapturado = parseCurrencyAmount(montoGasto);
+    if ((!Number.isFinite(montoCapturado) || montoCapturado <= 0) && xmlFile) {
+      montoCapturado = await parseCfdiAmountFromXmlFile(xmlFile);
+    }
+
     if ((!pdfFile && !ticketFile) || !descripcionCapturada || !Number.isFinite(montoCapturado) || montoCapturado <= 0) {
       setShowGastoDocumentoErrors(true);
+      if ((!Number.isFinite(montoCapturado) || montoCapturado <= 0) && xmlFile) {
+        showToast('No se pudo leer el total del XML. Captura el monto manualmente.', 'error');
+      }
       return;
     }
 
@@ -2569,14 +2614,14 @@ export default function UsuarioView() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-gray-900">
-                  5. Monto del gasto (MXN) <span className="text-rose-600">*</span>
+                  5. Monto del gasto (MXN)
                 </label>
                 <input
                   type="text"
                   inputMode="decimal"
                   value={montoGasto}
                   onChange={(e) => setMontoGasto(e.target.value)}
-                  placeholder="Ej. 350.00"
+                  placeholder="Ej. 350.00 (opcional si subes XML)"
                   className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                     gastoMontoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
                   }`}
