@@ -548,6 +548,7 @@ export default function UsuarioView() {
   const [ticketFile, setTicketFile] = useState<File | null>(null);
   const [descripcionGasto, setDescripcionGasto] = useState('');
   const [montoGasto, setMontoGasto] = useState('');
+  const [montoGastoBloqueado, setMontoGastoBloqueado] = useState(false);
 
   // Estado para vehículos
   const [vehicles] = useLocalStorageState<Vehicle[]>('usuario:vehicles', []);
@@ -1083,6 +1084,7 @@ export default function UsuarioView() {
     setTicketFile(null);
     setDescripcionGasto('');
     setMontoGasto('');
+    setMontoGastoBloqueado(false);
     setShowGastoDocumentoErrors(false);
   };
 
@@ -1145,8 +1147,10 @@ export default function UsuarioView() {
   };
 
   const handleXmlFileSelection = async (file: File | null) => {
+    xmlAmountParseRef.current += 1;
     setXmlFile(file);
     if (!file) {
+      setMontoGastoBloqueado(false);
       return;
     }
 
@@ -1160,10 +1164,12 @@ export default function UsuarioView() {
 
     if (Number.isFinite(montoDetectado) && montoDetectado > 0) {
       setMontoGasto(montoDetectado.toFixed(2));
+      setMontoGastoBloqueado(true);
       setShowGastoDocumentoErrors(false);
       return;
     }
 
+    setMontoGastoBloqueado(false);
     showToast('No se pudo detectar el monto del XML. Puedes capturarlo manualmente.', 'info');
   };
 
@@ -2576,7 +2582,9 @@ export default function UsuarioView() {
                   {xmlFile && (
                     <div className="flex items-center justify-between gap-2 bg-green-50 px-2 py-1.5 rounded-md sm:max-w-[45%]">
                       <span className="truncate text-xs font-medium text-green-700">{xmlFile.name}</span>
-                      <button onClick={() => setXmlFile(null)} className="text-red-600 hover:text-red-700">
+                      <button onClick={() => {
+                        void handleXmlFileSelection(null);
+                      }} className="text-red-600 hover:text-red-700">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -2647,13 +2655,14 @@ export default function UsuarioView() {
                   inputMode="decimal"
                   value={montoGasto}
                   onChange={(e) => setMontoGasto(e.target.value)}
+                  disabled={montoGastoBloqueado}
                   placeholder="Ej. 350.00 (opcional si subes XML)"
-                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-600 ${
                     gastoMontoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
                   }`}
                 />
-                {xmlFile && (
-                  <p className="mt-1 text-[11px] text-emerald-700">Monto autocompletado desde XML (editable).</p>
+                {montoGastoBloqueado && (
+                  <p className="mt-1 text-[11px] text-emerald-700">Monto autocompletado desde XML (campo bloqueado).</p>
                 )}
               </div>
               <div className="flex justify-end">
