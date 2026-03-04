@@ -576,6 +576,7 @@ export default function UsuarioView() {
   const [uploadDocumentosSummary, setUploadDocumentosSummary] = useState<UploadDocumentosSummary | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
   const confirmResolverRef = useRef<((accepted: boolean) => void) | null>(null);
+  const xmlAmountParseRef = useRef(0);
   const destinoVehiculoSelectionRef = useRef(0);
   const destinoVehiculoAbortRef = useRef<AbortController | null>(null);
   const skipSolicitarVehiculoResetRef = useRef(false);
@@ -1141,6 +1142,29 @@ export default function UsuarioView() {
     }));
     setShowSubirDocumentosErrors(false);
     resetGastoDraft();
+  };
+
+  const handleXmlFileSelection = async (file: File | null) => {
+    setXmlFile(file);
+    if (!file) {
+      return;
+    }
+
+    const requestId = xmlAmountParseRef.current + 1;
+    xmlAmountParseRef.current = requestId;
+
+    const montoDetectado = await parseCfdiAmountFromXmlFile(file);
+    if (xmlAmountParseRef.current !== requestId) {
+      return;
+    }
+
+    if (Number.isFinite(montoDetectado) && montoDetectado > 0) {
+      setMontoGasto(montoDetectado.toFixed(2));
+      setShowGastoDocumentoErrors(false);
+      return;
+    }
+
+    showToast('No se pudo detectar el monto del XML. Puedes capturarlo manualmente.', 'info');
   };
 
   const handleSubirDocumentos = async () => {
@@ -2543,7 +2567,9 @@ export default function UsuarioView() {
                     <input
                       type="file"
                       accept=".xml"
-                      onChange={(e) => setXmlFile(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        void handleXmlFileSelection(e.target.files?.[0] || null);
+                      }}
                       className="hidden"
                     />
                   </label>
@@ -2626,6 +2652,9 @@ export default function UsuarioView() {
                     gastoMontoError ? 'border-rose-300 bg-rose-50' : 'border-gray-300'
                   }`}
                 />
+                {xmlFile && (
+                  <p className="mt-1 text-[11px] text-emerald-700">Monto autocompletado desde XML (editable).</p>
+                )}
               </div>
               <div className="flex justify-end">
                 <button
