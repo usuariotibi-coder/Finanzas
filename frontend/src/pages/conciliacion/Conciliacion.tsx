@@ -431,6 +431,9 @@ export default function Conciliacion() {
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-900">{factura.razonSocial}</p>
                       <p className="text-xs text-gray-500">{factura.rfc}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Usuario: <span className="font-medium text-slate-700">{factura.userName || factura.userId || 'Sin usuario'}</span>
+                      </p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <p className="text-sm text-gray-900">{factura.fecha}</p>

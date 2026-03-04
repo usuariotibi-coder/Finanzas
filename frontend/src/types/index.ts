@@ -106,6 +106,7 @@ export interface Factura {
   id: string;
   viaticoId?: string;
   userId: string;
+  userName?: string;
   folio: string;
   uuid: string;
   rfc: string;

@@ -229,6 +229,7 @@ const mapFacturaFromApi = (raw: RawRecord): Factura => ({
   id: toStringId(raw.id),
   viaticoId: toNullableString(raw.viatico ? toStringId(raw.viatico) : undefined),
   userId: toStringId(raw.user),
+  userName: toNullableString(raw.user_name),
   folio: parseString(raw.folio),
   uuid: parseString(raw.uuid),
   rfc: parseString(raw.rfc),
