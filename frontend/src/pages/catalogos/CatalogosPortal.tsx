@@ -39,6 +39,7 @@ import {
 const ACTIVITY_CATEGORIES: GSActivity['category'][] = ['job', 'travel', 'facility', 'employee', 'office', 'vehicle'];
 const PROTECTED_DEPARTMENTS = new Set(['business_intelligence', 'finanzas', 'operaciones']);
 const DEFAULT_ACTIVITY_ACCOUNT = '5450';
+const DEFAULT_ACTIVITY_CODE = 'N/A';
 
 const normalizeDepartmentValue = (input: string) =>
   input
@@ -154,6 +155,7 @@ export default function CatalogosPortal() {
       await createCatalogGSActivity({
         label,
         account: DEFAULT_ACTIVITY_ACCOUNT,
+        code: DEFAULT_ACTIVITY_CODE,
         category: activityForm.category,
         proyectoRequerido: activityForm.proyectoRequerido,
         note: activityForm.note.trim() || undefined,
