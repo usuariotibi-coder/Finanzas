@@ -2,10 +2,11 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "npx serve -s dist -l tcp://0.0.0.0:$PORT"
+startCommand = "npm run start"
 
 [build.env]
 NPM_CONFIG_PRODUCTION = "false"
+NIXPACKS_NODE_VERSION = "20"
 
 [build.commands]
 install = "npm ci"
