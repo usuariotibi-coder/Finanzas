@@ -106,6 +106,14 @@ export default function CatalogosPortal() {
     value: '',
   });
 
+  const availableDepartmentLabels = Array.from(
+    new Set(
+      departments
+        .map((item) => item.label.trim())
+        .filter(Boolean)
+    )
+  );
+
   const clearMessages = () => {
     setError('');
     setSuccess('');
@@ -236,8 +244,13 @@ export default function CatalogosPortal() {
     clearMessages();
     const cardNumber = tarjetaForm.cardNumber.trim();
     const cardHolder = tarjetaForm.cardHolder.trim();
-    if (!cardNumber || !cardHolder) {
-      setError('La tarjeta requiere numero y titular.');
+    const department = tarjetaForm.department.trim();
+    if (!cardNumber || !cardHolder || !department) {
+      setError('La tarjeta requiere numero, titular y departamento.');
+      return;
+    }
+    if (!availableDepartmentLabels.includes(department)) {
+      setError('Selecciona un departamento valido del catalogo.');
       return;
     }
     if (tarjetas.some((item) => item.cardNumber === cardNumber)) {
@@ -248,7 +261,7 @@ export default function CatalogosPortal() {
       await createAmexTarjeta({
         cardNumber,
         cardHolder,
-        department: tarjetaForm.department.trim() || 'Sin departamento',
+        department,
         activa: tarjetaForm.activa,
       });
       await refreshCatalogs();
@@ -524,12 +537,18 @@ export default function CatalogosPortal() {
               placeholder="Titular"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <input
+            <select
               value={tarjetaForm.department}
               onChange={(event) => setTarjetaForm((prev) => ({ ...prev, department: event.target.value }))}
-              placeholder="Departamento"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
+            >
+              <option value="">Selecciona departamento</option>
+              {availableDepartmentLabels.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </select>
             <label className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
               <input
                 type="checkbox"
