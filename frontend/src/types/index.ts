@@ -151,6 +151,7 @@ export interface ValidacionCFDI {
 export interface Consumo {
   id: string;
   userId: string;
+  userName?: string;
   viaticoId?: string;
   fecha: string;
   comercio: string;
@@ -168,6 +169,7 @@ export interface Consumo {
 export interface TicketAMEX {
   id: string;
   userId: string;
+  userName?: string;
   cardNumber: string;          // Últimos 4 dígitos
   cardHolder: string;          // Nombre del titular
   fecha: string;

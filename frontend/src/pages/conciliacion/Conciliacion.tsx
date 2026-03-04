@@ -91,6 +91,7 @@ export default function Conciliacion() {
   const [uploadSaving, setUploadSaving] = useState(false);
   const [showUploadErrors, setShowUploadErrors] = useState(false);
   const [selectedMes, setSelectedMes] = useLocalStorageState('conciliacion:selectedMes', 'todos');
+  const [selectedUsuario, setSelectedUsuario] = useLocalStorageState('conciliacion:selectedUsuario', 'todos');
   const [vistaActiva, setVistaActiva] = useLocalStorageState<'facturas' | 'consumos' | 'amex'>('conciliacion:vistaActiva', 'facturas');
   const [alertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
   const facturasById = useMemo(
@@ -120,6 +121,7 @@ export default function Conciliacion() {
     return parts.length >= 2 ? parts[1] : '';
   };
   const filtraPorMes = (fecha: string) => selectedMes === 'todos' || getMesKey(fecha) === selectedMes;
+  const filtraPorUsuario = (userId?: string | null) => selectedUsuario === 'todos' || String(userId || '') === selectedUsuario;
   const mesesDisponibles = Array.from(
     new Set(
       [...facturas, ...consumos, ...ticketsAMEX]
@@ -127,10 +129,43 @@ export default function Conciliacion() {
         .filter(Boolean)
     )
   ).sort();
+  const usuariosDisponibles = useMemo(() => {
+    const users = new Map<string, string>();
+    facturas.forEach((factura) => {
+      const id = String(factura.userId || '').trim();
+      if (!id) {
+        return;
+      }
+      const label = String(factura.userName || factura.userId || id).trim() || id;
+      if (!users.has(id) || users.get(id) === id) {
+        users.set(id, label);
+      }
+    });
+    consumos.forEach((consumo) => {
+      const id = String(consumo.userId || '').trim();
+      if (!id || users.has(id)) {
+        return;
+      }
+      const label = String(consumo.userName || consumo.userId || id).trim() || id;
+      users.set(id, label);
+    });
+    ticketsAMEX.forEach((ticket) => {
+      const id = String(ticket.userId || '').trim();
+      if (!id || users.has(id)) {
+        return;
+      }
+      const label = String(ticket.userName || ticket.userId || id).trim() || id;
+      users.set(id, label);
+    });
 
-  const facturasFiltradas = facturas.filter((factura) => filtraPorMes(factura.fecha));
-  const consumosFiltrados = consumos.filter((consumo) => filtraPorMes(consumo.fecha));
-  const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha));
+    return Array.from(users.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { sensitivity: 'base' }));
+  }, [facturas, consumos, ticketsAMEX]);
+
+  const facturasFiltradas = facturas.filter((factura) => filtraPorMes(factura.fecha) && filtraPorUsuario(factura.userId));
+  const consumosFiltrados = consumos.filter((consumo) => filtraPorMes(consumo.fecha) && filtraPorUsuario(consumo.userId));
+  const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha) && filtraPorUsuario(ticket.userId));
 
   const facturasValidadas = facturasFiltradas.filter(f => f.status === 'validada').length;
   const facturasPendientes = facturasFiltradas.filter(f => f.status === 'pendiente').length;
@@ -316,6 +351,18 @@ export default function Conciliacion() {
                     </option>
                   ))}
                 </select>
+                <select
+                  value={selectedUsuario}
+                  onChange={(e) => setSelectedUsuario(e.target.value)}
+                  className="min-w-[170px] px-2.5 py-1.5 text-[11px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="todos">Todos los usuarios</option>
+                  {usuariosDisponibles.map((usuarioOption) => (
+                    <option key={usuarioOption.id} value={usuarioOption.id}>
+                      {usuarioOption.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -431,9 +478,6 @@ export default function Conciliacion() {
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-900">{factura.razonSocial}</p>
                       <p className="text-xs text-gray-500">{factura.rfc}</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Usuario: <span className="font-medium text-slate-700">{factura.userName || factura.userId || 'Sin usuario'}</span>
-                      </p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <p className="text-sm text-gray-900">{factura.fecha}</p>

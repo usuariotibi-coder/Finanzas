@@ -255,6 +255,7 @@ const mapFacturaFromApi = (raw: RawRecord): Factura => ({
 const mapConsumoFromApi = (raw: RawRecord): Consumo => ({
   id: toStringId(raw.id),
   userId: toStringId(raw.user),
+  userName: toNullableString(raw.user_name),
   viaticoId: toNullableString(raw.viatico ? toStringId(raw.viatico) : undefined),
   fecha: parseString(raw.fecha),
   comercio: parseString(raw.comercio),
@@ -279,6 +280,7 @@ const mapAlertaConciliacionFromApi = (raw: RawRecord): AlertaConciliacion => ({
 const mapTicketAmexFromApi = (raw: RawRecord): TicketAMEX => ({
   id: toStringId(raw.id),
   userId: toStringId(raw.user),
+  userName: toNullableString(raw.user_name),
   cardNumber: parseString(raw.card_number),
   cardHolder: parseString(raw.card_holder),
   fecha: parseString(raw.fecha),
