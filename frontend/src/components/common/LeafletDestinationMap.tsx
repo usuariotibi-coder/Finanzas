@@ -167,6 +167,7 @@ interface LeafletDestinationMapProps {
   defaultZoom?: number;
   fallbackZoom?: number;
   showModeControl?: boolean;
+  showSearchControl?: boolean;
   initialMode?: MapMode;
   onMapClick?: (coords: LatLngPoint) => void;
 }
@@ -253,6 +254,7 @@ export default function LeafletDestinationMap({
   defaultZoom = 17,
   fallbackZoom = 5,
   showModeControl = true,
+  showSearchControl = true,
   initialMode = 'hibrido',
   onMapClick,
 }: LeafletDestinationMapProps) {
@@ -637,51 +639,53 @@ export default function LeafletDestinationMap({
 
   return (
     <div className="relative h-full w-full">
-      <div className="pointer-events-auto absolute left-3 top-3 z-[1100] w-[min(33rem,calc(100%-6.5rem))] sm:w-[min(34rem,calc(100%-14rem))]">
-        <div className="rounded-2xl border border-slate-200/95 bg-white/95 p-1.5 shadow-xl backdrop-blur">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5">
-            <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6.04 6.04a7.5 7.5 0 0 0 10.61 10.61Z" />
-            </svg>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => {
-                setSearchTerm(event.target.value);
-                setShowSearchPanel(true);
-              }}
-              onFocus={() => setShowSearchPanel(true)}
-              placeholder="Buscar empresa, calle o direccion..."
-              className="w-full border-0 bg-transparent p-0 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
-            />
-            {isSearchingPlaces ? (
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
-            ) : null}
-          </div>
-          <p className="px-1.5 pt-1 text-[10px] text-slate-500">Escribe 3 letras o mas y elige una opcion para mover el mapa.</p>
-          {shouldShowSearchDropdown ? (
-            <div className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white">
-              {searchResults.map((result) => (
-                <button
-                  key={`${result.name}:${result.lat.toFixed(6)}:${result.lng.toFixed(6)}`}
-                  type="button"
-                  onClick={() => handleSelectSearchResult(result)}
-                  className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-sky-50"
-                >
-                  <p className="text-xs font-semibold text-slate-800">{result.name}</p>
-                  <p className="truncate text-[10px] text-slate-500">{result.address}</p>
-                  {formatSearchDistance(result.distance) ? (
-                    <p className="text-[10px] font-medium text-sky-700">{formatSearchDistance(result.distance)} desde el punto actual</p>
-                  ) : null}
-                </button>
-              ))}
-              {searchError && !isSearchingPlaces && searchResults.length === 0 ? (
-                <p className="px-3 py-2 text-[10px] text-amber-700">{searchError}</p>
+      {showSearchControl ? (
+        <div className="pointer-events-auto absolute left-3 top-3 z-[1100] w-[min(33rem,calc(100%-6.5rem))] sm:w-[min(34rem,calc(100%-14rem))]">
+          <div className="rounded-2xl border border-slate-200/95 bg-white/95 p-1.5 shadow-xl backdrop-blur">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5">
+              <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6.04 6.04a7.5 7.5 0 0 0 10.61 10.61Z" />
+              </svg>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setShowSearchPanel(true);
+                }}
+                onFocus={() => setShowSearchPanel(true)}
+                placeholder="Buscar empresa, calle o direccion..."
+                className="w-full border-0 bg-transparent p-0 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"
+              />
+              {isSearchingPlaces ? (
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-sky-500" />
               ) : null}
             </div>
-          ) : null}
+            <p className="px-1.5 pt-1 text-[10px] text-slate-500">Escribe 3 letras o mas y elige una opcion para mover el mapa.</p>
+            {shouldShowSearchDropdown ? (
+              <div className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                {searchResults.map((result) => (
+                  <button
+                    key={`${result.name}:${result.lat.toFixed(6)}:${result.lng.toFixed(6)}`}
+                    type="button"
+                    onClick={() => handleSelectSearchResult(result)}
+                    className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-sky-50"
+                  >
+                    <p className="text-xs font-semibold text-slate-800">{result.name}</p>
+                    <p className="truncate text-[10px] text-slate-500">{result.address}</p>
+                    {formatSearchDistance(result.distance) ? (
+                      <p className="text-[10px] font-medium text-sky-700">{formatSearchDistance(result.distance)} desde el punto actual</p>
+                    ) : null}
+                  </button>
+                ))}
+                {searchError && !isSearchingPlaces && searchResults.length === 0 ? (
+                  <p className="px-3 py-2 text-[10px] text-amber-700">{searchError}</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
       {showModeControl ? (
         <div className="pointer-events-auto absolute right-3 top-3 z-[1000] rounded-2xl border border-slate-200/90 bg-white/90 p-1 shadow-xl backdrop-blur">
           <p className="px-2 pb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500">Vista</p>

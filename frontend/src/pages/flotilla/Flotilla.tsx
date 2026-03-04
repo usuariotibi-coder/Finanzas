@@ -70,6 +70,7 @@ function DestinationLayeredMap({ coords, destinationLabel, compact = false }: De
       marker={{ lat: coords[0], lng: coords[1] }}
       markerTitle="Destino seleccionado"
       markerSubtitle={tooltipText}
+      showSearchControl={false}
       showModeControl={!compact}
       defaultZoom={compact ? 15 : 17}
     />
