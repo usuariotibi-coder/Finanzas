@@ -433,6 +433,14 @@ interface ToastMessage {
   type: ToastType;
 }
 
+interface ConfirmDialogState {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  tone: 'danger' | 'info';
+}
+
 export default function UsuarioView() {
   const { user } = useAuth();
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
@@ -486,8 +494,10 @@ export default function UsuarioView() {
   const [hiddenVehiculoCards, setHiddenVehiculoCards] = useLocalStorageState<string[]>('usuario:hiddenVehiculoCards', []);
   const [hiddenViajeCards, setHiddenViajeCards] = useLocalStorageState<string[]>('usuario:hiddenViajeCards', []);
   const [deletingCardKey, setDeletingCardKey] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
+  const confirmResolverRef = useRef<((accepted: boolean) => void) | null>(null);
   const destinoVehiculoSelectionRef = useRef(0);
   const destinoVehiculoAbortRef = useRef<AbortController | null>(null);
   const skipSolicitarVehiculoResetRef = useRef(false);
@@ -816,6 +826,43 @@ export default function UsuarioView() {
   useEscapeKey(() => setShowDestinoVehiculoMapExpanded(false), showDestinoVehiculoMapExpanded);
   useEscapeKey(resetExtensionState, showModalExtenderViaje);
   useEscapeKey(() => setShowVehicleReturnSuccess(false), showVehicleReturnSuccess);
+  useEscapeKey(() => {
+    if (!confirmDialog) {
+      return;
+    }
+    const resolver = confirmResolverRef.current;
+    confirmResolverRef.current = null;
+    setConfirmDialog(null);
+    resolver?.(false);
+  }, Boolean(confirmDialog));
+
+  const openConfirmDialog = ({
+    title,
+    message,
+    confirmLabel = 'Aceptar',
+    cancelLabel = 'Cancelar',
+    tone = 'danger',
+  }: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    tone?: ConfirmDialogState['tone'];
+  }) =>
+    new Promise<boolean>((resolve) => {
+      if (confirmResolverRef.current) {
+        confirmResolverRef.current(false);
+      }
+      confirmResolverRef.current = resolve;
+      setConfirmDialog({ title, message, confirmLabel, cancelLabel, tone });
+    });
+
+  const resolveConfirmDialog = (accepted: boolean) => {
+    const resolver = confirmResolverRef.current;
+    confirmResolverRef.current = null;
+    setConfirmDialog(null);
+    resolver?.(accepted);
+  };
 
   const openDatePicker = (event: { currentTarget: HTMLInputElement }) => {
     const input = event.currentTarget;
@@ -1354,10 +1401,15 @@ export default function UsuarioView() {
   const handleEliminarTarjetaViatico = async (viatico: Viatico) => {
     const id = String(viatico.id);
     const isCompleted = isCompletedViatico(viatico);
-    const confirmMessage = isCompleted
-      ? 'Este viatico ya esta completado. Solo se ocultara la tarjeta de tu portal. Deseas continuar?'
-      : 'Este viatico no esta completado. Se eliminaran todos los datos relacionados. Deseas continuar?';
-    if (!window.confirm(confirmMessage)) {
+    const shouldContinue = await openConfirmDialog({
+      title: isCompleted ? 'Ocultar tarjeta de viatico' : 'Eliminar viatico',
+      message: isCompleted
+        ? 'Este viatico ya esta completado. Solo se ocultara la tarjeta en tu portal.'
+        : 'Este viatico no esta completado. Se eliminaran todos sus datos relacionados.',
+      confirmLabel: isCompleted ? 'Ocultar tarjeta' : 'Eliminar viatico',
+      tone: isCompleted ? 'info' : 'danger',
+    });
+    if (!shouldContinue) {
       return;
     }
 
@@ -1392,10 +1444,15 @@ export default function UsuarioView() {
   const handleEliminarTarjetaVehiculo = async (assignment: VehicleAssignment) => {
     const id = String(assignment.id);
     const isCompleted = isCompletedVehiculo(assignment);
-    const confirmMessage = isCompleted
-      ? 'Esta solicitud de vehiculo ya esta completada. Solo se ocultara la tarjeta. Deseas continuar?'
-      : 'Esta solicitud de vehiculo no esta completada. Se eliminaran todos sus datos. Deseas continuar?';
-    if (!window.confirm(confirmMessage)) {
+    const shouldContinue = await openConfirmDialog({
+      title: isCompleted ? 'Ocultar tarjeta de vehiculo' : 'Eliminar solicitud de vehiculo',
+      message: isCompleted
+        ? 'Esta solicitud de vehiculo ya esta completada. Solo se ocultara la tarjeta.'
+        : 'Esta solicitud de vehiculo no esta completada. Se eliminaran todos sus datos.',
+      confirmLabel: isCompleted ? 'Ocultar tarjeta' : 'Eliminar solicitud',
+      tone: isCompleted ? 'info' : 'danger',
+    });
+    if (!shouldContinue) {
       return;
     }
 
@@ -1432,10 +1489,15 @@ export default function UsuarioView() {
   const handleEliminarTarjetaViaje = async (solicitud: SolicitudViaje) => {
     const id = String(solicitud.id);
     const isCompleted = isCompletedViaje(solicitud);
-    const confirmMessage = isCompleted
-      ? 'Esta solicitud de viaje ya esta completada. Solo se ocultara la tarjeta. Deseas continuar?'
-      : 'Esta solicitud de viaje no esta completada. Se eliminaran todos sus datos. Deseas continuar?';
-    if (!window.confirm(confirmMessage)) {
+    const shouldContinue = await openConfirmDialog({
+      title: isCompleted ? 'Ocultar tarjeta de viaje' : 'Eliminar solicitud de viaje',
+      message: isCompleted
+        ? 'Esta solicitud de viaje ya esta completada. Solo se ocultara la tarjeta.'
+        : 'Esta solicitud de viaje no esta completada. Se eliminaran todos sus datos.',
+      confirmLabel: isCompleted ? 'Ocultar tarjeta' : 'Eliminar solicitud',
+      tone: isCompleted ? 'info' : 'danger',
+    });
+    if (!shouldContinue) {
       return;
     }
 
@@ -1543,8 +1605,13 @@ export default function UsuarioView() {
     }
   };
 
-  const handleClearLocalData = () => {
-    const shouldClear = window.confirm('Esto borrara los datos guardados localmente. ?Deseas continuar?');
+  const handleClearLocalData = async () => {
+    const shouldClear = await openConfirmDialog({
+      title: 'Limpiar datos locales',
+      message: 'Esto borrara los datos guardados localmente en este navegador.',
+      confirmLabel: 'Si, limpiar',
+      tone: 'danger',
+    });
     if (!shouldClear) {
       return;
     }
@@ -1580,6 +1647,52 @@ export default function UsuarioView() {
               >
                 x
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-900/60 p-3 backdrop-blur-sm sm:p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className={`h-1 w-full ${
+              confirmDialog.tone === 'danger'
+                ? 'bg-gradient-to-r from-rose-500 via-orange-500 to-amber-400'
+                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500'
+            }`} />
+            <div className="px-5 py-4 sm:px-6 sm:py-5">
+              <div className="flex items-start gap-3">
+                <span className={`mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${
+                  confirmDialog.tone === 'danger'
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-sky-100 text-sky-700'
+                }`}>
+                  {confirmDialog.tone === 'danger' ? '!' : 'i'}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold text-slate-900">{confirmDialog.title}</h3>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">{confirmDialog.message}</p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => resolveConfirmDialog(false)}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 sm:w-auto"
+                >
+                  {confirmDialog.cancelLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resolveConfirmDialog(true)}
+                  className={`w-full rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors sm:w-auto ${
+                    confirmDialog.tone === 'danger'
+                      ? 'bg-rose-600 hover:bg-rose-700'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  {confirmDialog.confirmLabel}
+                </button>
+              </div>
             </div>
           </div>
         </div>
