@@ -38,6 +38,7 @@ import {
 
 const ACTIVITY_CATEGORIES: GSActivity['category'][] = ['job', 'travel', 'facility', 'employee', 'office', 'vehicle'];
 const PROTECTED_DEPARTMENTS = new Set(['business_intelligence', 'finanzas', 'operaciones']);
+const DEFAULT_ACTIVITY_ACCOUNT = '5450';
 
 const normalizeDepartmentValue = (input: string) =>
   input
@@ -53,6 +54,20 @@ const splitKeywords = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const buildNextCuentaCodigo = (items: CuentaContable[]) => {
+  const numericCodes = items
+    .map((item) => item.codigo.trim())
+    .filter((code) => /^\d+$/.test(code))
+    .map((code) => Number(code))
+    .filter((code) => Number.isFinite(code));
+
+  let next = numericCodes.length > 0 ? Math.max(...numericCodes) + 1 : 1000;
+  while (items.some((item) => item.codigo === String(next))) {
+    next += 1;
+  }
+  return String(next);
+};
+
 export default function CatalogosPortal() {
   const [activities, setActivities] = useState<GSActivity[]>(() => [...GS_ACTIVITIES].sort((a, b) => a.id - b.id));
   const [cuentas, setCuentas] = useState<CuentaContable[]>(() => [...CUENTAS_CONTABLES]);
@@ -64,15 +79,12 @@ export default function CatalogosPortal() {
 
   const [activityForm, setActivityForm] = useState({
     label: '',
-    account: '5450',
-    code: 'N/A',
     category: 'travel' as GSActivity['category'],
     proyectoRequerido: true,
     note: '',
   });
 
   const [cuentaForm, setCuentaForm] = useState({
-    codigo: '',
     nombre: '',
     descripcion: '',
     categoria: 'General',
@@ -141,8 +153,7 @@ export default function CatalogosPortal() {
     try {
       await createCatalogGSActivity({
         label,
-        account: activityForm.account.trim() || '5450',
-        code: activityForm.code.trim() || 'N/A',
+        account: DEFAULT_ACTIVITY_ACCOUNT,
         category: activityForm.category,
         proyectoRequerido: activityForm.proyectoRequerido,
         note: activityForm.note.trim() || undefined,
@@ -151,8 +162,6 @@ export default function CatalogosPortal() {
       setSuccess('Actividad agregada.');
       setActivityForm({
         label: '',
-        account: '5450',
-        code: 'N/A',
         category: activityForm.category,
         proyectoRequerido: true,
         note: '',
@@ -179,16 +188,12 @@ export default function CatalogosPortal() {
 
   const addCuenta = async () => {
     clearMessages();
-    const codigo = cuentaForm.codigo.trim();
     const nombre = cuentaForm.nombre.trim();
-    if (!codigo || !nombre) {
-      setError('La cuenta requiere codigo y nombre.');
+    if (!nombre) {
+      setError('La cuenta requiere nombre.');
       return;
     }
-    if (cuentas.some((item) => item.codigo === codigo)) {
-      setError('Ya existe una cuenta con ese codigo.');
-      return;
-    }
+    const codigo = buildNextCuentaCodigo(cuentas);
     try {
       await createCatalogCuentaContable({
         codigo,
@@ -202,7 +207,6 @@ export default function CatalogosPortal() {
       await refreshCatalogs();
       setSuccess('Cuenta contable agregada.');
       setCuentaForm({
-        codigo: '',
         nombre: '',
         descripcion: '',
         categoria: cuentaForm.categoria,
@@ -335,18 +339,6 @@ export default function CatalogosPortal() {
               placeholder="Nombre"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <input
-              value={activityForm.account}
-              onChange={(event) => setActivityForm((prev) => ({ ...prev, account: event.target.value }))}
-              placeholder="Cuenta"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <input
-              value={activityForm.code}
-              onChange={(event) => setActivityForm((prev) => ({ ...prev, code: event.target.value }))}
-              placeholder="Codigo"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
             <select
               value={activityForm.category}
               onChange={(event) =>
@@ -395,7 +387,6 @@ export default function CatalogosPortal() {
                 <tr>
                   <th className="px-3 py-2">ID</th>
                   <th className="px-3 py-2">Nombre</th>
-                  <th className="px-3 py-2">Cuenta</th>
                   <th className="px-3 py-2">Categoria</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -405,7 +396,6 @@ export default function CatalogosPortal() {
                   <tr key={item.id} className="border-t border-slate-200">
                     <td className="px-3 py-2">{item.id}</td>
                     <td className="px-3 py-2">{item.label}</td>
-                    <td className="px-3 py-2">{item.account}</td>
                     <td className="px-3 py-2">{CATEGORY_LABELS[item.category] || item.category}</td>
                     <td className="px-3 py-2 text-right">
                       <button
@@ -429,12 +419,6 @@ export default function CatalogosPortal() {
           <p className="mt-1 text-xs text-slate-600">Dropdown de clasificacion AMEX.</p>
 
           <div className="mt-4 grid gap-2 md:grid-cols-2">
-            <input
-              value={cuentaForm.codigo}
-              onChange={(event) => setCuentaForm((prev) => ({ ...prev, codigo: event.target.value }))}
-              placeholder="Codigo"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
             <input
               value={cuentaForm.nombre}
               onChange={(event) => setCuentaForm((prev) => ({ ...prev, nombre: event.target.value }))}
@@ -491,7 +475,6 @@ export default function CatalogosPortal() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-slate-600">
                 <tr>
-                  <th className="px-3 py-2">Codigo</th>
                   <th className="px-3 py-2">Nombre</th>
                   <th className="px-3 py-2">Categoria</th>
                   <th className="px-3 py-2">Activa</th>
@@ -501,7 +484,6 @@ export default function CatalogosPortal() {
               <tbody>
                 {cuentas.map((item) => (
                   <tr key={item.codigo} className="border-t border-slate-200">
-                    <td className="px-3 py-2">{item.codigo}</td>
                     <td className="px-3 py-2">{item.nombre}</td>
                     <td className="px-3 py-2">{item.categoria}</td>
                     <td className="px-3 py-2">{item.activa ? 'Si' : 'No'}</td>
