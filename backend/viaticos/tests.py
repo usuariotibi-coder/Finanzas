@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from flotilla.models import CargaGasolina, Vehicle, VehicleAssignment, VehicleExpense
+from flotilla.services import ensure_expense_from_gasoline_load
 from proyectos.models import Proyecto
 from .models import Viatico
 
@@ -107,6 +109,16 @@ class ProyectoGastadoSyncTests(APITestCase):
             responsable='Sync User',
             departamento='operaciones',
             descripcion='Sincronizacion B',
+        )
+        self.vehicle = Vehicle.objects.create(
+            marca='Nissan',
+            modelo='Versa',
+            anio=2024,
+            placas='SYNC-001',
+            numero_serie='SYNC-SERIE-0001',
+            color='Gris',
+            km_actual=12000,
+            status=Vehicle.Status.DISPONIBLE,
         )
 
     def test_pending_viatico_does_not_count_until_approved(self):
@@ -212,3 +224,87 @@ class ProyectoGastadoSyncTests(APITestCase):
 
         self.project_a.refresh_from_db()
         self.assertEqual(self.project_a.gastado, Decimal('0.00'))
+
+    def test_project_spent_includes_vehicle_expenses(self):
+        assignment = VehicleAssignment.objects.create(
+            vehicle=self.vehicle,
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Salida de operacion',
+            proposito=VehicleAssignment.Proposito.OPERACIONES,
+            fecha_inicio='2026-02-10',
+            km_inicial=12000,
+            status=VehicleAssignment.Status.ASIGNADO,
+        )
+
+        VehicleExpense.objects.create(
+            vehicle=self.vehicle,
+            assignment=assignment,
+            tipo=VehicleExpense.Tipo.GASOLINA,
+            fecha='2026-02-10',
+            monto=Decimal('780.50'),
+            descripcion='Carga de gasolina',
+            proveedor='PEMEX',
+        )
+
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('780.50'))
+
+    def test_project_spent_updates_when_vehicle_expense_changes_project(self):
+        assignment = VehicleAssignment.objects.create(
+            vehicle=self.vehicle,
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Salida de operacion',
+            proposito=VehicleAssignment.Proposito.OPERACIONES,
+            fecha_inicio='2026-02-10',
+            km_inicial=12000,
+            status=VehicleAssignment.Status.ASIGNADO,
+        )
+        expense = VehicleExpense.objects.create(
+            vehicle=self.vehicle,
+            assignment=assignment,
+            tipo=VehicleExpense.Tipo.GASOLINA,
+            fecha='2026-02-10',
+            monto=Decimal('600.00'),
+            descripcion='Carga de gasolina',
+            proveedor='PEMEX',
+        )
+
+        assignment.proyecto = self.project_b
+        assignment.save()
+
+        self.project_a.refresh_from_db()
+        self.project_b.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('0.00'))
+        self.assertEqual(self.project_b.gastado, Decimal('600.00'))
+        self.assertEqual(expense.assignment_id, assignment.id)
+
+    def test_project_spent_counts_gasoline_loads_via_vehicle_expense_sync(self):
+        assignment = VehicleAssignment.objects.create(
+            vehicle=self.vehicle,
+            user=self.user,
+            proyecto=self.project_a,
+            motivo='Salida de operacion',
+            proposito=VehicleAssignment.Proposito.OPERACIONES,
+            fecha_inicio='2026-02-10',
+            km_inicial=12000,
+            status=VehicleAssignment.Status.ASIGNADO,
+        )
+
+        load = CargaGasolina.objects.create(
+            vehicle=self.vehicle,
+            assignment=assignment,
+            user=self.user,
+            fecha='2026-02-10',
+            litros=Decimal('30.00'),
+            precio_litro=Decimal('25.00'),
+            total=Decimal('750.00'),
+            odometro=12100,
+            estacion='PEMEX',
+        )
+        ensure_expense_from_gasoline_load(load)
+
+        self.assertEqual(VehicleExpense.objects.filter(assignment=assignment, tipo='gasolina').count(), 1)
+        self.project_a.refresh_from_db()
+        self.assertEqual(self.project_a.gastado, Decimal('750.00'))
