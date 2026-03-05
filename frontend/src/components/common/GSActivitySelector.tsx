@@ -11,6 +11,7 @@ interface GSActivitySelectorProps {
   required?: boolean;
   label?: string;
   inputClassName?: string;
+  compact?: boolean;
 }
 
 export default function GSActivitySelector({
@@ -20,7 +21,8 @@ export default function GSActivitySelector({
   disabled = false,
   required = false,
   label = 'Concepto (GS Activity)',
-  inputClassName = ''
+  inputClassName = '',
+  compact = false,
 }: GSActivitySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -58,27 +60,37 @@ export default function GSActivitySelector({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full min-h-[74px] px-4 py-2 text-left border rounded-lg flex items-center justify-between ${
+        className={`w-full px-4 text-left border rounded-lg flex items-center justify-between ${
+          compact ? 'min-h-[44px] py-2' : 'min-h-[74px] py-2'
+        } ${
           disabled
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
             : 'bg-white hover:border-primary-500 cursor-pointer'
         } ${isOpen ? 'border-primary-500 ring-2 ring-primary-200' : 'border-gray-300'} ${inputClassName}`}
       >
         {selectedActivity ? (
-          <div className="flex flex-1 flex-col">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-gray-900">
+          <div className={`flex flex-1 ${compact ? 'min-w-0 items-center' : 'flex-col'}`}>
+            {compact ? (
+              <span className="truncate text-sm font-medium text-gray-900">
                 {selectedActivity.label}
               </span>
-              {selectedActivity.proyectoRequerido && (
-                <span className="px-2 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-700">
-                  Requiere Proyecto
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    {selectedActivity.label}
+                  </span>
+                  {selectedActivity.proyectoRequerido && (
+                    <span className="px-2 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-700">
+                      Requiere Proyecto
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-gray-500 truncate">
+                  Categoria: {CATEGORY_LABELS[selectedActivity.category] || selectedActivity.category}
                 </span>
-              )}
-            </div>
-            <span className="text-xs text-gray-500 truncate">
-              Categoria: {CATEGORY_LABELS[selectedActivity.category] || selectedActivity.category}
-            </span>
+              </>
+            )}
           </div>
         ) : (
           <span className="text-gray-500">Selecciona un concepto...</span>

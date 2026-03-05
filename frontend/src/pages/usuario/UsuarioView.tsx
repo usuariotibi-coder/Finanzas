@@ -2809,6 +2809,7 @@ export default function UsuarioView() {
                     onChange={(proyectoId) => setFormNuevoViatico({ ...formNuevoViatico, proyectoId })}
                     required={proyectoRequeridoViatico}
                     label="Proyecto"
+                    compact
                     inputClassName={nuevoViaticoErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
                   />
                   {nuevoViaticoErrors.proyectoId && (
@@ -2828,6 +2829,7 @@ export default function UsuarioView() {
                       }))}
                     filterByCategory="travel"
                     label="Tipo de Actividad"
+                    compact
                     inputClassName={nuevoViaticoErrors.gsActivityId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
                   />
                   {nuevoViaticoErrors.gsActivityId && (

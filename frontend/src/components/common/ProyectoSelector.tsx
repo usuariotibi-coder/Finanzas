@@ -20,6 +20,7 @@ interface ProyectoSelectorProps {
   disabled?: boolean;
   label?: string;
   inputClassName?: string;
+  compact?: boolean;
 }
 
 const STORAGE_KEY = 'proyectos_data';
@@ -54,7 +55,8 @@ export default function ProyectoSelector({
   showCreateOption = false,
   disabled = false,
   label = 'Proyecto',
-  inputClassName = ''
+  inputClassName = '',
+  compact = false,
 }: ProyectoSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -151,7 +153,9 @@ export default function ProyectoSelector({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full min-h-[74px] px-4 py-2 text-left border rounded-lg flex items-center justify-between ${
+        className={`w-full px-4 text-left border rounded-lg flex items-center justify-between ${
+          compact ? 'min-h-[44px] py-2' : 'min-h-[74px] py-2'
+        } ${
           disabled
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
             : 'bg-white hover:border-primary-500 cursor-pointer'
@@ -162,25 +166,32 @@ export default function ProyectoSelector({
             <span className="text-sm font-medium text-gray-900">{NEW_PROJECT_LABEL}</span>
           </div>
         ) : selectedProyecto ? (
-          <div className="flex flex-1 flex-col">
+          <div className={`flex flex-1 ${compact ? 'min-w-0 items-center' : 'flex-col'}`}>
             {(() => {
               const selectedNombre = (selectedProyecto.nombre || '').trim();
               const selectedCliente = (selectedProyecto.cliente || '').trim();
               const sameClienteDescripcion = Boolean(selectedCliente && selectedNombre && sameText(selectedNombre, selectedCliente));
               const selectedDescripcion = sameClienteDescripcion ? '' : selectedNombre;
+              const compactLabel = selectedNombre || selectedCliente || selectedProyecto.codigo;
               return (
                 <>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-bold text-gray-900">{selectedProyecto.codigo}</span>
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getEstadoBadgeColor(selectedProyecto.estado)}`}>
-                      {getEstadoLabel(selectedProyecto.estado)}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-500 truncate">
-                    {sameClienteDescripcion
-                      ? `Cliente/Descripcion: ${selectedCliente || '-'}`
-                      : `Cliente: ${selectedCliente || '-'} | Descripcion: ${selectedDescripcion || '-'}`}
-                  </span>
+                  {compact ? (
+                    <span className="truncate text-sm font-medium text-gray-900">{compactLabel}</span>
+                  ) : (
+                    <>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-bold text-gray-900">{selectedProyecto.codigo}</span>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded ${getEstadoBadgeColor(selectedProyecto.estado)}`}>
+                          {getEstadoLabel(selectedProyecto.estado)}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500 truncate">
+                        {sameClienteDescripcion
+                          ? `Cliente/Descripcion: ${selectedCliente || '-'}`
+                          : `Cliente: ${selectedCliente || '-'} | Descripcion: ${selectedDescripcion || '-'}`}
+                      </span>
+                    </>
+                  )}
                 </>
               );
             })()}
