@@ -664,7 +664,7 @@ export default function Proyectos() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Código
+                      Proyecto
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nombre
@@ -694,7 +694,11 @@ export default function Proyectos() {
                     const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                     return (
-                      <tr key={proyecto.id} className="hover:bg-gray-50">
+                      <tr
+                        key={proyecto.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => abrirDetalleGastos(proyecto)}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-bold text-gray-900">{proyecto.codigo}</span>
                         </td>
@@ -737,10 +741,13 @@ export default function Proyectos() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
-                            onClick={() => abrirDetalleGastos(proyecto)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              abrirModal(proyecto);
+                            }}
                             className="text-primary-600 hover:text-primary-900 text-sm font-medium"
                           >
-                            Ver gastos
+                            Editar
                           </button>
                         </td>
                       </tr>
@@ -756,7 +763,11 @@ export default function Proyectos() {
                 const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                 return (
-                  <div key={proyecto.id} className="p-4 hover:bg-gray-50">
+                  <div
+                    key={proyecto.id}
+                    className="cursor-pointer p-4 hover:bg-gray-50"
+                    onClick={() => abrirDetalleGastos(proyecto)}
+                  >
                     <div className="space-y-3">
                       {/* Header Card */}
                       <div className="flex items-start justify-between">
@@ -776,10 +787,15 @@ export default function Proyectos() {
                           <p className="text-xs text-gray-600 mt-1">{proyecto.cliente}</p>
                         </div>
                         <button
-                          onClick={() => abrirDetalleGastos(proyecto)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            abrirModal(proyecto);
+                          }}
                           className="text-primary-600 hover:text-primary-900 ml-2"
                         >
-                          <span className="text-xs font-semibold">Gastos</span>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
                         </button>
                       </div>
 
