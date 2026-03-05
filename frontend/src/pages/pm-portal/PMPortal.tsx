@@ -79,6 +79,31 @@ export default function PMPortal() {
     [viaticoSeleccionado]
   );
 
+  const getProyectoJobLabel = (proyectoId?: string | null, proyectoNombre?: string | null) => {
+    const normalizedProyectoId = (proyectoId || '').trim().toLowerCase();
+    const normalizedProyectoNombre = (proyectoNombre || '').trim().toLowerCase();
+    const proyecto = proyectos.find((item) => {
+      const candidates = [
+        item.id,
+        item.codigo,
+        item.nombre,
+        item.cliente,
+        item.descripcion,
+      ]
+        .map((value) => (value || '').trim().toLowerCase())
+        .filter(Boolean);
+      return (
+        (normalizedProyectoId && candidates.includes(normalizedProyectoId)) ||
+        (normalizedProyectoNombre && candidates.includes(normalizedProyectoNombre))
+      );
+    });
+    const codigo = (proyecto?.codigo || '').trim();
+    if (codigo) {
+      return codigo;
+    }
+    return formatProyectoLabel(proyectoNombre || undefined, proyectoId || undefined);
+  };
+
   const showToast = (text: string, type: PortalToastType = 'info') => {
     if (toastTimeoutRef.current) {
       window.clearTimeout(toastTimeoutRef.current);
@@ -643,7 +668,7 @@ export default function PMPortal() {
                   <div>
                     <p className="text-[10px] text-gray-500">Proyecto</p>
                     <p className="text-[11px] text-gray-900 truncate">
-                      {formatProyectoLabel(viatico.proyectoNombre, viatico.proyectoId)}
+                      {getProyectoJobLabel(viatico.proyectoId, viatico.proyectoNombre)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -720,7 +745,7 @@ export default function PMPortal() {
                         <span className="truncate">{viaje.userName}</span>
                       </h3>
                       <p className="text-[11px] text-gray-600 truncate">
-                        {formatProyectoLabel(viaje.proyectoNombre, viaje.proyectoId)}
+                        {getProyectoJobLabel(viaje.proyectoId, viaje.proyectoNombre)}
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-100 text-yellow-800">
@@ -938,9 +963,7 @@ export default function PMPortal() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Proyecto</p>
-                  <p className="font-semibold">
-                    {formatProyectoLabel(viaticoSeleccionado.proyectoNombre, viaticoSeleccionado.proyectoId)}
-                  </p>
+                  <p className="font-semibold">{getProyectoJobLabel(viaticoSeleccionado.proyectoId, viaticoSeleccionado.proyectoNombre)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Tipo de Viático</p>
@@ -1070,9 +1093,7 @@ export default function PMPortal() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Proyecto</p>
-                  <p className="font-semibold">
-                    {formatProyectoLabel(viajeSeleccionado.proyectoNombre, viajeSeleccionado.proyectoId)}
-                  </p>
+                  <p className="font-semibold">{getProyectoJobLabel(viajeSeleccionado.proyectoId, viajeSeleccionado.proyectoNombre)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Destino</p>
