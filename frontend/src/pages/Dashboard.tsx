@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
 import useLocalStorageState from '../hooks/useLocalStorageState';
 import type { DashboardMetrics, Dispersion, Factura, Viatico } from '../types';
 import { fetchDashboardMetrics } from '../utils/backendSync';
@@ -73,10 +74,12 @@ const facturaMetaByStatus: Record<Factura['status'], { title: string; color: Act
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [viaticos] = useLocalStorageState<Viatico[]>('viaticos:list', []);
   const [dispersiones] = useLocalStorageState<Dispersion[]>('dispersion:dispersiones', []);
   const [facturas] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
+  const canViewRestrictedQuickActions = user?.department === 'finanzas' || user?.department === 'business_intelligence';
 
   useEffect(() => {
     let active = true;
@@ -311,9 +314,13 @@ export default function Dashboard() {
             <div className="space-y-1.5 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
               <QuickActionButton icon="plus" label="Nueva Solicitud de Viatico" onClick={() => navigate('/mi-portal')} />
               <QuickActionButton icon="upload" label="Cargar Facturas" onClick={() => navigate('/conciliacion')} />
-              <QuickActionButton icon="send" label="Realizar Dispersion" onClick={() => navigate('/dispersion')} />
-              <QuickActionButton icon="car" label="Asignar Vehiculo" onClick={() => navigate('/flotilla')} />
-              <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
+              {canViewRestrictedQuickActions && (
+                <>
+                  <QuickActionButton icon="send" label="Realizar Dispersion" onClick={() => navigate('/dispersion')} />
+                  <QuickActionButton icon="car" label="Asignar Vehiculo" onClick={() => navigate('/flotilla')} />
+                  <QuickActionButton icon="document" label="Generar Reporte" onClick={() => navigate('/reportes')} />
+                </>
+              )}
             </div>
           </div>
         </div>
