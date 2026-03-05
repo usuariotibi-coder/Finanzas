@@ -90,6 +90,7 @@ export default function Proyectos() {
   const [filtroEstado, setFiltroEstado] = useLocalStorageState<ProyectoEstado | 'todos'>('proyectos:filtroEstado', 'todos');
   const [filtroCliente, setFiltroCliente] = useLocalStorageState<string>('proyectos:filtroCliente', 'todos');
   const [isModalOpen, setIsModalOpen] = useLocalStorageState('proyectos:isModalOpen', false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [modoEdicion, setModoEdicion] = useLocalStorageState('proyectos:modoEdicion', false);
   const [proyectoSeleccionado, setProyectoSeleccionado] = useLocalStorageState<Proyecto | null>('proyectos:proyectoSeleccionado', null);
 
@@ -369,11 +370,16 @@ export default function Proyectos() {
   const cerrarModal = () => {
     setIsModalOpen(false);
     setModoEdicion(false);
-    setProyectoSeleccionado(null);
     setShowFormErrors(false);
   };
 
   useEscapeKey(cerrarModal, isModalOpen);
+  useEscapeKey(() => setIsExpenseModalOpen(false), isExpenseModalOpen);
+
+  const abrirDetalleGastos = (proyecto: Proyecto) => {
+    setProyectoSeleccionado(proyecto);
+    setIsExpenseModalOpen(true);
+  };
 
   const guardarProyecto = async () => {
     const clienteDescripcion = formData.cliente?.trim() || '';
@@ -688,11 +694,7 @@ export default function Proyectos() {
                     const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                     return (
-                      <tr
-                        key={proyecto.id}
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => abrirModal(proyecto)}
-                      >
+                      <tr key={proyecto.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-bold text-gray-900">{proyecto.codigo}</span>
                         </td>
@@ -735,13 +737,10 @@ export default function Proyectos() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              abrirModal(proyecto);
-                            }}
+                            onClick={() => abrirDetalleGastos(proyecto)}
                             className="text-primary-600 hover:text-primary-900 text-sm font-medium"
                           >
-                            Editar
+                            Ver gastos
                           </button>
                         </td>
                       </tr>
@@ -757,11 +756,7 @@ export default function Proyectos() {
                 const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                 return (
-                  <div
-                    key={proyecto.id}
-                    className="cursor-pointer p-4 hover:bg-gray-50"
-                    onClick={() => abrirModal(proyecto)}
-                  >
+                  <div key={proyecto.id} className="p-4 hover:bg-gray-50">
                     <div className="space-y-3">
                       {/* Header Card */}
                       <div className="flex items-start justify-between">
@@ -781,15 +776,10 @@ export default function Proyectos() {
                           <p className="text-xs text-gray-600 mt-1">{proyecto.cliente}</p>
                         </div>
                         <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            abrirModal(proyecto);
-                          }}
+                          onClick={() => abrirDetalleGastos(proyecto)}
                           className="text-primary-600 hover:text-primary-900 ml-2"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                          <span className="text-xs font-semibold">Gastos</span>
                         </button>
                       </div>
 
@@ -837,6 +827,111 @@ export default function Proyectos() {
           </>
         )}
       </div>
+
+      {isExpenseModalOpen && proyectoSeleccionado && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-screen items-center justify-center px-4 py-8">
+            <div
+              className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm transition-opacity"
+              onClick={() => setIsExpenseModalOpen(false)}
+            />
+
+            <div className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Gastos Del Proyecto</p>
+                    <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                      {proyectoSeleccionado.codigo} · {proyectoSeleccionado.nombre}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Total gastado: {formatExpenseAmount(toSafeMonto(proyectoSeleccionado.gastado))}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsExpenseModalOpen(false)}
+                    className="rounded-full p-2 text-slate-400 transition hover:bg-white hover:text-slate-600"
+                    aria-label="Cerrar"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-[75vh] overflow-y-auto px-5 py-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-500">Gastado</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {formatExpenseAmount(toSafeMonto(proyectoSeleccionado.gastado))}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-500">Viaticos</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {formatExpenseAmount(proyectoExpenseSummary.viaticos)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-500">Avion</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {formatExpenseAmount(proyectoExpenseSummary.avion)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-wide text-slate-500">Flotilla</p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {formatExpenseAmount(proyectoExpenseSummary.flotilla)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  {proyectoExpenseLines.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm font-medium text-slate-700">No hay movimientos registrados.</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Aqui apareceran los gastos que alimentan el total gastado del proyecto.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="max-h-[52vh] overflow-y-auto">
+                      {proyectoExpenseLines.map((expense) => (
+                        <div
+                          key={expense.id}
+                          className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[110px_130px_minmax(0,1fr)_140px]"
+                        >
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Fecha</p>
+                            <p className="text-sm font-medium text-slate-900">{formatExpenseDate(expense.date)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Fuente</p>
+                            <p className="text-sm font-medium text-slate-900">{getExpenseSourceLabel(expense.source)}</p>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Concepto</p>
+                            <p className="truncate text-sm font-medium text-slate-900">{expense.description}</p>
+                            <p className="truncate text-xs text-slate-500">
+                              {expense.category} · {expense.reference || 'Sin referencia'}
+                            </p>
+                          </div>
+                          <div className="sm:text-right">
+                            <p className="text-[11px] uppercase tracking-wide text-slate-500">Monto</p>
+                            <p className="text-sm font-semibold text-slate-900">{formatExpenseAmount(expense.amount)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Crear/Editar Proyecto */}
       {isModalOpen && (
@@ -963,82 +1058,6 @@ export default function Proyectos() {
                       />
                     </div>
                   </div>
-
-                  {modoEdicion && proyectoSeleccionado && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                          <h4 className="text-sm font-semibold text-slate-900">Gastos registrados</h4>
-                          <p className="text-xs text-slate-500">
-                            Desglose de los movimientos que alimentan el gastado del proyecto.
-                          </p>
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {proyectoExpenseLines.length} movimiento{proyectoExpenseLines.length !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Viaticos</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {formatProyectoMontoCompacto(proyectoExpenseSummary.viaticos)}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Avion</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {formatProyectoMontoCompacto(proyectoExpenseSummary.avion)}
-                          </p>
-                        </div>
-                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Flotilla</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900">
-                            {formatProyectoMontoCompacto(proyectoExpenseSummary.flotilla)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                        {proyectoExpenseLines.length === 0 ? (
-                          <div className="px-4 py-6 text-center">
-                            <p className="text-sm font-medium text-slate-700">No hay gastos detallados para este proyecto.</p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              Se mostraran aqui los viaticos, vuelos y gastos de flotilla ligados al proyecto.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="max-h-72 overflow-y-auto">
-                            {proyectoExpenseLines.map((expense) => (
-                              <div
-                                key={expense.id}
-                                className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[120px_minmax(0,1fr)_140px]"
-                              >
-                                <div>
-                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                    {expense.category}
-                                  </p>
-                                  <p className="text-xs text-slate-500">{formatExpenseDate(expense.date)}</p>
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-slate-900">{expense.description}</p>
-                                  <p className="truncate text-xs text-slate-500">{expense.reference || 'Sin referencia'}</p>
-                                </div>
-                                <div className="sm:text-right">
-                                  <p className="text-sm font-semibold text-slate-900">
-                                    {formatExpenseAmount(expense.amount)}
-                                  </p>
-                                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                                    {getExpenseSourceLabel(expense.source)}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
