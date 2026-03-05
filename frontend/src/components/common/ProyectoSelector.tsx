@@ -172,7 +172,7 @@ export default function ProyectoSelector({
               const selectedCliente = (selectedProyecto.cliente || '').trim();
               const sameClienteDescripcion = Boolean(selectedCliente && selectedNombre && sameText(selectedNombre, selectedCliente));
               const selectedDescripcion = sameClienteDescripcion ? '' : selectedNombre;
-              const compactLabel = selectedNombre || selectedCliente || selectedProyecto.codigo;
+              const compactLabel = [selectedNombre, selectedCliente].filter(Boolean).join(' - ') || selectedProyecto.codigo;
               return (
                 <>
                   {compact ? (
