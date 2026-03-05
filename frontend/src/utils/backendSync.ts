@@ -775,7 +775,7 @@ const deriveVehicleAlertsFromVehicles = async (): Promise<VehicleAlert[]> => {
   });
 };
 
-const fetchFlotillaGastos = async (): Promise<VehicleExpense[]> => {
+export const fetchFlotillaGastos = async (): Promise<VehicleExpense[]> => {
   const data = await apiFetch('/flotilla/gastos/');
   return asArrayRecords(data).map(mapVehicleExpenseFromApi);
 };

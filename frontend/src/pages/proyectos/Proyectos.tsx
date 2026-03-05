@@ -2,11 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import useAuth from '../../hooks/useAuth';
-import type { Proyecto, ProyectoEstado } from '../../types';
+import type { Proyecto, ProyectoEstado, SolicitudViaje, VehicleAssignment, VehicleExpense, Viatico } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import {
   createProyecto,
+  fetchFlotillaAsignaciones,
+  fetchFlotillaGastos,
   fetchProyectos,
+  fetchViajes,
+  fetchViaticos,
   syncCoreAppData,
   updateProyecto,
 } from '../../utils/backendSync';
@@ -16,6 +20,68 @@ import {
   sanitizeProyectoMontos,
   toSafeMonto,
 } from '../../utils/proyectoMetrics';
+import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
+
+type ProyectoExpenseSource = 'viatico' | 'viaje' | 'flotilla';
+
+interface ProyectoExpenseLine {
+  id: string;
+  source: ProyectoExpenseSource;
+  category: string;
+  description: string;
+  amount: number;
+  date: string;
+  reference?: string;
+}
+
+const TRIP_EXCLUDED_STATUSES = new Set<SolicitudViaje['status']>(['rechazado', 'cancelado']);
+
+const formatExpenseDate = (value: string) => {
+  if (!value) return 'Sin fecha';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const formatExpenseAmount = (value: number) =>
+  new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(toSafeMonto(value));
+
+const getExpenseSourceLabel = (source: ProyectoExpenseSource) => {
+  switch (source) {
+    case 'viatico':
+      return 'Viatico';
+    case 'viaje':
+      return 'Viaje';
+    case 'flotilla':
+      return 'Flotilla';
+  }
+};
+
+const getFlotillaCategoryLabel = (tipo: VehicleExpense['tipo']) => {
+  switch (tipo) {
+    case 'gasolina':
+      return 'Gasolina';
+    case 'mantenimiento':
+      return 'Mantenimiento';
+    case 'seguro':
+      return 'Seguro';
+    case 'verificacion':
+      return 'Verificacion';
+    default:
+      return 'Flotilla';
+  }
+};
 
 export default function Proyectos() {
   const [proyectos, setProyectos] = useState<Proyecto[]>(() => getProyectos().map(sanitizeProyectoMontos));
@@ -43,6 +109,10 @@ export default function Proyectos() {
     notas: ''
   });
   const [showFormErrors, setShowFormErrors] = useState(false);
+  const [viaticos, setViaticos] = useState<Viatico[]>([]);
+  const [viajes, setViajes] = useState<SolicitudViaje[]>([]);
+  const [flotillaAssignments, setFlotillaAssignments] = useState<VehicleAssignment[]>([]);
+  const [flotillaGastos, setFlotillaGastos] = useState<VehicleExpense[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -59,6 +129,34 @@ export default function Proyectos() {
     };
 
     void loadProyectos();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProjectExpenseSources = async () => {
+      const [remoteViaticos, remoteViajes, remoteAssignments, remoteFlotillaGastos] = await Promise.allSettled([
+          fetchViaticos(),
+          fetchViajes(),
+          fetchFlotillaAsignaciones(),
+          fetchFlotillaGastos(),
+      ]);
+
+      if (!active) {
+        return;
+      }
+
+      setViaticos(remoteViaticos.status === 'fulfilled' ? remoteViaticos.value : []);
+      setViajes(remoteViajes.status === 'fulfilled' ? remoteViajes.value : []);
+      setFlotillaAssignments(remoteAssignments.status === 'fulfilled' ? remoteAssignments.value : []);
+      setFlotillaGastos(remoteFlotillaGastos.status === 'fulfilled' ? remoteFlotillaGastos.value : []);
+    };
+
+    void loadProjectExpenseSources();
 
     return () => {
       active = false;
@@ -127,6 +225,111 @@ export default function Proyectos() {
       porcentajeUso: getProyectoUsoPorcentaje(gastadoTotal, presupuestoTotal),
     };
   }, [proyectos]);
+
+  const proyectoExpenseLines = useMemo(() => {
+    if (!proyectoSeleccionado) {
+      return [] as ProyectoExpenseLine[];
+    }
+
+    const projectId = proyectoSeleccionado.id;
+    const assignmentMap = new Map(
+      flotillaAssignments
+        .filter((assignment) => assignment.proyectoId === projectId)
+        .map((assignment) => [assignment.id, assignment])
+    );
+
+    const viaticoLines = viaticos
+      .filter((viatico) => viatico.proyectoId === projectId)
+      .map((viatico) => {
+        const amount = getViaticoGastadoKpi(viatico);
+        return {
+          id: `viatico-${viatico.id}`,
+          source: 'viatico' as const,
+          category: 'Viatico',
+          description: viatico.motivo || `Viatico a ${viatico.destino}`,
+          amount,
+          date: viatico.fechaInicio || viatico.createdAt,
+          reference: viatico.userName || viatico.destino,
+        };
+      })
+      .filter((item) => item.amount > 0);
+
+    const tripLines = viajes
+      .filter((viaje) => viaje.proyectoId === projectId && viaje.necesitaAvion && !TRIP_EXCLUDED_STATUSES.has(viaje.status))
+      .flatMap((viaje) => {
+        const confirmations = viaje.confirmaciones?.avion ?? [];
+        const confirmationLines = confirmations
+          .map((confirmacion, index) => {
+            const amount = toSafeMonto(confirmacion.costo);
+            return {
+              id: `viaje-${viaje.id}-avion-${index}`,
+              source: 'viaje' as const,
+              category: 'Avion',
+              description: `${viaje.origen || 'Origen'} -> ${viaje.destino}`,
+              amount,
+              date: viaje.fechaInicio || viaje.createdAt,
+              reference: confirmacion.aerolinea || confirmacion.confirmacion || viaje.userName,
+            };
+          })
+          .filter((item) => item.amount > 0);
+
+        if (confirmationLines.length > 0) {
+          return confirmationLines;
+        }
+
+        if (!viaje.necesitaCamion && !viaje.necesitaHotel && toSafeMonto(viaje.costoFinal) > 0) {
+          return [{
+            id: `viaje-${viaje.id}-avion-fallback`,
+            source: 'viaje' as const,
+            category: 'Avion',
+            description: `${viaje.origen || 'Origen'} -> ${viaje.destino}`,
+            amount: toSafeMonto(viaje.costoFinal),
+            date: viaje.fechaInicio || viaje.createdAt,
+            reference: viaje.userName,
+          }];
+        }
+
+        return [];
+      });
+
+    const flotillaLines = flotillaGastos
+      .filter((gasto) => gasto.assignmentId && assignmentMap.has(gasto.assignmentId))
+      .map((gasto) => {
+        const assignment = gasto.assignmentId ? assignmentMap.get(gasto.assignmentId) : undefined;
+        return {
+          id: `flotilla-${gasto.id}`,
+          source: 'flotilla' as const,
+          category: getFlotillaCategoryLabel(gasto.tipo),
+          description: gasto.descripcion || getFlotillaCategoryLabel(gasto.tipo),
+          amount: toSafeMonto(gasto.monto),
+          date: gasto.fecha,
+          reference: gasto.proveedor || assignment?.vehiculoLabel || assignment?.destino || 'Flotilla',
+        };
+      })
+      .filter((item) => item.amount > 0);
+
+    return [...viaticoLines, ...tripLines, ...flotillaLines]
+      .sort((a, b) => {
+        const timeA = new Date(a.date).getTime();
+        const timeB = new Date(b.date).getTime();
+        return (Number.isFinite(timeB) ? timeB : 0) - (Number.isFinite(timeA) ? timeA : 0);
+      });
+  }, [flotillaAssignments, flotillaGastos, proyectoSeleccionado, viaticos, viajes]);
+
+  const proyectoExpenseSummary = useMemo(() => {
+    return {
+      viaticos: proyectoExpenseLines
+        .filter((item) => item.source === 'viatico')
+        .reduce((sum, item) => sum + item.amount, 0),
+      avion: proyectoExpenseLines
+        .filter((item) => item.source === 'viaje')
+        .reduce((sum, item) => sum + item.amount, 0),
+      flotilla: proyectoExpenseLines
+        .filter((item) => item.source === 'flotilla')
+        .reduce((sum, item) => sum + item.amount, 0),
+    };
+  }, [proyectoExpenseLines]);
+
   const formErrors = showFormErrors
     ? {
       codigo: !formData.codigo?.trim() ? 'Ingresa el codigo.' : '',
@@ -485,7 +688,11 @@ export default function Proyectos() {
                     const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                     return (
-                      <tr key={proyecto.id} className="hover:bg-gray-50">
+                      <tr
+                        key={proyecto.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => abrirModal(proyecto)}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-bold text-gray-900">{proyecto.codigo}</span>
                         </td>
@@ -528,7 +735,10 @@ export default function Proyectos() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
-                            onClick={() => abrirModal(proyecto)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              abrirModal(proyecto);
+                            }}
                             className="text-primary-600 hover:text-primary-900 text-sm font-medium"
                           >
                             Editar
@@ -547,7 +757,11 @@ export default function Proyectos() {
                 const porcentajeUso = getProyectoUsoPorcentaje(proyecto.gastado, proyecto.presupuesto);
 
                 return (
-                  <div key={proyecto.id} className="p-4 hover:bg-gray-50">
+                  <div
+                    key={proyecto.id}
+                    className="cursor-pointer p-4 hover:bg-gray-50"
+                    onClick={() => abrirModal(proyecto)}
+                  >
                     <div className="space-y-3">
                       {/* Header Card */}
                       <div className="flex items-start justify-between">
@@ -567,7 +781,10 @@ export default function Proyectos() {
                           <p className="text-xs text-gray-600 mt-1">{proyecto.cliente}</p>
                         </div>
                         <button
-                          onClick={() => abrirModal(proyecto)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            abrirModal(proyecto);
+                          }}
                           className="text-primary-600 hover:text-primary-900 ml-2"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -746,6 +963,82 @@ export default function Proyectos() {
                       />
                     </div>
                   </div>
+
+                  {modoEdicion && proyectoSeleccionado && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-900">Gastos registrados</h4>
+                          <p className="text-xs text-slate-500">
+                            Desglose de los movimientos que alimentan el gastado del proyecto.
+                          </p>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {proyectoExpenseLines.length} movimiento{proyectoExpenseLines.length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Viaticos</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {formatProyectoMontoCompacto(proyectoExpenseSummary.viaticos)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Avion</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {formatProyectoMontoCompacto(proyectoExpenseSummary.avion)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-500">Flotilla</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {formatProyectoMontoCompacto(proyectoExpenseSummary.flotilla)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        {proyectoExpenseLines.length === 0 ? (
+                          <div className="px-4 py-6 text-center">
+                            <p className="text-sm font-medium text-slate-700">No hay gastos detallados para este proyecto.</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Se mostraran aqui los viaticos, vuelos y gastos de flotilla ligados al proyecto.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="max-h-72 overflow-y-auto">
+                            {proyectoExpenseLines.map((expense) => (
+                              <div
+                                key={expense.id}
+                                className="grid grid-cols-1 gap-2 border-b border-slate-100 px-4 py-3 last:border-b-0 sm:grid-cols-[120px_minmax(0,1fr)_140px]"
+                              >
+                                <div>
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                    {expense.category}
+                                  </p>
+                                  <p className="text-xs text-slate-500">{formatExpenseDate(expense.date)}</p>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-slate-900">{expense.description}</p>
+                                  <p className="truncate text-xs text-slate-500">{expense.reference || 'Sin referencia'}</p>
+                                </div>
+                                <div className="sm:text-right">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {formatExpenseAmount(expense.amount)}
+                                  </p>
+                                  <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                                    {getExpenseSourceLabel(expense.source)}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
