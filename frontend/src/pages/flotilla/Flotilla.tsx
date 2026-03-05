@@ -10,8 +10,10 @@ import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExc
 import {
   createFlotillaGasto,
   createFlotillaVehiculo,
+  fetchFlotillaAlertas,
   fetchFlotillaAsignaciones,
   fetchFlotillaCargasGasolina,
+  fetchFlotillaMantenimiento,
   syncCoreAppData,
   updateFlotillaAsignacion,
   updateFlotillaVehiculo,
@@ -437,9 +439,9 @@ export default function Flotilla() {
   const [showHistorialModal, setShowHistorialModal] = useLocalStorageState('flotilla:showHistorialModal', false);
   const [editingVehicleId, setEditingVehicleId] = useState<string | null>(null);
   const [vehicles] = useLocalStorageState<Vehicle[]>('flotilla:vehiculos', []);
-  const [alerts] = useLocalStorageState<VehicleAlert[]>('flotilla:alertas', []);
+  const [alerts, setAlerts] = useLocalStorageState<VehicleAlert[]>('flotilla:alertas', []);
   const [cargasGasolina, setCargasGasolina] = useLocalStorageState<CargaGasolina[]>('flotilla:cargasGasolina', []);
-  const [maintenanceHistory] = useLocalStorageState<MaintenanceRecord[]>('flotilla:maintenanceHistory', []);
+  const [maintenanceHistory, setMaintenanceHistory] = useLocalStorageState<MaintenanceRecord[]>('flotilla:maintenanceHistory', []);
   const [assignments, setAssignments] = useState<VehicleAssignment[]>(getVehicleAssignments);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
   const [showRevisionEntregaModal, setShowRevisionEntregaModal] = useState(false);
@@ -504,6 +506,22 @@ export default function Flotilla() {
   useEffect(() => {
     let isActive = true;
 
+    const loadMaintenanceData = async () => {
+      try {
+        const [remoteAlerts, remoteMaintenance] = await Promise.all([
+          fetchFlotillaAlertas(),
+          fetchFlotillaMantenimiento(),
+        ]);
+        if (!isActive) {
+          return;
+        }
+        setAlerts(remoteAlerts);
+        setMaintenanceHistory(remoteMaintenance);
+      } catch {
+        // Keep local cache if backend is temporarily unavailable.
+      }
+    };
+
     const loadGasolina = async () => {
       try {
         const remoteCargas = await fetchFlotillaCargasGasolina();
@@ -516,12 +534,43 @@ export default function Flotilla() {
       }
     };
 
+    void loadMaintenanceData();
     void loadGasolina();
 
     return () => {
       isActive = false;
     };
-  }, [setCargasGasolina]);
+  }, [setAlerts, setCargasGasolina, setMaintenanceHistory]);
+
+  useEffect(() => {
+    if (activeTab !== 'mantenimiento') {
+      return;
+    }
+
+    let isActive = true;
+
+    const refreshMaintenanceData = async () => {
+      try {
+        const [remoteAlerts, remoteMaintenance] = await Promise.all([
+          fetchFlotillaAlertas(),
+          fetchFlotillaMantenimiento(),
+        ]);
+        if (!isActive) {
+          return;
+        }
+        setAlerts(remoteAlerts);
+        setMaintenanceHistory(remoteMaintenance);
+      } catch {
+        // Keep cached values in the view.
+      }
+    };
+
+    void refreshMaintenanceData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeTab, setAlerts, setMaintenanceHistory]);
 
   useEffect(() => {
     if (activeTab !== 'gasolina') {

@@ -555,6 +555,226 @@ const isUsableCargaGasolina = (item: CargaGasolina) => {
   return Boolean(id && vehicleId && fecha) && (item.litros > 0 || item.total > 0);
 };
 
+const normalizeStoredMaintenanceRecord = (item: unknown): MaintenanceRecord | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+  const raw = item as Record<string, unknown>;
+  const id = parseString(raw.id).trim();
+  const vehicleId = parseString(raw.vehicleId).trim();
+  if (!id || !vehicleId) {
+    return null;
+  }
+
+  return {
+    id,
+    vehicleId,
+    fecha: parseString(raw.fecha),
+    tipo: (parseString(raw.tipo) || 'otro') as MaintenanceRecord['tipo'],
+    descripcion: parseString(raw.descripcion),
+    costo: parseNumber(raw.costo),
+    km: toNullableNumber(raw.km),
+    proveedor: toNullableString(raw.proveedor),
+  };
+};
+
+const normalizeStoredVehicleAlert = (item: unknown): VehicleAlert | null => {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+  const raw = item as Record<string, unknown>;
+  const id = parseString(raw.id).trim();
+  const vehicleId = parseString(raw.vehicleId).trim();
+  if (!id || !vehicleId) {
+    return null;
+  }
+
+  const prioridad = (parseString(raw.prioridad) || 'media') as NonNullable<VehicleAlert['prioridad']>;
+  return {
+    id,
+    vehicleId,
+    tipoMantenimiento: (parseString(raw.tipoMantenimiento) || 'otro') as VehicleAlert['tipoMantenimiento'],
+    tipoAlerta: (parseString(raw.tipoAlerta) || 'servicio') as VehicleAlert['tipoAlerta'],
+    descripcion: toNullableString(raw.descripcion),
+    fechaVencimiento: toNullableString(raw.fechaVencimiento),
+    prioridad,
+    type: toNullableString(raw.type),
+    message: toNullableString(raw.message),
+    dueDate: toNullableString(raw.dueDate),
+    severity: (parseString(raw.severity) || mapPriorityToSeverity(prioridad)) as VehicleAlert['severity'],
+    costoEstimado: toNullableNumber(raw.costoEstimado),
+    proveedorSugerido: toNullableString(raw.proveedorSugerido),
+    atendido: parseBoolean(raw.atendido),
+    attended: parseBoolean(raw.attended),
+  };
+};
+
+const normalizeExpenseText = (value: string) =>
+  parseString(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const inferMaintenanceType = (description: string): MaintenanceRecord['tipo'] => {
+  const normalized = normalizeExpenseText(description);
+  if (!normalized) {
+    return 'otro';
+  }
+  if (/(aceite|filtro|afinacion|servicio|preventiv)/.test(normalized)) {
+    return 'preventivo';
+  }
+  if (/(vibracion|sensor|bateria|llanta|freno|desgaste|diagnostic)/.test(normalized)) {
+    return 'predictivo';
+  }
+  if (/(reparacion|averia|falla|motor|transmision|suspension|electri)/.test(normalized)) {
+    return 'correctivo';
+  }
+  return 'otro';
+};
+
+const toMaintenanceFromExpense = (expense: VehicleExpense): MaintenanceRecord => ({
+  id: `expense-${expense.id}`,
+  vehicleId: expense.vehicleId,
+  fecha: expense.fecha,
+  tipo: inferMaintenanceType(expense.descripcion),
+  descripcion: expense.descripcion || 'Gasto de mantenimiento',
+  costo: expense.monto,
+  km: expense.odometro,
+  proveedor: expense.proveedor,
+});
+
+const getStoredCargasGasolina = () => {
+  const currentStored = readStorageList<unknown>('flotilla:cargasGasolina')
+    .map(normalizeStoredCarga)
+    .filter((item): item is CargaGasolina => Boolean(item))
+    .filter(isUsableCargaGasolina);
+  if (currentStored.length > 0) {
+    return currentStored;
+  }
+
+  return readStorageList<unknown>('flotilla:cargasGasolina', { legacy: true })
+    .map(normalizeStoredCarga)
+    .filter((item): item is CargaGasolina => Boolean(item))
+    .filter(isUsableCargaGasolina);
+};
+
+const getStoredMaintenanceRecords = () =>
+  readStorageList<unknown>('flotilla:maintenanceHistory')
+    .map(normalizeStoredMaintenanceRecord)
+    .filter((item): item is MaintenanceRecord => Boolean(item));
+
+const getStoredVehicleAlerts = () =>
+  readStorageList<unknown>('flotilla:alertas')
+    .map(normalizeStoredVehicleAlert)
+    .filter((item): item is VehicleAlert => Boolean(item));
+
+const toPriorityFromSeverity = (severity: VehicleAlert['severity']): VehicleAlert['prioridad'] => {
+  if (severity === 'critical' || severity === 'high') {
+    return 'alta';
+  }
+  if (severity === 'medium') {
+    return 'media';
+  }
+  return 'baja';
+};
+
+const startOfDay = (value: Date) => {
+  const next = new Date(value);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const daysBetween = (from: Date, to: Date) => {
+  const diff = startOfDay(to).getTime() - startOfDay(from).getTime();
+  return Math.round(diff / (1000 * 60 * 60 * 24));
+};
+
+const deriveAlertSeverity = (daysUntilDue?: number, kmUntilDue?: number): VehicleAlert['severity'] => {
+  if ((daysUntilDue !== undefined && daysUntilDue <= 0) || (kmUntilDue !== undefined && kmUntilDue <= 0)) {
+    return 'critical';
+  }
+  if ((daysUntilDue !== undefined && daysUntilDue <= 14) || (kmUntilDue !== undefined && kmUntilDue <= 500)) {
+    return 'high';
+  }
+  if ((daysUntilDue !== undefined && daysUntilDue <= 30) || (kmUntilDue !== undefined && kmUntilDue <= 1000)) {
+    return 'medium';
+  }
+  return 'low';
+};
+
+const deriveVehicleAlertsFromVehicles = async (): Promise<VehicleAlert[]> => {
+  let vehicles: Vehicle[] = [];
+  try {
+    vehicles = await fetchFlotillaVehiculos();
+  } catch {
+    vehicles = readStorageList<Vehicle>('flotilla:vehiculos');
+  }
+
+  const today = new Date();
+
+  return vehicles.flatMap((vehicle) => {
+    const nextServiceDate = vehicle.maintenance?.nextServiceDate || vehicle.mantenimiento?.proximoServicio || '';
+    const nextServiceKm = vehicle.maintenance?.nextServiceKm || vehicle.mantenimiento?.kmProximoServicio || 0;
+    const currentKm = vehicle.currentKm || vehicle.kmActual || 0;
+    const kmUntilDue = nextServiceKm > 0 ? nextServiceKm - currentKm : undefined;
+    const dueDate = nextServiceDate ? new Date(nextServiceDate) : null;
+    const daysUntilDue = dueDate && !Number.isNaN(dueDate.getTime()) ? daysBetween(today, dueDate) : undefined;
+
+    const alerts: VehicleAlert[] = [];
+
+    if (nextServiceDate || nextServiceKm > 0) {
+      const severity = deriveAlertSeverity(daysUntilDue, kmUntilDue);
+      const serviceMessageParts = [
+        `Servicio programado para ${vehicle.brand} ${vehicle.model} (${vehicle.plates})`,
+        nextServiceKm > 0 ? `objetivo ${nextServiceKm.toLocaleString()} km` : '',
+        nextServiceDate ? `fecha ${nextServiceDate}` : '',
+      ].filter(Boolean);
+
+      alerts.push({
+        id: `derived-service-${vehicle.id}`,
+        vehicleId: vehicle.id,
+        tipoMantenimiento: 'preventivo',
+        tipoAlerta: 'servicio',
+        descripcion: serviceMessageParts.join(' | '),
+        fechaVencimiento: nextServiceDate || undefined,
+        prioridad: toPriorityFromSeverity(severity),
+        type: 'servicio',
+        message: serviceMessageParts.join(' | '),
+        dueDate: nextServiceDate || undefined,
+        severity,
+        atendido: false,
+        attended: false,
+      });
+    }
+
+    const insuranceDate = vehicle.insurance?.expirationDate || vehicle.seguro?.vigencia || '';
+    if (insuranceDate) {
+      const expiryDate = new Date(insuranceDate);
+      if (!Number.isNaN(expiryDate.getTime())) {
+        const severity = deriveAlertSeverity(daysBetween(today, expiryDate));
+        alerts.push({
+          id: `derived-insurance-${vehicle.id}`,
+          vehicleId: vehicle.id,
+          tipoMantenimiento: 'otro',
+          tipoAlerta: 'seguro',
+          descripcion: `Renovacion de seguro para ${vehicle.brand} ${vehicle.model} (${vehicle.plates})`,
+          fechaVencimiento: insuranceDate,
+          prioridad: toPriorityFromSeverity(severity),
+          type: 'seguro',
+          message: `Renovacion de seguro para ${vehicle.brand} ${vehicle.model} (${vehicle.plates})`,
+          dueDate: insuranceDate,
+          severity,
+          atendido: false,
+          attended: false,
+        });
+      }
+    }
+
+    return alerts;
+  });
+};
+
 const fetchFlotillaGastos = async (): Promise<VehicleExpense[]> => {
   const data = await apiFetch('/flotilla/gastos/');
   return asArrayRecords(data).map(mapVehicleExpenseFromApi);
@@ -832,8 +1052,22 @@ export const fetchFlotillaAsignaciones = async (): Promise<VehicleAssignment[]> 
 };
 
 export const fetchFlotillaAlertas = async (): Promise<VehicleAlert[]> => {
-  const data = await apiFetch('/flotilla/alertas/');
-  return asArrayRecords(data).map(mapVehicleAlertFromApi);
+  try {
+    const data = await apiFetch('/flotilla/alertas/');
+    const alerts = asArrayRecords(data).map(mapVehicleAlertFromApi);
+    if (alerts.length > 0) {
+      return alerts;
+    }
+  } catch {
+    // Fall back to cached or derived alerts below.
+  }
+
+  const storedAlerts = getStoredVehicleAlerts();
+  if (storedAlerts.length > 0) {
+    return storedAlerts;
+  }
+
+  return deriveVehicleAlertsFromVehicles();
 };
 
 export const fetchFlotillaCargasGasolina = async (): Promise<CargaGasolina[]> => {
@@ -849,12 +1083,9 @@ export const fetchFlotillaCargasGasolina = async (): Promise<CargaGasolina[]> =>
     return cargasFromApi;
   }
 
-  const legacyStored = readStorageList<unknown>('flotilla:cargasGasolina', { legacy: true })
-    .map(normalizeStoredCarga)
-    .filter((item): item is CargaGasolina => Boolean(item))
-    .filter(isUsableCargaGasolina);
-  if (legacyStored.length > 0) {
-    return legacyStored;
+  const storedCargas = getStoredCargasGasolina();
+  if (storedCargas.length > 0) {
+    return storedCargas;
   }
 
   try {
@@ -869,8 +1100,29 @@ export const fetchFlotillaCargasGasolina = async (): Promise<CargaGasolina[]> =>
 };
 
 export const fetchFlotillaMantenimiento = async (): Promise<MaintenanceRecord[]> => {
-  const data = await apiFetch('/flotilla/mantenimiento/');
-  return asArrayRecords(data).map(mapMaintenanceRecordFromApi);
+  try {
+    const data = await apiFetch('/flotilla/mantenimiento/');
+    const records = asArrayRecords(data).map(mapMaintenanceRecordFromApi);
+    if (records.length > 0) {
+      return records;
+    }
+  } catch {
+    // Fall back to cached or expense-based maintenance below.
+  }
+
+  const storedRecords = getStoredMaintenanceRecords();
+  if (storedRecords.length > 0) {
+    return storedRecords;
+  }
+
+  try {
+    const gastos = await fetchFlotillaGastos();
+    return gastos
+      .filter((item) => item.tipo === 'mantenimiento')
+      .map(toMaintenanceFromExpense);
+  } catch {
+    return [];
+  }
 };
 
 export const fetchDashboardMetrics = async (): Promise<DashboardMetrics> => {
