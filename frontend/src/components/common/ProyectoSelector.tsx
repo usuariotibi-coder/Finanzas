@@ -151,7 +151,7 @@ export default function ProyectoSelector({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full px-4 py-2 text-left border rounded-lg flex items-center justify-between ${
+        className={`w-full min-h-[74px] px-4 py-2 text-left border rounded-lg flex items-center justify-between ${
           disabled
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
             : 'bg-white hover:border-primary-500 cursor-pointer'
