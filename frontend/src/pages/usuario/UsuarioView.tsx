@@ -1998,7 +1998,7 @@ export default function UsuarioView() {
             <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Viáticos</h2>
               {/* Lista de Viáticos */}
-              <div className="grid gap-2.5 grid-cols-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+              <div className="grid grid-cols-1 gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
@@ -2014,15 +2014,15 @@ export default function UsuarioView() {
                 const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
 
                 return (
-                  <div key={viatico.id} className="w-full bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 hover:shadow transition-shadow">
-                    <div className="flex flex-col gap-1.5">
+                  <div key={viatico.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
+                    <div className="flex flex-col gap-2">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
-                            <span className="text-sm">{estadoInfo.icon}</span>
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
+                            <span className="text-base">{estadoInfo.icon}</span>
                             <span className="truncate">{viatico.destino} - {proyectoLabel}</span>
                           </h3>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-gray-600">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
                             <span>{formatDateOnlyMx(viatico.fechaInicio)} - {formatDateOnlyMx(viatico.fechaFin)}</span>
                             <span className="font-semibold text-gray-900">${viatico.montoAprobado?.toLocaleString() || viatico.montoSolicitado.toLocaleString()} MXN</span>
                           </div>
@@ -2045,10 +2045,10 @@ export default function UsuarioView() {
                       </div>
 
                       <div>
-                        <p className="text-[10px] text-gray-600">
+                        <p className="text-[11px] text-gray-600">
                           Proceso actual: <span className="font-semibold text-gray-900">{procesoViatico.texto}</span>
                         </p>
-                        <div className="mt-0.5 h-1.5 w-full rounded-full bg-gray-200">
+                        <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
                           <div
                             className={`h-1.5 rounded-full ${procesoViatico.barra}`}
                             style={{ width: `${procesoViatico.avance}%` }}
@@ -2120,7 +2120,7 @@ export default function UsuarioView() {
                 );
               })
             ) : (
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full md:col-span-2 xl:col-span-3">
+              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 sm:p-8 text-center w-full">
                 <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -2304,7 +2304,7 @@ export default function UsuarioView() {
 
                   return (
                     <div key={solicitud.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2.5">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                             <span className="text-base">{viajeStatusIcon}</span> {solicitud.destino}
