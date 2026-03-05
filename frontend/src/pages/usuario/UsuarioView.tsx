@@ -1889,7 +1889,7 @@ export default function UsuarioView() {
       )}
       {!viaticoSeleccionado || !viaticoActual ? (
         <>
-          <div className="space-y-4 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:space-y-0 xl:gap-4 xl:overflow-hidden">
+          <div className="space-y-4 xl:flex xl:h-full xl:min-h-0 xl:flex-1 xl:flex-col xl:space-y-0 xl:gap-4 xl:overflow-hidden">
           <div className="sticky top-0 z-30 -mx-2 sm:-mx-3 lg:-mx-4 px-2 sm:px-3 lg:px-4 pt-1 pb-2 xl:flex-shrink-0">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3 shadow-sm">
               <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-sky-200/40 blur-3xl" />
@@ -1994,8 +1994,8 @@ export default function UsuarioView() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start xl:min-h-0 xl:flex-1">
-            <div className="xl:min-h-0 xl:flex xl:flex-col">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-stretch xl:min-h-0 xl:flex-1">
+            <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Viáticos</h2>
               {/* Lista de Viáticos */}
               <div className="grid gap-2.5 grid-cols-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
@@ -2145,10 +2145,10 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="xl:col-span-2 xl:min-h-0">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start xl:min-h-0">
+            <div className="xl:col-span-2 xl:h-full xl:min-h-0">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch xl:h-full xl:min-h-0">
             {/* Sección de Vehículos Asignados */}
-            <div className="xl:min-h-0 xl:flex xl:flex-col">
+            <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Vehículos</h2>
               <div className="grid grid-cols-1 gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
               {visibleVehicleAssignments.length > 0 ? (
@@ -2287,7 +2287,7 @@ export default function UsuarioView() {
           </div>
 
             {/* Sección de Solicitudes de Viaje */}
-            <div className="xl:min-h-0 xl:flex xl:flex-col">
+            <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Solicitudes de Viaje</h2>
               <div className="grid grid-cols-1 gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
               {visibleSolicitudesViaje.length > 0 ? (
