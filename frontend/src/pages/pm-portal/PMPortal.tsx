@@ -79,10 +79,10 @@ export default function PMPortal() {
     [viaticoSeleccionado]
   );
 
-  const getProyectoJobLabel = (proyectoId?: string | null, proyectoNombre?: string | null) => {
+  const resolveProyecto = (proyectoId?: string | null, proyectoNombre?: string | null) => {
     const normalizedProyectoId = (proyectoId || '').trim().toLowerCase();
     const normalizedProyectoNombre = (proyectoNombre || '').trim().toLowerCase();
-    const proyecto = proyectos.find((item) => {
+    return proyectos.find((item) => {
       const candidates = [
         item.id,
         item.codigo,
@@ -97,11 +97,25 @@ export default function PMPortal() {
         (normalizedProyectoNombre && candidates.includes(normalizedProyectoNombre))
       );
     });
+  };
+
+  const getProyectoJobLabel = (proyectoId?: string | null, proyectoNombre?: string | null) => {
+    const proyecto = resolveProyecto(proyectoId, proyectoNombre);
     const codigo = (proyecto?.codigo || '').trim();
     if (codigo) {
       return codigo;
     }
     return formatProyectoLabel(proyectoNombre || undefined, proyectoId || undefined);
+  };
+
+  const getProyectoClienteDescripcionLabel = (proyectoId?: string | null, proyectoNombre?: string | null) => {
+    const proyecto = resolveProyecto(proyectoId, proyectoNombre);
+    const cliente = (proyecto?.cliente || '').trim();
+    const descripcion = (proyecto?.descripcion || '').trim();
+    if (cliente && descripcion && cliente.toLowerCase() !== descripcion.toLowerCase()) {
+      return `${cliente} / ${descripcion}`;
+    }
+    return cliente || descripcion || '';
   };
 
   const showToast = (text: string, type: PortalToastType = 'info') => {
@@ -648,6 +662,8 @@ export default function PMPortal() {
               const viaticoStatusIcon = getViaticoStatusIcon(viatico.status);
               const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
               const isExtensionRequest = Boolean(extensionPendiente);
+              const proyectoJobLabel = getProyectoJobLabel(viatico.proyectoId, viatico.proyectoNombre);
+              const proyectoClienteDescripcion = getProyectoClienteDescripcionLabel(viatico.proyectoId, viatico.proyectoNombre);
 
               return (
                 <div key={viatico.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
@@ -668,7 +684,8 @@ export default function PMPortal() {
                   <div>
                     <p className="text-[10px] text-gray-500">Proyecto</p>
                     <p className="text-[11px] text-gray-900 truncate">
-                      {getProyectoJobLabel(viatico.proyectoId, viatico.proyectoNombre)}
+                      {proyectoJobLabel}
+                      {proyectoClienteDescripcion ? ` - ${proyectoClienteDescripcion}` : ''}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -735,6 +752,8 @@ export default function PMPortal() {
           <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
             {viajesPendientes.map((viaje) => {
               const viajeStatusIcon = getViajeStatusIcon(viaje.status);
+              const proyectoJobLabel = getProyectoJobLabel(viaje.proyectoId, viaje.proyectoNombre);
+              const proyectoClienteDescripcion = getProyectoClienteDescripcionLabel(viaje.proyectoId, viaje.proyectoNombre);
 
               return (
                 <div key={viaje.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 hover:shadow-md transition-shadow w-full">
@@ -745,7 +764,8 @@ export default function PMPortal() {
                         <span className="truncate">{viaje.userName}</span>
                       </h3>
                       <p className="text-[11px] text-gray-600 truncate">
-                        {getProyectoJobLabel(viaje.proyectoId, viaje.proyectoNombre)}
+                        {proyectoJobLabel}
+                        {proyectoClienteDescripcion ? ` - ${proyectoClienteDescripcion}` : ''}
                       </p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-100 text-yellow-800">
@@ -963,7 +983,13 @@ export default function PMPortal() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Proyecto</p>
-                  <p className="font-semibold">{getProyectoJobLabel(viaticoSeleccionado.proyectoId, viaticoSeleccionado.proyectoNombre)}</p>
+                  <p className="font-semibold">
+                    {getProyectoJobLabel(viaticoSeleccionado.proyectoId, viaticoSeleccionado.proyectoNombre)}
+                    {(() => {
+                      const proyectoClienteDescripcion = getProyectoClienteDescripcionLabel(viaticoSeleccionado.proyectoId, viaticoSeleccionado.proyectoNombre);
+                      return proyectoClienteDescripcion ? ` - ${proyectoClienteDescripcion}` : '';
+                    })()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Tipo de Viático</p>
@@ -1093,7 +1119,13 @@ export default function PMPortal() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Proyecto</p>
-                  <p className="font-semibold">{getProyectoJobLabel(viajeSeleccionado.proyectoId, viajeSeleccionado.proyectoNombre)}</p>
+                  <p className="font-semibold">
+                    {getProyectoJobLabel(viajeSeleccionado.proyectoId, viajeSeleccionado.proyectoNombre)}
+                    {(() => {
+                      const proyectoClienteDescripcion = getProyectoClienteDescripcionLabel(viajeSeleccionado.proyectoId, viajeSeleccionado.proyectoNombre);
+                      return proyectoClienteDescripcion ? ` - ${proyectoClienteDescripcion}` : '';
+                    })()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Destino</p>
