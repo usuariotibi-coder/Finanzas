@@ -472,18 +472,23 @@ export default function Flotilla() {
     return remoteCargas;
   };
 
+  const refreshAssignmentsFromBackend = async () => {
+    const remoteAssignments = await fetchFlotillaAsignaciones();
+    setAssignments(remoteAssignments);
+    localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(remoteAssignments));
+    window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
+    return remoteAssignments;
+  };
+
   useEffect(() => {
     let isActive = true;
 
     const loadAssignments = async () => {
       try {
-        const remoteAssignments = await fetchFlotillaAsignaciones();
+        await refreshAssignmentsFromBackend();
         if (!isActive) {
           return;
         }
-        setAssignments(remoteAssignments);
-        localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(remoteAssignments));
-        window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
       } catch {
         // Keep local cache if backend is temporarily unavailable.
       }
@@ -525,6 +530,37 @@ export default function Flotilla() {
       window.removeEventListener('app-storage-change', handleCustomStorage);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshAssignmentsFromBackend().catch(() => {});
+      }
+    };
+
+    const refreshOnFocus = () => {
+      void refreshAssignmentsFromBackend().catch(() => {});
+    };
+
+    window.addEventListener('focus', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
+
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!showAssignmentForm) {
+      return;
+    }
+    void refreshAssignmentsFromBackend().catch(() => {});
+  }, [showAssignmentForm]);
 
   useEffect(() => {
     let isActive = true;

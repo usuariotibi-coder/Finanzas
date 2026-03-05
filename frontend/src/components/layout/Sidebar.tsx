@@ -4,6 +4,7 @@ import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { AlertaConciliacion, SolicitudViaje, TicketAMEX, VehicleAssignment, Viatico } from '../../types';
 import { canAccessPath } from '../../utils/access';
+import { fetchFlotillaAsignaciones } from '../../utils/backendSync';
 import { getPendingViaticoExtension } from '../../utils/viaticoExtensions';
 
 interface SidebarProps {
@@ -210,6 +211,48 @@ export default function Sidebar({ isOpen }: SidebarProps) {
       window.removeEventListener('app-storage-change', handleCustom);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user || !['admin', 'finance', 'pm'].includes(user.role)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncAssignments = async () => {
+      try {
+        const remoteAssignments = await fetchFlotillaAsignaciones();
+        if (cancelled) {
+          return;
+        }
+        setVehicleAssignments(remoteAssignments);
+        localStorage.setItem(VEHICLE_ASSIGNMENTS_STORAGE_KEY, JSON.stringify(remoteAssignments));
+        window.dispatchEvent(new CustomEvent('app-storage-change', { detail: { key: VEHICLE_ASSIGNMENTS_STORAGE_KEY } }));
+      } catch {
+        // Keep cached assignments if the backend is temporarily unavailable.
+      }
+    };
+
+    const handleFocus = () => {
+      void syncAssignments();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void syncAssignments();
+      }
+    };
+
+    void syncAssignments();
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [user]);
 
   const portalPmViaticosSource = viaticosPm.length > 0 ? viaticosPm : viaticosAdmin;
   const portalPmViaticosPendientes = portalPmViaticosSource.filter((viatico) => {
