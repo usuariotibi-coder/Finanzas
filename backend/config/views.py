@@ -16,6 +16,7 @@ from accounts.models import Role
 from amex.models import TicketAMEX
 from conciliacion.models import AlertaConciliacion, Factura
 from flotilla.models import Vehicle, VehicleAlert
+from flotilla.services import sync_vehicle_alerts
 from viaticos.models import Viatico
 
 
@@ -862,6 +863,8 @@ class DashboardMetricsView(APIView):
                 .count()
             )
 
+        if can_view_flotilla:
+            sync_vehicle_alerts()
         vehiculos_disponibles = Vehicle.objects.filter(status='disponible').count() if can_view_flotilla else 0
         vehiculos_asignados = Vehicle.objects.filter(status='asignado').count() if can_view_flotilla else 0
         alertas_mantenimiento = VehicleAlert.objects.filter(atendido=False).count() if can_view_flotilla else 0

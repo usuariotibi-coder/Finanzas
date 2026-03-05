@@ -8,13 +8,16 @@ import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import LeafletDestinationMap from '../../components/common/LeafletDestinationMap';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import {
+  createFlotillaCargaGasolina,
   createFlotillaGasto,
+  createFlotillaMantenimiento,
   createFlotillaVehiculo,
   fetchFlotillaAlertas,
   fetchFlotillaAsignaciones,
   fetchFlotillaCargasGasolina,
   fetchFlotillaMantenimiento,
   syncCoreAppData,
+  updateFlotillaAlerta,
   updateFlotillaAsignacion,
   updateFlotillaVehiculo,
   uploadFlotillaEntregaFotos,
@@ -28,6 +31,8 @@ const normalizeText = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+
+const isDerivedAlertId = (value: string) => value.startsWith('derived-');
 
 const parseCoordinatesFromText = (value: string): [number, number] | null => {
   const text = value.trim();
@@ -446,8 +451,28 @@ export default function Flotilla() {
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
   const [showRevisionEntregaModal, setShowRevisionEntregaModal] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [showGasolinaModal, setShowGasolinaModal] = useState(false);
+  const [selectedMaintenanceAlertId, setSelectedMaintenanceAlertId] = useState<string | null>(null);
+  const [maintenanceModalMode, setMaintenanceModalMode] = useState<'manual' | 'schedule' | 'complete'>('manual');
 
   useEscapeKey(() => setShowExportModal(false), showExportModal);
+
+  const refreshMaintenanceData = async () => {
+    const [remoteAlerts, remoteMaintenance] = await Promise.all([
+      fetchFlotillaAlertas(),
+      fetchFlotillaMantenimiento(),
+    ]);
+    setAlerts(remoteAlerts);
+    setMaintenanceHistory(remoteMaintenance);
+    return { remoteAlerts, remoteMaintenance };
+  };
+
+  const refreshGasolinaData = async () => {
+    const remoteCargas = await fetchFlotillaCargasGasolina();
+    setCargasGasolina(remoteCargas);
+    return remoteCargas;
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -506,17 +531,12 @@ export default function Flotilla() {
   useEffect(() => {
     let isActive = true;
 
-    const loadMaintenanceData = async () => {
+    const loadMaintenanceSnapshot = async () => {
       try {
-        const [remoteAlerts, remoteMaintenance] = await Promise.all([
-          fetchFlotillaAlertas(),
-          fetchFlotillaMantenimiento(),
-        ]);
+        await refreshMaintenanceData();
         if (!isActive) {
           return;
         }
-        setAlerts(remoteAlerts);
-        setMaintenanceHistory(remoteMaintenance);
       } catch {
         // Keep local cache if backend is temporarily unavailable.
       }
@@ -524,7 +544,7 @@ export default function Flotilla() {
 
     const loadGasolina = async () => {
       try {
-        const remoteCargas = await fetchFlotillaCargasGasolina();
+        const remoteCargas = await refreshGasolinaData();
         if (!isActive) {
           return;
         }
@@ -534,7 +554,7 @@ export default function Flotilla() {
       }
     };
 
-    void loadMaintenanceData();
+    void loadMaintenanceSnapshot();
     void loadGasolina();
 
     return () => {
@@ -549,23 +569,18 @@ export default function Flotilla() {
 
     let isActive = true;
 
-    const refreshMaintenanceData = async () => {
+    const reloadMaintenanceTab = async () => {
       try {
-        const [remoteAlerts, remoteMaintenance] = await Promise.all([
-          fetchFlotillaAlertas(),
-          fetchFlotillaMantenimiento(),
-        ]);
+        await refreshMaintenanceData();
         if (!isActive) {
           return;
         }
-        setAlerts(remoteAlerts);
-        setMaintenanceHistory(remoteMaintenance);
       } catch {
         // Keep cached values in the view.
       }
     };
 
-    void refreshMaintenanceData();
+    void reloadMaintenanceTab();
 
     return () => {
       isActive = false;
@@ -579,19 +594,18 @@ export default function Flotilla() {
 
     let isActive = true;
 
-    const refreshGasolina = async () => {
+    const reloadGasolina = async () => {
       try {
-        const remoteCargas = await fetchFlotillaCargasGasolina();
+        await refreshGasolinaData();
         if (!isActive) {
           return;
         }
-        setCargasGasolina(remoteCargas);
       } catch {
         // Keep cached values in the view.
       }
     };
 
-    void refreshGasolina();
+    void reloadGasolina();
 
     return () => {
       isActive = false;
@@ -636,6 +650,9 @@ export default function Flotilla() {
     : null;
   const selectedAssignmentVehicle = selectedAssignment
     ? vehiclesWithStatus.find(v => v.id === selectedAssignment.vehicleId) ?? null
+    : null;
+  const selectedMaintenanceAlert = selectedMaintenanceAlertId
+    ? alerts.find((alert) => alert.id === selectedMaintenanceAlertId) ?? null
     : null;
   const editingVehicle = editingVehicleId
     ? vehiclesWithStatus.find((vehicle) => vehicle.id === editingVehicleId) ?? null
@@ -796,14 +813,149 @@ export default function Flotilla() {
       window.alert(error instanceof Error ? error.message : 'No se pudo validar la liberacion de entrega.');
     }
   };
+  const handleCloseMaintenanceModal = () => {
+    setShowMaintenanceModal(false);
+    setSelectedMaintenanceAlertId(null);
+    setMaintenanceModalMode('manual');
+  };
+
   const handleScheduleService = (alertId: string) => {
-    console.log('Agendar servicio:', alertId);
-    // Aquí iría la lógica para agendar
+    setSelectedMaintenanceAlertId(alertId);
+    setMaintenanceModalMode('schedule');
+    setShowMaintenanceModal(true);
   };
 
   const handleCompleteService = (alertId: string) => {
-    console.log('Completar servicio:', alertId);
-    // Aquí iría la lógica para marcar como completado
+    setSelectedMaintenanceAlertId(alertId);
+    setMaintenanceModalMode('complete');
+    setShowMaintenanceModal(true);
+  };
+
+  const handleOpenManualMaintenanceModal = () => {
+    setSelectedMaintenanceAlertId(null);
+    setMaintenanceModalMode('manual');
+    setShowMaintenanceModal(true);
+  };
+
+  const handleOpenGasolinaModal = () => {
+    setShowGasolinaModal(true);
+  };
+
+  const handleCloseGasolinaModal = () => {
+    setShowGasolinaModal(false);
+  };
+
+  const handleSubmitMaintenance = async (payload: {
+    vehicleId: string;
+    tipo: MaintenanceRecord['tipo'];
+    fecha: string;
+    descripcion: string;
+    costo: number;
+    km?: number;
+    proveedor?: string;
+    nextServiceDate?: string;
+    nextServiceKm?: number;
+  }) => {
+    try {
+      const vehicle = vehiclesWithStatus.find((item) => item.id === payload.vehicleId);
+      if (!vehicle) {
+        throw new Error('No se encontro el vehiculo seleccionado.');
+      }
+
+      const vehiclePayload: Parameters<typeof updateFlotillaVehiculo>[1] = {};
+
+      if (maintenanceModalMode === 'schedule') {
+        if (payload.nextServiceDate) {
+          vehiclePayload.nextServiceDate = payload.nextServiceDate;
+        }
+        if (payload.nextServiceKm !== undefined && Number.isFinite(payload.nextServiceKm)) {
+          vehiclePayload.nextServiceKm = payload.nextServiceKm;
+        }
+      } else {
+        await createFlotillaMantenimiento({
+          vehicleId: payload.vehicleId,
+          fecha: payload.fecha,
+          tipo: payload.tipo,
+          descripcion: payload.descripcion,
+          costo: payload.costo,
+          km: payload.km,
+          proveedor: payload.proveedor,
+        });
+
+        vehiclePayload.lastServiceDate = payload.fecha;
+        if (payload.km !== undefined && Number.isFinite(payload.km)) {
+          vehiclePayload.lastServiceKm = payload.km;
+          vehiclePayload.currentKm = payload.km;
+        }
+        if (payload.nextServiceDate) {
+          vehiclePayload.nextServiceDate = payload.nextServiceDate;
+        }
+        if (payload.nextServiceKm !== undefined && Number.isFinite(payload.nextServiceKm)) {
+          vehiclePayload.nextServiceKm = payload.nextServiceKm;
+        }
+      }
+
+      if (Object.keys(vehiclePayload).length > 0) {
+        await updateFlotillaVehiculo(payload.vehicleId, vehiclePayload);
+      }
+
+      if (selectedMaintenanceAlert && !isDerivedAlertId(selectedMaintenanceAlert.id)) {
+        const nextDueDate =
+          maintenanceModalMode === 'complete'
+            ? selectedMaintenanceAlert.dueDate || selectedMaintenanceAlert.fechaVencimiento
+            : payload.nextServiceDate || selectedMaintenanceAlert.dueDate || selectedMaintenanceAlert.fechaVencimiento;
+        await updateFlotillaAlerta(selectedMaintenanceAlert.id, {
+          atendido: maintenanceModalMode === 'complete',
+          attended: maintenanceModalMode === 'complete',
+          fechaVencimiento: nextDueDate,
+          dueDate: nextDueDate,
+          descripcion: selectedMaintenanceAlert.descripcion,
+          tipoMantenimiento: selectedMaintenanceAlert.tipoMantenimiento,
+          tipoAlerta: selectedMaintenanceAlert.tipoAlerta,
+          prioridad: selectedMaintenanceAlert.prioridad,
+          costoEstimado: payload.costo || selectedMaintenanceAlert.costoEstimado,
+          proveedorSugerido: payload.proveedor || selectedMaintenanceAlert.proveedorSugerido,
+        });
+      }
+
+      await refreshMaintenanceData();
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      handleCloseMaintenanceModal();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo registrar el mantenimiento.');
+    }
+  };
+
+  const handleSubmitGasolina = async (payload: {
+    vehicleId: string;
+    assignmentId?: string;
+    fecha: string;
+    litros: number;
+    total: number;
+    odometro: number;
+    estacion: string;
+    facturaId?: string;
+  }) => {
+    try {
+      const precioLitro = payload.litros > 0 ? Number((payload.total / payload.litros).toFixed(2)) : 0;
+      await createFlotillaCargaGasolina({
+        vehicleId: payload.vehicleId,
+        assignmentId: payload.assignmentId,
+        userId: user ? String(user.id) : undefined,
+        fecha: payload.fecha,
+        litros: payload.litros,
+        precioLitro,
+        total: payload.total,
+        odometro: payload.odometro,
+        estacion: payload.estacion,
+        facturaId: payload.facturaId,
+      });
+      await refreshGasolinaData();
+      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
+      handleCloseGasolinaModal();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No se pudo registrar la carga de gasolina.');
+    }
   };
 
   const handleExportExcel = () => {
@@ -985,6 +1137,24 @@ export default function Flotilla() {
                       {entregasPendientesValidacion.length > 99 ? '99+' : entregasPendientesValidacion.length}
                     </span>
                   )}
+                </button>
+                <button
+                  onClick={handleOpenManualMaintenanceModal}
+                  className="px-2 py-1 text-[10px] bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-1-1v2m-6.938 8h13.856M7 16h10a2 2 0 002-2v-1a2 2 0 00-2-2H7a2 2 0 00-2 2v1a2 2 0 002 2zm0 0v2m10-2v2" />
+                  </svg>
+                  <span>Registrar Mantenimiento</span>
+                </button>
+                <button
+                  onClick={handleOpenGasolinaModal}
+                  className="px-2 py-1 text-[10px] bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-6 4h6m-7 9h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-2.414-2.414A2 2 0 0013.586 4H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Registrar Gasolina</span>
                 </button>
                 <button
                   onClick={() => setShowNewVehicleForm(true)}
@@ -1253,6 +1423,440 @@ export default function Flotilla() {
           onValidate={(comentarios) => handleValidarLiberacionEntrega(selectedAssignment.id, comentarios)}
         />
       )}
+
+      {showMaintenanceModal && (
+        <MaintenanceEntryModal
+          mode={maintenanceModalMode}
+          vehicles={vehiclesWithStatus}
+          alert={selectedMaintenanceAlert}
+          onClose={handleCloseMaintenanceModal}
+          onSubmit={handleSubmitMaintenance}
+        />
+      )}
+
+      {showGasolinaModal && (
+        <GasolinaEntryModal
+          vehicles={vehiclesWithStatus}
+          assignments={assignments}
+          userId={user ? String(user.id) : undefined}
+          onClose={handleCloseGasolinaModal}
+          onSubmit={handleSubmitGasolina}
+        />
+      )}
+    </div>
+  );
+}
+
+interface MaintenanceEntryModalProps {
+  mode: 'manual' | 'schedule' | 'complete';
+  vehicles: Vehicle[];
+  alert: VehicleAlert | null;
+  onClose: () => void;
+  onSubmit: (payload: {
+    vehicleId: string;
+    tipo: MaintenanceRecord['tipo'];
+    fecha: string;
+    descripcion: string;
+    costo: number;
+    km?: number;
+    proveedor?: string;
+    nextServiceDate?: string;
+    nextServiceKm?: number;
+  }) => void;
+}
+
+function MaintenanceEntryModal({ mode, vehicles, alert, onClose, onSubmit }: MaintenanceEntryModalProps) {
+  const initialVehicleId = alert?.vehicleId || vehicles[0]?.id || '';
+  const [vehicleId, setVehicleId] = useState(initialVehicleId);
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId) ?? vehicles[0] ?? null;
+  const [tipo, setTipo] = useState<MaintenanceRecord['tipo']>(alert?.tipoMantenimiento || 'preventivo');
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [descripcion, setDescripcion] = useState(alert?.descripcion || alert?.message || '');
+  const [costo, setCosto] = useState(alert?.costoEstimado ? String(alert.costoEstimado) : '');
+  const [km, setKm] = useState(
+    selectedVehicle ? String(selectedVehicle.currentKm || selectedVehicle.kmActual || 0) : ''
+  );
+  const [proveedor, setProveedor] = useState(alert?.proveedorSugerido || '');
+  const [nextServiceDate, setNextServiceDate] = useState(
+    alert?.dueDate || alert?.fechaVencimiento || selectedVehicle?.maintenance.nextServiceDate || ''
+  );
+  const [nextServiceKm, setNextServiceKm] = useState(
+    selectedVehicle && selectedVehicle.maintenance.nextServiceKm > 0
+      ? String(selectedVehicle.maintenance.nextServiceKm)
+      : ''
+  );
+
+  const title =
+    mode === 'schedule'
+      ? 'Agendar servicio'
+      : mode === 'complete'
+        ? 'Completar mantenimiento'
+        : 'Registrar mantenimiento';
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const parsedCost = Number(costo);
+    const parsedKm = km.trim() ? Number(km) : undefined;
+    const parsedNextServiceKm = nextServiceKm.trim() ? Number(nextServiceKm) : undefined;
+
+    if (!vehicleId) {
+      window.alert('Selecciona un vehiculo.');
+      return;
+    }
+    if (mode === 'schedule' && !nextServiceDate && parsedNextServiceKm === undefined) {
+      window.alert('Captura una fecha o kilometraje para el proximo servicio.');
+      return;
+    }
+    if (mode !== 'schedule') {
+      if (!fecha.trim() || !descripcion.trim() || !Number.isFinite(parsedCost) || parsedCost <= 0) {
+        window.alert('Completa fecha, descripcion y costo del mantenimiento.');
+        return;
+      }
+    }
+
+    onSubmit({
+      vehicleId,
+      tipo,
+      fecha,
+      descripcion: descripcion.trim(),
+      costo: Number.isFinite(parsedCost) ? parsedCost : 0,
+      km: parsedKm,
+      proveedor: proveedor.trim() || undefined,
+      nextServiceDate: nextServiceDate.trim() || undefined,
+      nextServiceKm: parsedNextServiceKm,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
+            <p className="text-xs text-slate-500">Los cambios se guardan en backend y actualizan la alerta del vehiculo.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4 px-5 py-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Vehiculo</span>
+              <select
+                value={vehicleId}
+                onChange={(event) => setVehicleId(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.id}>
+                    {vehicle.brand} {vehicle.model} ({vehicle.plates})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Tipo</span>
+              <select
+                value={tipo}
+                onChange={(event) => setTipo(event.target.value as MaintenanceRecord['tipo'])}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="preventivo">Preventivo</option>
+                <option value="predictivo">Predictivo</option>
+                <option value="correctivo">Correctivo</option>
+                <option value="otro">Otro</option>
+              </select>
+            </label>
+          </div>
+
+          {mode !== 'schedule' && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="text-sm text-slate-700">
+                <span className="mb-1 block font-medium">Fecha</span>
+                <input
+                  type="date"
+                  value={fecha}
+                  onChange={(event) => setFecha(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                <span className="mb-1 block font-medium">Costo</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costo}
+                  onChange={(event) => setCosto(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+          )}
+
+          {mode !== 'schedule' && (
+            <label className="block text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Descripcion</span>
+              <textarea
+                value={descripcion}
+                onChange={(event) => setDescripcion(event.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Kilometraje</span>
+              <input
+                type="number"
+                min="0"
+                value={km}
+                onChange={(event) => setKm(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm text-slate-700 md:col-span-2">
+              <span className="mb-1 block font-medium">Proveedor</span>
+              <input
+                type="text"
+                value={proveedor}
+                onChange={(event) => setProveedor(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="mb-3 text-sm font-medium text-amber-900">Proximo servicio</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="text-sm text-slate-700">
+                <span className="mb-1 block font-medium">Fecha proxima</span>
+                <input
+                  type="date"
+                  value={nextServiceDate}
+                  onChange={(event) => setNextServiceDate(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm text-slate-700">
+                <span className="mb-1 block font-medium">KM proximo</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={nextServiceKm}
+                  onChange={(event) => setNextServiceKm(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+              Cancelar
+            </button>
+            <button type="submit" className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface GasolinaEntryModalProps {
+  vehicles: Vehicle[];
+  assignments: VehicleAssignment[];
+  userId?: string;
+  onClose: () => void;
+  onSubmit: (payload: {
+    vehicleId: string;
+    assignmentId?: string;
+    fecha: string;
+    litros: number;
+    total: number;
+    odometro: number;
+    estacion: string;
+    facturaId?: string;
+  }) => void;
+}
+
+function GasolinaEntryModal({ vehicles, assignments, onClose, onSubmit }: GasolinaEntryModalProps) {
+  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id || '');
+  const activeAssignments = assignments.filter(
+    (assignment) => assignment.vehicleId === vehicleId && assignment.status !== 'completado'
+  );
+  const [assignmentId, setAssignmentId] = useState(activeAssignments[0]?.id || '');
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId) ?? vehicles[0] ?? null;
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [litros, setLitros] = useState('');
+  const [total, setTotal] = useState('');
+  const [odometro, setOdometro] = useState(selectedVehicle ? String(selectedVehicle.currentKm || selectedVehicle.kmActual || 0) : '');
+  const [estacion, setEstacion] = useState('');
+  const [facturaId, setFacturaId] = useState('');
+
+  useEffect(() => {
+    setAssignmentId(activeAssignments[0]?.id || '');
+    if (selectedVehicle) {
+      setOdometro(String(selectedVehicle.currentKm || selectedVehicle.kmActual || 0));
+    }
+  }, [vehicleId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const parsedLitros = Number(litros);
+    const parsedTotal = Number(total);
+    const parsedOdometer = Number(odometro);
+
+    if (!vehicleId || !Number.isFinite(parsedLitros) || parsedLitros <= 0 || !Number.isFinite(parsedTotal) || parsedTotal <= 0) {
+      window.alert('Completa vehiculo, litros y total.');
+      return;
+    }
+
+    onSubmit({
+      vehicleId,
+      assignmentId: assignmentId || undefined,
+      fecha,
+      litros: parsedLitros,
+      total: parsedTotal,
+      odometro: Number.isFinite(parsedOdometer) ? parsedOdometer : 0,
+      estacion: estacion.trim() || 'Carga manual',
+      facturaId: facturaId.trim() || undefined,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Registrar gasolina</h3>
+            <p className="text-xs text-slate-500">La carga se guarda en backend y se refleja en gastos de flotilla.</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-4 px-5 py-4">
+          <label className="block text-sm text-slate-700">
+            <span className="mb-1 block font-medium">Vehiculo</span>
+            <select
+              value={vehicleId}
+              onChange={(event) => setVehicleId(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            >
+              {vehicles.map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.id}>
+                  {vehicle.brand} {vehicle.model} ({vehicle.plates})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Asignacion</span>
+              <select
+                value={assignmentId}
+                onChange={(event) => setAssignmentId(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Sin asignacion</option>
+                {activeAssignments.map((assignment) => (
+                  <option key={assignment.id} value={assignment.id}>
+                    {assignment.userName} · {formatDate(assignment.fechaInicio)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Fecha</span>
+              <input
+                type="date"
+                value={fecha}
+                onChange={(event) => setFecha(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Litros</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={litros}
+                onChange={(event) => setLitros(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Total</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={total}
+                onChange={(event) => setTotal(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Odometro</span>
+              <input
+                type="number"
+                min="0"
+                value={odometro}
+                onChange={(event) => setOdometro(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Estacion</span>
+              <input
+                type="text"
+                value={estacion}
+                onChange={(event) => setEstacion(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm text-slate-700">
+              <span className="mb-1 block font-medium">Factura</span>
+              <input
+                type="text"
+                value={facturaId}
+                onChange={(event) => setFacturaId(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
+            <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+              Cancelar
+            </button>
+            <button type="submit" className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">
+              Guardar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

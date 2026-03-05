@@ -1407,6 +1407,82 @@ export const createFlotillaGasto = async (payload: {
   return mapVehicleExpenseFromApi(data);
 };
 
+export const createFlotillaCargaGasolina = async (payload: {
+  vehicleId: string;
+  assignmentId?: string;
+  userId?: string;
+  fecha: string;
+  litros: number;
+  precioLitro: number;
+  total: number;
+  odometro: number;
+  estacion: string;
+  facturaId?: string;
+  eficiencia?: number;
+}): Promise<CargaGasolina> => {
+  const data = (await apiFetch('/flotilla/gasolina/', {
+    method: 'POST',
+    body: JSON.stringify({
+      vehicle: toApiId(payload.vehicleId),
+      assignment: payload.assignmentId ? toApiId(payload.assignmentId) ?? null : null,
+      user: payload.userId ? toApiId(payload.userId) ?? null : null,
+      fecha: payload.fecha,
+      litros: parseNumber(payload.litros),
+      precio_litro: parseNumber(payload.precioLitro),
+      total: parseNumber(payload.total),
+      odometro: parseNumber(payload.odometro),
+      estacion: parseString(payload.estacion),
+      factura_id: payload.facturaId || '',
+      eficiencia: payload.eficiencia ?? null,
+    }),
+  })) as RawRecord;
+  return mapCargaGasolinaFromApi(data);
+};
+
+export const createFlotillaMantenimiento = async (payload: {
+  vehicleId: string;
+  fecha: string;
+  tipo: MaintenanceRecord['tipo'];
+  descripcion: string;
+  costo: number;
+  km?: number;
+  proveedor?: string;
+}): Promise<MaintenanceRecord> => {
+  const data = (await apiFetch('/flotilla/mantenimiento/', {
+    method: 'POST',
+    body: JSON.stringify({
+      vehicle: toApiId(payload.vehicleId),
+      fecha: payload.fecha,
+      tipo: payload.tipo,
+      descripcion: parseString(payload.descripcion),
+      costo: parseNumber(payload.costo),
+      km: payload.km ?? null,
+      proveedor: payload.proveedor || '',
+    }),
+  })) as RawRecord;
+  return mapMaintenanceRecordFromApi(data);
+};
+
+export const updateFlotillaAlerta = async (
+  id: string,
+  payload: Partial<VehicleAlert>
+): Promise<VehicleAlert> => {
+  const data = (await apiFetch(`/flotilla/alertas/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      tipo_mantenimiento: payload.tipoMantenimiento,
+      tipo_alerta: payload.tipoAlerta,
+      descripcion: payload.descripcion ?? payload.message ?? '',
+      fecha_vencimiento: payload.fechaVencimiento ?? payload.dueDate ?? null,
+      prioridad: payload.prioridad,
+      costo_estimado: payload.costoEstimado ?? null,
+      proveedor_sugerido: payload.proveedorSugerido ?? '',
+      atendido: payload.atendido ?? payload.attended,
+    }),
+  })) as RawRecord;
+  return mapVehicleAlertFromApi(data);
+};
+
 export const createFlotillaVehiculo = async (payload: {
   brand: string;
   model: string;
@@ -1463,6 +1539,10 @@ export const updateFlotillaVehiculo = async (
     insuranceCompany: string;
     insurancePolicyNumber: string;
     insuranceExpirationDate: string;
+    lastServiceDate: string;
+    lastServiceKm: number;
+    nextServiceDate: string;
+    nextServiceKm: number;
     foto: File | null;
   }>
 ) => {
@@ -1479,6 +1559,10 @@ export const updateFlotillaVehiculo = async (
   if (payload.insuranceExpirationDate !== undefined && payload.insuranceExpirationDate.trim()) {
     body.append('seguro_vigencia', payload.insuranceExpirationDate.trim());
   }
+  if (payload.lastServiceDate !== undefined) body.append('mantenimiento_ultimo_servicio', payload.lastServiceDate);
+  if (payload.lastServiceKm !== undefined) body.append('mantenimiento_km_ultimo', String(payload.lastServiceKm));
+  if (payload.nextServiceDate !== undefined) body.append('mantenimiento_proximo_servicio', payload.nextServiceDate);
+  if (payload.nextServiceKm !== undefined) body.append('mantenimiento_km_proximo', String(payload.nextServiceKm));
   if (payload.foto instanceof File) {
     body.append('foto', payload.foto);
   }

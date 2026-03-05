@@ -21,12 +21,30 @@ from .serializers import (
     VehicleExpenseSerializer,
     VehicleSerializer,
 )
+from .services import (
+    ensure_expense_from_gasoline_load,
+    ensure_expense_from_maintenance,
+    ensure_gasoline_load_from_expense,
+    ensure_maintenance_record_from_expense,
+    sync_expense_mirrors,
+    sync_vehicle_alerts,
+)
 
 
 class VehicleViewSet(viewsets.ModelViewSet):
     queryset = Vehicle.objects.all().order_by('-created_at')
     serializer_class = VehicleSerializer
     permission_classes = [IsAdminOrFinanceOrReadOnly]
+
+    def perform_create(self, serializer):
+        vehicle = serializer.save()
+        sync_vehicle_alerts()
+        return vehicle
+
+    def perform_update(self, serializer):
+        vehicle = serializer.save()
+        sync_vehicle_alerts()
+        return vehicle
 
 
 class VehicleAssignmentViewSet(viewsets.ModelViewSet):
@@ -79,15 +97,27 @@ class VehicleAssignmentViewSet(viewsets.ModelViewSet):
 
 
 class VehicleAlertViewSet(viewsets.ModelViewSet):
-    queryset = VehicleAlert.objects.select_related('vehicle').order_by('-created_at')
     serializer_class = VehicleAlertSerializer
     permission_classes = [IsAdminOrFinanceOrReadOnly]
 
+    def get_queryset(self):
+        sync_vehicle_alerts()
+        return VehicleAlert.objects.select_related('vehicle').order_by('-created_at')
+
 
 class VehicleExpenseViewSet(viewsets.ModelViewSet):
-    queryset = VehicleExpense.objects.select_related('vehicle', 'assignment').order_by('-created_at')
     serializer_class = VehicleExpenseSerializer
     permission_classes = [IsAdminOrFinanceOrReadOnly]
+
+    def get_queryset(self):
+        sync_expense_mirrors()
+        return VehicleExpense.objects.select_related('vehicle', 'assignment').order_by('-created_at')
+
+    def perform_create(self, serializer):
+        expense = serializer.save()
+        ensure_gasoline_load_from_expense(expense)
+        ensure_maintenance_record_from_expense(expense)
+        return expense
 
 
 class CargaGasolinaViewSet(viewsets.ModelViewSet):
@@ -95,6 +125,7 @@ class CargaGasolinaViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        sync_expense_mirrors()
         user = self.request.user
         queryset = CargaGasolina.objects.select_related('vehicle', 'assignment', 'user').order_by('-created_at')
         if user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
@@ -104,13 +135,23 @@ class CargaGasolinaViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         request_user = self.request.user
         payload_user = serializer.validated_data.get('user')
+        load = None
         if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
-            serializer.save(user=payload_user or request_user)
+            load = serializer.save(user=payload_user or request_user)
         else:
-            serializer.save(user=request_user)
+            load = serializer.save(user=request_user)
+        ensure_expense_from_gasoline_load(load)
 
 
 class MaintenanceRecordViewSet(viewsets.ModelViewSet):
-    queryset = MaintenanceRecord.objects.select_related('vehicle').order_by('-created_at')
     serializer_class = MaintenanceRecordSerializer
     permission_classes = [IsAdminOrFinanceOrReadOnly]
+
+    def get_queryset(self):
+        sync_expense_mirrors()
+        return MaintenanceRecord.objects.select_related('vehicle').order_by('-created_at')
+
+    def perform_create(self, serializer):
+        record = serializer.save()
+        ensure_expense_from_maintenance(record)
+        return record
