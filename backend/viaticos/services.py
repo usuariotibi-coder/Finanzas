@@ -13,6 +13,45 @@ APPROVED_STATUSES = (
     'completado',
 )
 
+TRIP_EXCLUDED_STATUSES = (
+    'rechazado',
+    'cancelado',
+)
+
+
+def _sum_trip_airfare(proyecto_id: int) -> Decimal:
+    from viajes.models import SolicitudViaje
+
+    total = Decimal('0.00')
+    solicitudes = SolicitudViaje.objects.filter(
+        proyecto_id=proyecto_id,
+        necesita_avion=True,
+    ).exclude(status__in=TRIP_EXCLUDED_STATUSES)
+
+    for solicitud in solicitudes:
+        flight_total = Decimal('0.00')
+        for confirmacion in solicitud.confirmaciones_avion or []:
+            if not isinstance(confirmacion, dict):
+                continue
+            costo = confirmacion.get('costo')
+            if costo in (None, ''):
+                continue
+            try:
+                parsed_cost = Decimal(str(costo))
+            except (ArithmeticError, TypeError, ValueError):
+                continue
+            if parsed_cost > 0:
+                flight_total += parsed_cost
+
+        if flight_total == Decimal('0.00'):
+            has_only_flight_service = not solicitud.necesita_camion and not solicitud.necesita_hotel
+            if has_only_flight_service and solicitud.costo_final:
+                flight_total = Decimal(str(solicitud.costo_final))
+
+        total += flight_total
+
+    return total
+
 
 def recalculate_project_spent(proyecto_id: int | None):
     if not proyecto_id:
@@ -55,7 +94,9 @@ def recalculate_project_spent(proyecto_id: int | None):
         .get('total', Decimal('0.00'))
     )
 
-    Proyecto.objects.filter(pk=proyecto_id).update(gastado=viaticos_spent + flotilla_spent)
+    viajes_spent = _sum_trip_airfare(proyecto_id)
+
+    Proyecto.objects.filter(pk=proyecto_id).update(gastado=viaticos_spent + flotilla_spent + viajes_spent)
 
 
 def recalculate_all_project_spent(proyecto_ids: Iterable[int] | None = None):
