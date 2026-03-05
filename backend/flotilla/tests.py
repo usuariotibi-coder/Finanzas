@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import CargaGasolina, MaintenanceRecord, Vehicle, VehicleAlert, VehicleExpense
+from .models import CargaGasolina, MaintenanceRecord, Vehicle, VehicleAlert, VehicleAssignment, VehicleExpense
 
 
 User = get_user_model()
@@ -101,13 +101,23 @@ class FlotillaCreateTests(APITestCase):
 
     def test_gasoline_endpoint_backfills_from_expenses(self):
         self.client.force_authenticate(user=self.admin_user)
+        assignment = VehicleAssignment.objects.create(
+            vehicle=self.vehicle,
+            user=self.admin_user,
+            motivo='Visita de servicio',
+            proposito='operaciones',
+            fecha_inicio='2026-02-10',
+            km_inicial=15000,
+            km_final=15300,
+            status='completado',
+        )
         VehicleExpense.objects.create(
             vehicle=self.vehicle,
+            assignment=assignment,
             tipo=VehicleExpense.Tipo.GASOLINA,
             fecha='2026-02-10',
             monto='920.00',
             descripcion='Carga de 40 litros',
-            odometro=15300,
             proveedor='PEMEX QA',
         )
 
@@ -116,6 +126,7 @@ class FlotillaCreateTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(CargaGasolina.objects.count(), 1)
+        self.assertEqual(response.data[0]['odometro'], 15300)
 
     def test_maintenance_endpoint_backfills_from_expenses(self):
         self.client.force_authenticate(user=self.admin_user)

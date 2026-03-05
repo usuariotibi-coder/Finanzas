@@ -36,36 +36,84 @@ def parse_liters_from_description(description: str) -> float | None:
     return parsed if parsed > 0 else None
 
 
+def _resolve_fuel_odometer(expense: VehicleExpense) -> int:
+    if expense.odometro:
+        return int(expense.odometro)
+    assignment = expense.assignment
+    if assignment and assignment.km_final:
+        return int(assignment.km_final)
+    if assignment and assignment.km_inicial:
+        return int(assignment.km_inicial)
+    return 0
+
+
+def _resolve_fuel_efficiency(expense: VehicleExpense, liters: float) -> float | None:
+    assignment = expense.assignment
+    if not assignment or not assignment.km_inicial or not assignment.km_final or liters <= 0:
+        return None
+    distance = assignment.km_final - assignment.km_inicial
+    if distance <= 0:
+        return None
+    return round(distance / liters, 2)
+
+
 def ensure_gasoline_load_from_expense(expense: VehicleExpense) -> CargaGasolina | None:
     if expense.tipo != VehicleExpense.Tipo.GASOLINA:
         return None
+
+    liters = parse_liters_from_description(expense.descripcion)
+    if liters is None:
+        liters = round(float(expense.monto) / DEFAULT_GAS_PRICE_PER_LITER, 2) if float(expense.monto) > 0 else 0
+    price_per_liter = round(float(expense.monto) / liters, 2) if liters > 0 else DEFAULT_GAS_PRICE_PER_LITER
+    odometer = _resolve_fuel_odometer(expense)
+    efficiency = _resolve_fuel_efficiency(expense, liters)
+    station = expense.proveedor or expense.descripcion or 'Gasto de gasolina'
+    user = getattr(expense.assignment, 'user', None)
 
     existing = CargaGasolina.objects.filter(
         vehicle=expense.vehicle,
         assignment=expense.assignment,
         fecha=expense.fecha,
         total=expense.monto,
-        estacion=expense.proveedor or expense.descripcion or 'Gasto de gasolina',
+        estacion=station,
     ).first()
     if existing:
+        changed = False
+        if float(existing.litros) != float(liters):
+            existing.litros = liters
+            changed = True
+        if float(existing.precio_litro) != float(price_per_liter):
+            existing.precio_litro = price_per_liter
+            changed = True
+        if existing.odometro != odometer:
+            existing.odometro = odometer
+            changed = True
+        if existing.factura_id != expense.factura_id:
+            existing.factura_id = expense.factura_id
+            changed = True
+        if existing.user_id != getattr(user, 'id', None):
+            existing.user = user
+            changed = True
+        current_efficiency = float(existing.eficiencia) if existing.eficiencia is not None else None
+        if current_efficiency != efficiency:
+            existing.eficiencia = efficiency
+            changed = True
+        if changed:
+            existing.save()
         return existing
-
-    liters = parse_liters_from_description(expense.descripcion)
-    if liters is None:
-        liters = round(float(expense.monto) / DEFAULT_GAS_PRICE_PER_LITER, 2) if float(expense.monto) > 0 else 0
-    price_per_liter = round(float(expense.monto) / liters, 2) if liters > 0 else DEFAULT_GAS_PRICE_PER_LITER
 
     return CargaGasolina.objects.create(
         vehicle=expense.vehicle,
         assignment=expense.assignment,
-        user=getattr(expense.assignment, 'user', None),
+        user=user,
         fecha=expense.fecha,
         litros=liters,
         precio_litro=price_per_liter,
         total=expense.monto,
-        odometro=expense.odometro or 0,
-        estacion=expense.proveedor or expense.descripcion or 'Gasto de gasolina',
+        odometro=odometer,
+        estacion=station,
         factura_id=expense.factura_id,
+        eficiencia=efficiency,
     )
 
 

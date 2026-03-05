@@ -8,7 +8,6 @@ import MenuMantenimiento from '../../components/flotilla/MenuMantenimiento';
 import LeafletDestinationMap from '../../components/common/LeafletDestinationMap';
 import { exportToExcel, formatCurrency, formatDate } from '../../utils/exportExcel';
 import {
-  createFlotillaCargaGasolina,
   createFlotillaGasto,
   createFlotillaMantenimiento,
   createFlotillaVehiculo,
@@ -452,7 +451,6 @@ export default function Flotilla() {
   const [showRevisionEntregaModal, setShowRevisionEntregaModal] = useState(false);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
-  const [showGasolinaModal, setShowGasolinaModal] = useState(false);
   const [selectedMaintenanceAlertId, setSelectedMaintenanceAlertId] = useState<string | null>(null);
   const [maintenanceModalMode, setMaintenanceModalMode] = useState<'manual' | 'schedule' | 'complete'>('manual');
 
@@ -772,6 +770,7 @@ export default function Flotilla() {
         assignment.id === assignmentId ? { ...assignment, ...persisted } : assignment
       ));
       saveAssignments(updatedAssignments);
+      await refreshGasolinaData();
       handleCloseFinalizarModal();
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
@@ -835,14 +834,6 @@ export default function Flotilla() {
     setSelectedMaintenanceAlertId(null);
     setMaintenanceModalMode('manual');
     setShowMaintenanceModal(true);
-  };
-
-  const handleOpenGasolinaModal = () => {
-    setShowGasolinaModal(true);
-  };
-
-  const handleCloseGasolinaModal = () => {
-    setShowGasolinaModal(false);
   };
 
   const handleSubmitMaintenance = async (payload: {
@@ -923,38 +914,6 @@ export default function Flotilla() {
       handleCloseMaintenanceModal();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'No se pudo registrar el mantenimiento.');
-    }
-  };
-
-  const handleSubmitGasolina = async (payload: {
-    vehicleId: string;
-    assignmentId?: string;
-    fecha: string;
-    litros: number;
-    total: number;
-    odometro: number;
-    estacion: string;
-    facturaId?: string;
-  }) => {
-    try {
-      const precioLitro = payload.litros > 0 ? Number((payload.total / payload.litros).toFixed(2)) : 0;
-      await createFlotillaCargaGasolina({
-        vehicleId: payload.vehicleId,
-        assignmentId: payload.assignmentId,
-        userId: user ? String(user.id) : undefined,
-        fecha: payload.fecha,
-        litros: payload.litros,
-        precioLitro,
-        total: payload.total,
-        odometro: payload.odometro,
-        estacion: payload.estacion,
-        facturaId: payload.facturaId,
-      });
-      await refreshGasolinaData();
-      await syncCoreAppData({ userId: user ? String(user.id) : undefined });
-      handleCloseGasolinaModal();
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No se pudo registrar la carga de gasolina.');
     }
   };
 
@@ -1146,15 +1105,6 @@ export default function Flotilla() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-1-1v2m-6.938 8h13.856M7 16h10a2 2 0 002-2v-1a2 2 0 00-2-2H7a2 2 0 00-2 2v1a2 2 0 002 2zm0 0v2m10-2v2" />
                   </svg>
                   <span>Registrar Mantenimiento</span>
-                </button>
-                <button
-                  onClick={handleOpenGasolinaModal}
-                  className="px-2 py-1 text-[10px] bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-medium transition-colors flex items-center space-x-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-6 4h6m-7 9h8a2 2 0 002-2V8.414a2 2 0 00-.586-1.414l-2.414-2.414A2 2 0 0013.586 4H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>Registrar Gasolina</span>
                 </button>
                 <button
                   onClick={() => setShowNewVehicleForm(true)}
@@ -1433,16 +1383,6 @@ export default function Flotilla() {
           onSubmit={handleSubmitMaintenance}
         />
       )}
-
-      {showGasolinaModal && (
-        <GasolinaEntryModal
-          vehicles={vehiclesWithStatus}
-          assignments={assignments}
-          userId={user ? String(user.id) : undefined}
-          onClose={handleCloseGasolinaModal}
-          onSubmit={handleSubmitGasolina}
-        />
-      )}
     </div>
   );
 }
@@ -1663,195 +1603,6 @@ function MaintenanceEntryModal({ mode, vehicles, alert, onClose, onSubmit }: Mai
               Cancelar
             </button>
             <button type="submit" className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700">
-              Guardar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-interface GasolinaEntryModalProps {
-  vehicles: Vehicle[];
-  assignments: VehicleAssignment[];
-  userId?: string;
-  onClose: () => void;
-  onSubmit: (payload: {
-    vehicleId: string;
-    assignmentId?: string;
-    fecha: string;
-    litros: number;
-    total: number;
-    odometro: number;
-    estacion: string;
-    facturaId?: string;
-  }) => void;
-}
-
-function GasolinaEntryModal({ vehicles, assignments, onClose, onSubmit }: GasolinaEntryModalProps) {
-  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id || '');
-  const activeAssignments = assignments.filter(
-    (assignment) => assignment.vehicleId === vehicleId && assignment.status !== 'completado'
-  );
-  const [assignmentId, setAssignmentId] = useState(activeAssignments[0]?.id || '');
-  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === vehicleId) ?? vehicles[0] ?? null;
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
-  const [litros, setLitros] = useState('');
-  const [total, setTotal] = useState('');
-  const [odometro, setOdometro] = useState(selectedVehicle ? String(selectedVehicle.currentKm || selectedVehicle.kmActual || 0) : '');
-  const [estacion, setEstacion] = useState('');
-  const [facturaId, setFacturaId] = useState('');
-
-  useEffect(() => {
-    setAssignmentId(activeAssignments[0]?.id || '');
-    if (selectedVehicle) {
-      setOdometro(String(selectedVehicle.currentKm || selectedVehicle.kmActual || 0));
-    }
-  }, [vehicleId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const parsedLitros = Number(litros);
-    const parsedTotal = Number(total);
-    const parsedOdometer = Number(odometro);
-
-    if (!vehicleId || !Number.isFinite(parsedLitros) || parsedLitros <= 0 || !Number.isFinite(parsedTotal) || parsedTotal <= 0) {
-      window.alert('Completa vehiculo, litros y total.');
-      return;
-    }
-
-    onSubmit({
-      vehicleId,
-      assignmentId: assignmentId || undefined,
-      fecha,
-      litros: parsedLitros,
-      total: parsedTotal,
-      odometro: Number.isFinite(parsedOdometer) ? parsedOdometer : 0,
-      estacion: estacion.trim() || 'Carga manual',
-      facturaId: facturaId.trim() || undefined,
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">Registrar gasolina</h3>
-            <p className="text-xs text-slate-500">La carga se guarda en backend y se refleja en gastos de flotilla.</p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="space-y-4 px-5 py-4">
-          <label className="block text-sm text-slate-700">
-            <span className="mb-1 block font-medium">Vehiculo</span>
-            <select
-              value={vehicleId}
-              onChange={(event) => setVehicleId(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              {vehicles.map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {vehicle.brand} {vehicle.model} ({vehicle.plates})
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Asignacion</span>
-              <select
-                value={assignmentId}
-                onChange={(event) => setAssignmentId(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                <option value="">Sin asignacion</option>
-                {activeAssignments.map((assignment) => (
-                  <option key={assignment.id} value={assignment.id}>
-                    {assignment.userName} · {formatDate(assignment.fechaInicio)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Fecha</span>
-              <input
-                type="date"
-                value={fecha}
-                onChange={(event) => setFecha(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Litros</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={litros}
-                onChange={(event) => setLitros(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Total</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={total}
-                onChange={(event) => setTotal(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Odometro</span>
-              <input
-                type="number"
-                min="0"
-                value={odometro}
-                onChange={(event) => setOdometro(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Estacion</span>
-              <input
-                type="text"
-                value={estacion}
-                onChange={(event) => setEstacion(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm text-slate-700">
-              <span className="mb-1 block font-medium">Factura</span>
-              <input
-                type="text"
-                value={facturaId}
-                onChange={(event) => setFacturaId(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-
-          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
-            <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
-              Cancelar
-            </button>
-            <button type="submit" className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">
               Guardar
             </button>
           </div>
@@ -3445,6 +3196,9 @@ function AssignmentModal({
                         className="w-full px-3 py-1.5 border border-slate-200 rounded-xl bg-white/90 text-sm text-slate-900 shadow-sm transition focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         placeholder="Monto"
                       />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Se registrara automaticamente en gasolina usando la solicitud y los kilometros de la asignacion.
+                      </p>
                     </div>
                     <div className="md:col-span-3">
                       <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">Comentarios</label>
