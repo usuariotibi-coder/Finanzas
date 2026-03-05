@@ -1014,7 +1014,7 @@ export const updateConsumo = async (id: string, payload: Partial<Consumo>): Prom
 export const createCatalogGSActivity = async (payload: {
   label: string;
   account: string;
-  code: string;
+  code?: string;
   category: GSActivity['category'];
   proyectoRequerido: boolean;
   note?: string;
@@ -1024,7 +1024,7 @@ export const createCatalogGSActivity = async (payload: {
     body: JSON.stringify({
       label: payload.label,
       account: payload.account,
-      code: payload.code,
+      code: payload.code || 'N/A',
       category: payload.category,
       proyecto_requerido: payload.proyectoRequerido,
       note: payload.note || '',

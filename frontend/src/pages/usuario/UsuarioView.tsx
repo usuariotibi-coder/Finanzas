@@ -1998,7 +1998,7 @@ export default function UsuarioView() {
             <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Viáticos</h2>
               {/* Lista de Viáticos */}
-              <div className="grid grid-cols-1 gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+              <div className="flex flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {viaticosFiltrados.length > 0 ? (
               viaticosFiltrados.map((viatico) => {
                 const estadoInfo = getEstadoInfo(viatico.status);
@@ -2159,7 +2159,7 @@ export default function UsuarioView() {
             {/* Sección de Vehículos Asignados */}
             <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Vehículos</h2>
-              <div className="grid grid-cols-1 gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+              <div className="flex flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
               {visibleVehicleAssignments.length > 0 ? (
                 visibleVehicleAssignments.map((assignment) => {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
@@ -2298,7 +2298,7 @@ export default function UsuarioView() {
             {/* Sección de Solicitudes de Viaje */}
             <div className="xl:h-full xl:min-h-0 xl:flex xl:flex-col">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">Mis Solicitudes de Viaje</h2>
-              <div className="grid grid-cols-1 gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+              <div className="flex flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
               {visibleSolicitudesViaje.length > 0 ? (
                 visibleSolicitudesViaje.map((solicitud) => {
                   const proyecto = proyectos.find(p => p.id === solicitud.proyectoId);
