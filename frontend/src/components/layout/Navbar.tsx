@@ -240,7 +240,10 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
     [newPassword]
   );
   const passedChecks = passwordChecks.filter((check) => check.ok).length;
-  const strengthScore = Math.min(5, passedChecks + (newPassword.length >= 12 ? 1 : 0));
+  const rawStrengthScore = Math.min(5, passedChecks + (newPassword.length >= 12 ? 1 : 0));
+  const strengthScore = passwordChecks.every((check) => check.ok)
+    ? rawStrengthScore
+    : Math.min(rawStrengthScore, 3);
   const currentStrength = strengthMeta[Math.max(0, Math.min(4, strengthScore - 1))];
 
   const getNotificationStyle = (id: string) => {

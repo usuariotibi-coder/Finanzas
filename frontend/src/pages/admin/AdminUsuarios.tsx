@@ -97,7 +97,10 @@ export default function AdminUsuarios() {
     [password]
   );
   const passedChecks = passwordChecks.filter((check) => check.ok).length;
-  const strengthScore = Math.min(5, passedChecks + (password.length >= 12 ? 1 : 0));
+  const rawStrengthScore = Math.min(5, passedChecks + (password.length >= 12 ? 1 : 0));
+  const strengthScore = passwordChecks.every((check) => check.ok)
+    ? rawStrengthScore
+    : Math.min(rawStrengthScore, 3);
   const currentStrength = strengthMeta[Math.max(0, Math.min(4, strengthScore - 1))];
 
   const editPasswordChecks = useMemo(
@@ -105,7 +108,10 @@ export default function AdminUsuarios() {
     [editPassword]
   );
   const editPassedChecks = editPasswordChecks.filter((check) => check.ok).length;
-  const editStrengthScore = Math.min(5, editPassedChecks + (editPassword.length >= 12 ? 1 : 0));
+  const editRawStrengthScore = Math.min(5, editPassedChecks + (editPassword.length >= 12 ? 1 : 0));
+  const editStrengthScore = editPasswordChecks.every((check) => check.ok)
+    ? editRawStrengthScore
+    : Math.min(editRawStrengthScore, 3);
   const editCurrentStrength = strengthMeta[Math.max(0, Math.min(4, editStrengthScore - 1))];
 
   useEffect(() => {

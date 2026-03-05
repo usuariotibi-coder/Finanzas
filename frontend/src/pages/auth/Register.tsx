@@ -32,7 +32,10 @@ export default function Register() {
     { label: 'Un simbolo (!@#$...)', ok: /[^A-Za-z0-9]/.test(password) },
   ];
   const passedChecks = passwordChecks.filter((check) => check.ok).length;
-  const strengthScore = Math.min(5, passedChecks + (password.length >= 12 ? 1 : 0));
+  const rawStrengthScore = Math.min(5, passedChecks + (password.length >= 12 ? 1 : 0));
+  const strengthScore = passwordChecks.every((check) => check.ok)
+    ? rawStrengthScore
+    : Math.min(rawStrengthScore, 3);
   const strengthMeta = [
     { label: 'Muy debil', color: 'bg-red-500', text: 'text-red-600' },
     { label: 'Debil', color: 'bg-orange-500', text: 'text-orange-600' },
