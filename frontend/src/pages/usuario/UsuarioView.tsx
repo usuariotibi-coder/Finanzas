@@ -2020,12 +2020,9 @@ export default function UsuarioView() {
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
                             <span className="text-base">{estadoInfo.icon}</span>
-                            <span className="truncate">{viatico.destino} - {proyectoLabel}</span>
+                            <span className="truncate">{viatico.destino}</span>
                           </h3>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-600">
-                            <span>{formatDateOnlyMx(viatico.fechaInicio)} - {formatDateOnlyMx(viatico.fechaFin)}</span>
-                            <span className="font-semibold text-gray-900">${viatico.montoAprobado?.toLocaleString() || viatico.montoSolicitado.toLocaleString()} MXN</span>
-                          </div>
+                          <p className="mt-0.5 text-xs text-gray-600">{proyectoLabel}</p>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
@@ -2054,18 +2051,30 @@ export default function UsuarioView() {
                             style={{ width: `${procesoViatico.avance}%` }}
                           />
                         </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
+                        <span><span className="font-medium">Proyecto:</span> {proyectoLabel}</span>
+                        <span><span className="font-medium">Desde:</span> {formatDateOnlyMx(viatico.fechaInicio)}</span>
+                        <span><span className="font-medium">Hasta:</span> {formatDateOnlyMx(viatico.fechaFin)}</span>
+                        <span className="font-semibold text-gray-900">
+                          <span className="font-medium text-gray-600">Monto:</span> ${viatico.montoAprobado?.toLocaleString() || viatico.montoSolicitado.toLocaleString()} MXN
+                        </span>
+                      </div>
+
+                      <div className="space-y-1">
                         {extensionPendiente && (
-                          <p className="mt-1 text-[11px] text-amber-700">
+                          <p className="text-[11px] text-amber-700">
                             Extension pendiente PM: {formatDateOnlyMx(extensionPendiente.nuevaFechaFin)}
                           </p>
                         )}
                         {!extensionPendiente && extensionResuelta && (
-                          <p className={`mt-1 text-[11px] ${extensionResuelta.status === 'aprobada' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          <p className={`text-[11px] ${extensionResuelta.status === 'aprobada' ? 'text-emerald-700' : 'text-rose-700'}`}>
                             {extensionResuelta.status === 'aprobada' ? 'Extension aprobada PM' : 'Extension rechazada PM'}: {extensionResuelta.resolvedAt}
                           </p>
                         )}
                         {requiereDispersionAdicional && (
-                          <p className="mt-1 text-[11px] text-blue-700">
+                          <p className="text-[11px] text-blue-700">
                             Pendiente de dispersion adicional por extension aprobada.
                           </p>
                         )}
@@ -2306,9 +2315,12 @@ export default function UsuarioView() {
                     <div key={solicitud.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
                       <div className="flex flex-col gap-2.5">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900">
-                            <span className="text-base">{viajeStatusIcon}</span> {solicitud.destino}
-                          </h3>
+                          <div className="min-w-0">
+                            <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                              <span className="text-base">{viajeStatusIcon}</span> {solicitud.destino}
+                            </h3>
+                            <p className="mt-0.5 text-xs text-gray-600">{proyectoLabel}</p>
+                          </div>
                           <div className="flex items-center gap-1.5">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
                               solicitud.status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
@@ -2356,7 +2368,7 @@ export default function UsuarioView() {
                         </div>
 
                         {/* Servicios solicitados con sus estados */}
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5 border-t border-gray-200 pt-2">
                           {solicitud.necesitaAvion && (
                             <div className="flex items-center gap-1">
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -2412,8 +2424,8 @@ export default function UsuarioView() {
 
                         {/* Confirmaciones */}
                         {tieneConfirmaciones && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <p className="text-xs font-medium text-gray-700 mb-1">Confirmaciones:</p>
+                          <div className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Confirmaciones</p>
                             <div className="space-y-1 text-xs text-gray-600">
                               {confirmacionesAvion.map((confirmacion, index) => (
                                 <p key={`avion-${solicitud.id}-${index}`}>Avión: {confirmacion.aerolinea} - Conf: {confirmacion.confirmacion}</p>
