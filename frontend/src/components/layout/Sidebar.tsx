@@ -290,19 +290,20 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-48 border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
+      className={`fixed left-0 top-16 flex h-[calc(100vh-4rem)] w-48 flex-col border-r border-neutral-200 bg-white/95 shadow-sm backdrop-blur transition-all duration-300 ease-out ${
         isOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 pointer-events-none'
       }`}
       aria-hidden={!isOpen}
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-500 via-accent-500 to-primary-500" />
 
-      <div className="border-b border-neutral-200 px-4 py-3">
+      <div className="border-b border-neutral-200 px-3 py-2.5">
         <p className="text-[10px] uppercase tracking-[0.28em] text-neutral-500">Navegacion</p>
-        <p className="mt-1 pr-2 text-xs font-medium text-primary-800">Accesos rapidos del sistema</p>
+        <p className="mt-0.5 pr-2 text-[11px] font-medium text-primary-800">Accesos rapidos del sistema</p>
       </div>
 
-      <nav className="h-[calc(100%-7.3rem)] overflow-y-auto p-3 space-y-1">
+      <nav className="flex-1 overflow-hidden px-2 py-2">
+        <div className="space-y-0.5">
         {filteredItems.map((item) => {
           const isActive = location.pathname === item.path;
 
@@ -310,15 +311,15 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             <Link
               key={item.path}
               to={item.path}
-              className={`group flex items-center justify-between rounded-xl py-2 transition-all duration-200 ${
+              className={`group flex items-center justify-between rounded-xl py-1.5 transition-all duration-200 ${
                 isActive
-                  ? 'bg-primary-50 text-primary-800 border-l-4 border-accent-500 pl-2.5 pr-3 shadow-sm'
-                  : 'text-neutral-700 hover:bg-neutral-50 hover:translate-x-0.5 px-3'
+                  ? 'border-l-4 border-accent-500 bg-primary-50 pl-2 pr-2.5 text-primary-800 shadow-sm'
+                  : 'px-2.5 text-neutral-700 hover:translate-x-0.5 hover:bg-neutral-50'
               }`}
             >
-              <div className="flex items-center space-x-2.5">
+              <div className="flex items-center space-x-2">
                 <svg
-                  className={`w-[18px] h-[18px] transition-transform duration-200 ${
+                  className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
                     isActive ? 'text-primary-700' : 'text-neutral-500 group-hover:text-primary-700 group-hover:scale-110'
                   }`}
                   fill="none"
@@ -327,7 +328,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 >
                   {icons[item.icon]}
                 </svg>
-                <span className="pr-1 text-[14px] font-medium">{item.label}</span>
+                <span className="pr-1 text-[12px] font-medium leading-tight">{item.label}</span>
               </div>
 
               {(() => {
@@ -347,7 +348,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                   return null;
                 }
                 return (
-                  <span className="px-1.5 py-0.5 text-[11px] font-semibold text-white bg-accent-500 rounded-full shadow-sm">
+                  <span className="rounded-full bg-accent-500 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                     {badgeValue}
                   </span>
                 );
@@ -355,9 +356,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             </Link>
           );
         })}
+        </div>
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white px-3 py-2.5">
+      <div className="border-t border-neutral-200 bg-white px-3 py-2">
         <div className="flex items-center justify-between text-xs text-neutral-600">
           <span>Version 1.0.0</span>
           <button className="rounded-md p-1 hover:bg-primary-50 hover:text-accent-600 transition-colors">
