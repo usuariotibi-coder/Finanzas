@@ -2844,8 +2844,8 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-3 sm:px-4">
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm md:grid-cols-2">
+            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm md:grid-cols-2">
                 <div>
                   {/* Proyecto - OBLIGATORIO */}
                   <ProyectoSelector
@@ -2883,7 +2883,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Motivo */}
-              <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 shadow-sm">
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-2.5 shadow-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Motivo del Viaje <span className="text-red-500">*</span>
                 </label>
@@ -2906,7 +2906,7 @@ export default function UsuarioView() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-sky-100 bg-sky-50/60 p-3 shadow-sm md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-sky-100 bg-sky-50/60 p-2.5 shadow-sm md:grid-cols-2">
               {/* Pais */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2984,7 +2984,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha de Inicio <span className="text-red-500">*</span>
@@ -3026,11 +3026,11 @@ export default function UsuarioView() {
               </div>
 
               {/* Alimentos */}
-              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-3 shadow-sm">
+              <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-2.5 shadow-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Alimentos (MXN) <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Desayunos ($150)</label>
                     <input
@@ -3080,7 +3080,7 @@ export default function UsuarioView() {
                 {nuevoViaticoErrors.alimentos && (
                   <p className="mt-2 text-xs text-rose-600">{nuevoViaticoErrors.alimentos}</p>
                 )}
-                <div className="mt-2.5 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5">
+                <div className="mt-2 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-1.5">
                   <span className="text-sm text-gray-600">Total estimado</span>
                   <span className="text-lg font-semibold text-gray-900">
                     ${totalAlimentos.toLocaleString()}
