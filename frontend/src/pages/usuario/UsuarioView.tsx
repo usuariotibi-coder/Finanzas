@@ -3496,12 +3496,12 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-2">
+            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
               {/* Información General */}
               <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
-                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {/* Proyecto */}
                 <ProyectoSelector
                   value={formSolicitudViaje.proyectoId}
@@ -3631,7 +3631,7 @@ export default function UsuarioView() {
                   <p className="text-xs text-rose-600">{solicitarViajeErrors.servicios}</p>
                 )}
 
-                <div className="grid grid-cols-1 gap-2.5">
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-1">
                 {/* Avión */}
                 <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
