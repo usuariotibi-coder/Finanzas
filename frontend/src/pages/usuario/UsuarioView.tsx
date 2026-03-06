@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje } from '../../types';
+import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje, Proyecto } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
@@ -16,6 +16,7 @@ import {
   deleteViaje,
   deleteViatico,
   fetchFlotillaAsignaciones,
+  fetchProyectos,
   syncCoreAppData,
   uploadFlotillaEntregaFotos,
   updateFlotillaAsignacion,
@@ -697,7 +698,27 @@ export default function UsuarioView() {
   const [kmInicial, setKmInicial] = useLocalStorageState<number>('usuario:kmInicial', 0);
   const [kmFinal, setKmFinal] = useLocalStorageState<number>('usuario:kmFinal', 0);
 
-  const proyectos = getProyectos();
+  const [proyectos, setProyectos] = useLocalStorageState<Proyecto[]>('proyectos_data', getProyectos());
+  useEffect(() => {
+    let isActive = true;
+
+    const loadProjects = async () => {
+      try {
+        const remoteProjects = await fetchProyectos();
+        if (!isActive || remoteProjects.length === 0) {
+          return;
+        }
+        setProyectos(remoteProjects);
+      } catch {
+        // Keep cached projects if backend is temporarily unavailable.
+      }
+    };
+
+    void loadProjects();
+    return () => {
+      isActive = false;
+    };
+  }, [setProyectos]);
   const totalAlimentos =
     formNuevoViatico.desayunos * 150 +
     formNuevoViatico.comidas * 200 +
