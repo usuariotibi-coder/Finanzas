@@ -718,6 +718,24 @@ export default function UsuarioView() {
     ? getPendingViaticoExtension(viaticoParaExtender.comentarios)
     : null;
   const actividadSeleccionada = formNuevoViatico.gsActivityId ? getActivityById(formNuevoViatico.gsActivityId) : undefined;
+
+  const resolveProyectoDisplay = (proyectoId?: string, proyectoNombre?: string) => {
+    const normalizedProyectoId = normalizeText(proyectoId || '');
+    const normalizedProyectoNombre = normalizeText(proyectoNombre || '');
+    const proyecto = proyectos.find((item) => {
+      const candidates = [item.id, item.codigo, item.nombre, item.cliente, item.descripcion]
+        .map((value) => normalizeText(value || ''))
+        .filter(Boolean);
+      return (
+        (normalizedProyectoId && candidates.includes(normalizedProyectoId)) ||
+        (normalizedProyectoNombre && candidates.includes(normalizedProyectoNombre))
+      );
+    });
+    const jobLabel = (proyecto?.codigo || '').trim() || formatProyectoLabel(undefined, proyectoId);
+    return {
+      jobLabel,
+    };
+  };
   const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
   const isFormValid = Boolean(
@@ -2010,8 +2028,7 @@ export default function UsuarioView() {
                   ? getLatestViaticoExtensionResolution(viatico.comentarios)
                   : null;
                 const requiereDispersionAdicional = viatico.status === 'aprobado' && (viatico.montoDispersado || 0) > 0;
-                const proyecto = proyectos.find(p => p.id === viatico.proyectoId);
-                const proyectoLabel = formatProyectoLabel(proyecto?.nombre || viatico.proyectoNombre, viatico.proyectoId);
+                const proyectoDisplay = resolveProyectoDisplay(viatico.proyectoId, viatico.proyectoNombre);
 
                 return (
                   <div key={viatico.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
@@ -2020,9 +2037,11 @@ export default function UsuarioView() {
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
                             <span className="text-base">{estadoInfo.icon}</span>
-                            <span className="truncate">{viatico.destino}</span>
+                            <span className="truncate">{proyectoDisplay.jobLabel}</span>
                           </h3>
-                          <p className="mt-0.5 text-xs text-gray-600">{proyectoLabel}</p>
+                          {viatico.destino && normalizeText(viatico.destino) !== normalizeText(proyectoDisplay.jobLabel) && (
+                            <p className="mt-0.5 text-xs text-gray-600">{viatico.destino}</p>
+                          )}
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
@@ -2054,7 +2073,7 @@ export default function UsuarioView() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-                        <span><span className="font-medium">Proyecto:</span> {proyectoLabel}</span>
+                        <span><span className="font-medium">Proyecto:</span> {proyectoDisplay.jobLabel}</span>
                         <span><span className="font-medium">Desde:</span> {formatDateOnlyMx(viatico.fechaInicio)}</span>
                         <span><span className="font-medium">Hasta:</span> {formatDateOnlyMx(viatico.fechaFin)}</span>
                         <span className="font-semibold text-gray-900">
@@ -2163,8 +2182,7 @@ export default function UsuarioView() {
               {visibleVehicleAssignments.length > 0 ? (
                 visibleVehicleAssignments.map((assignment) => {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
-                  const proyecto = proyectos.find(p => p.id === assignment.proyectoId);
-                  const proyectoLabel = formatProyectoLabel(proyecto?.nombre || assignment.proyectoNombre, assignment.proyectoId);
+                  const proyectoDisplay = resolveProyectoDisplay(assignment.proyectoId, assignment.proyectoNombre);
                   const vehiculoStatusIcon = getVehiculoStatusIcon(assignment.status);
                   const procesoVehiculo = getProcesoVehiculo(assignment.status);
                   const deletingVehiculo = deletingCardKey === `vehiculo:${assignment.id}`;
@@ -2226,7 +2244,7 @@ export default function UsuarioView() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-                          <span><span className="font-medium">Proyecto:</span> {proyectoLabel}</span>
+                          <span><span className="font-medium">Proyecto:</span> {proyectoDisplay.jobLabel}</span>
                           {assignment.destino && (
                             <span><span className="font-medium">Destino:</span> {assignment.destino}</span>
                           )}
@@ -2301,8 +2319,7 @@ export default function UsuarioView() {
               <div className="flex flex-col gap-3 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
               {visibleSolicitudesViaje.length > 0 ? (
                 visibleSolicitudesViaje.map((solicitud) => {
-                  const proyecto = proyectos.find(p => p.id === solicitud.proyectoId);
-                  const proyectoLabel = formatProyectoLabel(proyecto?.nombre || solicitud.proyectoNombre, solicitud.proyectoId);
+                  const proyectoDisplay = resolveProyectoDisplay(solicitud.proyectoId, solicitud.proyectoNombre);
                   const confirmacionesAvion = solicitud.confirmaciones?.avion ?? [];
                   const confirmacionesCamion = solicitud.confirmaciones?.camion ?? [];
                   const confirmacionesHotel = solicitud.confirmaciones?.hotel ?? [];
@@ -2319,7 +2336,7 @@ export default function UsuarioView() {
                             <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                               <span className="text-base">{viajeStatusIcon}</span> {solicitud.destino}
                             </h3>
-                            <p className="mt-0.5 text-xs text-gray-600">{proyectoLabel}</p>
+                            <p className="mt-0.5 text-xs text-gray-600">{proyectoDisplay.jobLabel}</p>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -2362,7 +2379,7 @@ export default function UsuarioView() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-                          <span><span className="font-medium">Proyecto:</span> {proyectoLabel}</span>
+                          <span><span className="font-medium">Proyecto:</span> {proyectoDisplay.jobLabel}</span>
                           <span><span className="font-medium">Motivo:</span> {solicitud.motivo}</span>
                           <span><span className="font-medium">Fechas:</span> {formatDateOnlyMx(solicitud.fechaInicio)} - {formatDateOnlyMx(solicitud.fechaFin)}</span>
                         </div>
