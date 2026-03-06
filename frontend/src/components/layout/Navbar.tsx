@@ -418,9 +418,9 @@ export default function Navbar({ onMenuClick, sidebarOpen }: NavbarProps) {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 h-16 bg-white/95 border-b border-neutral-200 z-50 shadow-sm backdrop-blur">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-neutral-200 bg-white/95 shadow-sm backdrop-blur">
       <div className="absolute inset-x-0 top-0 h-1 bg-accent-500" />
-      <div className="flex items-center justify-between h-full px-4">
+      <div className="mx-auto flex h-full w-full max-w-[2400px] items-center justify-between px-4 sm:px-5 lg:px-6 xl:px-8">
         <div className="flex items-center space-x-4">
           <button
             onClick={onMenuClick}
