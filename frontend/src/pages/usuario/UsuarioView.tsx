@@ -2094,7 +2094,7 @@ export default function UsuarioView() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-                        <span><span className="font-medium">Proyecto:</span> {proyectoDisplay.jobLabel}</span>
+                        <span><span className="font-medium">Job:</span> {proyectoDisplay.jobLabel}</span>
                         <span><span className="font-medium">Desde:</span> {formatDateOnlyMx(viatico.fechaInicio)}</span>
                         <span><span className="font-medium">Hasta:</span> {formatDateOnlyMx(viatico.fechaFin)}</span>
                         <span className="font-semibold text-gray-900">
@@ -2212,12 +2212,18 @@ export default function UsuarioView() {
                     <div key={assignment.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3 sm:p-4 hover:shadow transition-shadow">
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                          <div className="min-w-0">
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            <span className="text-base">{vehiculoStatusIcon}</span>{' '}
+                            {proyectoDisplay.jobLabel}
+                          </p>
+                          <h3 className="mt-0.5 text-xs text-gray-600">
                             <span className="text-base">{vehiculoStatusIcon}</span>{' '}
                             {vehicle
                               ? `${vehicle.marca} ${vehicle.modelo} (${vehicle.placas})`
                               : assignment.vehiculoLabel || 'Vehículo pendiente de asignación'}
                           </h3>
+                          </div>
                           <div className="flex flex-wrap items-center gap-1.5">
                           {assignment.status === 'solicitado' && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
@@ -2265,7 +2271,7 @@ export default function UsuarioView() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-                          <span><span className="font-medium">Proyecto:</span> {proyectoDisplay.jobLabel}</span>
+                          <span><span className="font-medium">Job:</span> {proyectoDisplay.jobLabel}</span>
                           {assignment.destino && (
                             <span><span className="font-medium">Destino:</span> {assignment.destino}</span>
                           )}
@@ -2355,9 +2361,9 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                             <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                              <span className="text-base">{viajeStatusIcon}</span> {solicitud.destino}
+                              <span className="text-base">{viajeStatusIcon}</span> {proyectoDisplay.jobLabel}
                             </h3>
-                            <p className="mt-0.5 text-xs text-gray-600">{proyectoDisplay.jobLabel}</p>
+                            <p className="mt-0.5 text-xs text-gray-600">{solicitud.destino}</p>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
@@ -2400,7 +2406,7 @@ export default function UsuarioView() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
-                          <span><span className="font-medium">Proyecto:</span> {proyectoDisplay.jobLabel}</span>
+                          <span><span className="font-medium">Job:</span> {proyectoDisplay.jobLabel}</span>
                           <span><span className="font-medium">Motivo:</span> {solicitud.motivo}</span>
                           <span><span className="font-medium">Fechas:</span> {formatDateOnlyMx(solicitud.fechaInicio)} - {formatDateOnlyMx(solicitud.fechaFin)}</span>
                         </div>
