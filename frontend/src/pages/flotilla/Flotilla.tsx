@@ -2693,10 +2693,10 @@ function NewVehicleModal({
           </div>
         </div>
 
-        <form className="p-6 space-y-6" onSubmit={(event) => {
+        <form className="grid gap-3 p-4 sm:p-5 xl:grid-cols-2" onSubmit={(event) => {
           void handleSubmit(event);
         }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:col-span-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Marca</label>
               <select
@@ -2873,7 +2873,7 @@ function NewVehicleModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 xl:col-span-2">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Foto del Vehiculo (opcional)</label>
@@ -2919,7 +2919,7 @@ function NewVehicleModal({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+          <div className="flex justify-end space-x-3 border-t border-gray-200 pt-4 xl:col-span-2">
             <button
               type="button"
               onClick={onClose}

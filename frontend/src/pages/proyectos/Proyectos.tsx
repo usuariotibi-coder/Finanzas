@@ -962,9 +962,9 @@ export default function Proyectos() {
                 </h3>
               </div>
 
-              <div className="px-4 sm:px-5 py-3">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="px-4 py-3 sm:px-5">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Código <span className="text-red-500">*</span>
@@ -1049,7 +1049,7 @@ export default function Proyectos() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Fecha de Inicio

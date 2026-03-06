@@ -3140,8 +3140,8 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-3 sm:px-4">
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm md:grid-cols-2">
+            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm md:grid-cols-2">
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -3173,7 +3173,7 @@ export default function UsuarioView() {
 
               </div>
 
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-sky-100 bg-sky-50/60 p-3 shadow-sm md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-sky-100 bg-sky-50/60 p-2.5 shadow-sm md:grid-cols-2">
               {/* Origen */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3259,7 +3259,7 @@ export default function UsuarioView() {
                       <p className="mt-1 text-[11px] text-slate-500">
                         Usa el selector superior del mapa: Mapa, Satelite, Hibrido y Relieve. En Satelite/Hibrido se muestran etiquetas de lugares.
                       </p>
-                      <div className="mt-2 h-48 overflow-hidden rounded-md border border-gray-200">
+                      <div className="mt-2 h-40 overflow-hidden rounded-md border border-gray-200">
                         <VehicleDestinationLayeredMap
                           center={VEHICLE_DESTINATION_MAP_CENTER}
                           selectedPoint={destinoVehiculoCoords}
@@ -3308,7 +3308,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Fechas */}
-              <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Fecha de Inicio <span className="text-red-500">*</span>
@@ -3343,7 +3343,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Motivo */}
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 shadow-sm">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-2.5 shadow-sm">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Motivo <span className="text-red-500">*</span>
                 </label>
@@ -3496,12 +3496,12 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-3 sm:px-4">
+            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-2">
               {/* Información General */}
-              <div className="space-y-3 rounded-xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+              <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
                 {/* Proyecto */}
                 <ProyectoSelector
                   value={formSolicitudViaje.proyectoId}
@@ -3560,7 +3560,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Fechas */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Fecha de Inicio <span className="text-red-500">*</span>
@@ -3624,7 +3624,7 @@ export default function UsuarioView() {
               </div>
 
               {/* Servicios Requeridos */}
-              <div className="space-y-3 rounded-xl border border-violet-100 bg-violet-50/60 p-3 shadow-sm">
+              <div className="space-y-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Servicios Requeridos</h3>
                 <p className="text-sm text-gray-600">Selecciona los servicios que necesitas (al menos uno)</p>
                 {solicitarViajeErrors.servicios && (

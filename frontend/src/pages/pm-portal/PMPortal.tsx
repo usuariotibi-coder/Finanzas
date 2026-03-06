@@ -1238,8 +1238,8 @@ export default function PMPortal() {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-3 p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Job *
@@ -1299,7 +1299,7 @@ export default function PMPortal() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Presupuesto *
@@ -1321,7 +1321,7 @@ export default function PMPortal() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Fecha de Inicio *
@@ -1378,7 +1378,7 @@ export default function PMPortal() {
               </div>
             </div>
 
-            <div className="p-6 bg-gray-50 border-t border-gray-200 flex gap-3">
+            <div className="flex gap-3 border-t border-gray-200 bg-gray-50 p-4 sm:p-5">
               <button
                 onClick={() => {
                   setShowModalCrearProyecto(false);

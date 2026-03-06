@@ -949,8 +949,8 @@ export default function Amex() {
               </div>
             </div>
 
-            <div className="px-6 py-4 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-3 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
                   <input
@@ -1093,7 +1093,7 @@ export default function Amex() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
                   <ProyectoSelector
                     value={newTicket.proyectoId}
@@ -1129,7 +1129,7 @@ export default function Amex() {
               </div>
 
               {newTicket.paisComercio === 'USA' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Monto USD</label>
                     <input
@@ -1169,7 +1169,7 @@ export default function Amex() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                   <select

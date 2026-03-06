@@ -470,9 +470,9 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
           </div>
         </div>
 
-        <form className="p-6 space-y-4" onSubmit={handleSubmit}>
+        <form className="grid gap-3 p-4 sm:p-5 md:grid-cols-2" onSubmit={handleSubmit}>
           {/* Proyecto (OBLIGATORIO) */}
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <ProyectoSelector
               value={selectedProyectoId}
               onChange={handleProyectoChange}
@@ -487,7 +487,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
           </div>
 
           {/* GS Activity */}
-          <div className="col-span-2">
+          <div className="md:col-span-2">
             <GSActivitySelector
               value={selectedActivityId}
               onChange={handleActivityChange}
@@ -501,7 +501,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-3 md:col-span-2 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Motivo del Viaje
@@ -618,7 +618,7 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
             </div>
           </div>
 
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Detalles / Comentarios
             </label>
@@ -632,12 +632,12 @@ function NewViaticoModal({ currentUser, onCreated, onClose }: NewViaticoModalPro
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:col-span-2">
               {error}
             </div>
           )}
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+          <div className="flex justify-end space-x-3 border-t border-gray-200 pt-4 md:col-span-2">
             <button
               type="button"
               onClick={onClose}
