@@ -673,7 +673,6 @@ export default function PMPortal() {
                         <span className="text-xs">{viaticoStatusIcon}</span>
                         <span className="truncate">{viatico.userName}</span>
                       </h3>
-                      <p className="text-[11px] text-gray-500">{viatico.id}</p>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${isExtensionRequest ? 'bg-amber-100 text-amber-800' : 'bg-yellow-100 text-yellow-800'}`}>
                       {isExtensionRequest ? 'Extension pendiente' : 'Pendiente'}
