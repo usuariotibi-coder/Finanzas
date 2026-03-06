@@ -49,7 +49,7 @@ export default function GSActivitySelector({
   };
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <label className="block text-sm font-medium text-gray-700 mb-1">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}

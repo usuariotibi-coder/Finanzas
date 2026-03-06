@@ -2844,7 +2844,7 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-2">
+            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
               <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm md:grid-cols-2">
                 <div>
                   {/* Proyecto - OBLIGATORIO */}
@@ -3624,16 +3624,16 @@ export default function UsuarioView() {
               </div>
 
               {/* Servicios Requeridos */}
-              <div className="space-y-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-2.5 shadow-sm">
+              <div className="self-start space-y-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Servicios Requeridos</h3>
                 <p className="text-sm text-gray-600">Selecciona los servicios que necesitas (al menos uno)</p>
                 {solicitarViajeErrors.servicios && (
                   <p className="text-xs text-rose-600">{solicitarViajeErrors.servicios}</p>
                 )}
 
-                <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2.5">
                 {/* Avión */}
-                <div className="rounded-lg border border-gray-200 p-2.5">
+                <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -3663,7 +3663,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Camión */}
-                <div className="rounded-lg border border-gray-200 p-2.5">
+                <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -3693,7 +3693,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Hotel */}
-                <div className="rounded-lg border border-gray-200 p-2.5">
+                <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
