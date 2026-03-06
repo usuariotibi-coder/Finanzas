@@ -3474,7 +3474,7 @@ export default function UsuarioView() {
       )}
       {showModalSolicitarViaje && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+          <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:px-5">
               <div className="flex items-start justify-between gap-3">
@@ -3496,9 +3496,9 @@ export default function UsuarioView() {
               </div>
             </div>
 
-            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+            <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
               {/* Información General */}
-              <div className="space-y-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -3624,16 +3624,16 @@ export default function UsuarioView() {
               </div>
 
               {/* Servicios Requeridos */}
-              <div className="self-start space-y-2.5 rounded-xl border border-violet-100 bg-violet-50/60 p-2.5 shadow-sm">
+              <div className="self-start space-y-2 rounded-xl border border-violet-100 bg-violet-50/60 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Servicios Requeridos</h3>
-                <p className="text-sm text-gray-600">Selecciona los servicios que necesitas (al menos uno)</p>
+                <p className="text-xs text-gray-600">Selecciona los servicios que necesitas (al menos uno)</p>
                 {solicitarViajeErrors.servicios && (
                   <p className="text-xs text-rose-600">{solicitarViajeErrors.servicios}</p>
                 )}
 
-                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-1">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 {/* Avión */}
-                <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
+                <div className="rounded-lg border border-gray-200 bg-white/80 p-2">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -3647,7 +3647,7 @@ export default function UsuarioView() {
                     </div>
                   </label>
                   {formSolicitudViaje.necesitaAvion && (
-                    <div className="mt-2">
+                    <div className="mt-1.5">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Detalles del Vuelo
                       </label>
@@ -3655,15 +3655,15 @@ export default function UsuarioView() {
                         value={formSolicitudViaje.detallesAvion}
                         onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, detallesAvion: e.target.value })}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        rows={2}
-                        placeholder="Ej: Vuelo redondo desde Guadalajara, preferencia de horarios, escalas..."
+                        rows={1}
+                        placeholder="Vuelo redondo, horarios, escalas..."
                       />
                     </div>
                   )}
                 </div>
 
                 {/* Camión */}
-                <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
+                <div className="rounded-lg border border-gray-200 bg-white/80 p-2">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -3677,7 +3677,7 @@ export default function UsuarioView() {
                     </div>
                   </label>
                   {formSolicitudViaje.necesitaCamion && (
-                    <div className="mt-2">
+                    <div className="mt-1.5">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Detalles del Transporte
                       </label>
@@ -3685,7 +3685,7 @@ export default function UsuarioView() {
                         value={formSolicitudViaje.detallesCamion}
                         onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, detallesCamion: e.target.value })}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        rows={2}
+                        rows={1}
                         placeholder="Ej: Camión de carga, tipo de vehículo, capacidad necesaria..."
                       />
                     </div>
@@ -3693,7 +3693,7 @@ export default function UsuarioView() {
                 </div>
 
                 {/* Hotel */}
-                <div className="rounded-lg border border-gray-200 bg-white/80 p-2.5">
+                <div className="rounded-lg border border-gray-200 bg-white/80 p-2">
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -3707,7 +3707,7 @@ export default function UsuarioView() {
                     </div>
                   </label>
                   {formSolicitudViaje.necesitaHotel && (
-                    <div className="mt-2">
+                    <div className="mt-1.5">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Detalles del Hospedaje
                       </label>
@@ -3715,7 +3715,7 @@ export default function UsuarioView() {
                         value={formSolicitudViaje.detallesHotel}
                         onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, detallesHotel: e.target.value })}
                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        rows={2}
+                        rows={1}
                         placeholder="Ej: Hotel cerca del aeropuerto, habitación sencilla, 3 noches..."
                       />
                     </div>
