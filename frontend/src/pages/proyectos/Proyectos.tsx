@@ -846,7 +846,7 @@ export default function Proyectos() {
 
       {isExpenseModalOpen && proyectoSeleccionado && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center px-4 py-8">
+          <div className="flex min-h-full items-start justify-center px-4 py-2 sm:items-center sm:py-8">
             <div
               className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm transition-opacity"
               onClick={() => setIsExpenseModalOpen(false)}
@@ -952,10 +952,10 @@ export default function Proyectos() {
       {/* Modal Crear/Editar Proyecto */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 py-8">
+          <div className="flex min-h-full items-start justify-center px-4 py-2 sm:items-center sm:py-8">
             <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm transition-opacity" onClick={cerrarModal}></div>
 
-            <div className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[94vh] overflow-y-auto">
+            <div className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
               <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {modoEdicion ? 'Editar Proyecto' : 'Nuevo Proyecto'}

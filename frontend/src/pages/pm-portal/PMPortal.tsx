@@ -952,8 +952,8 @@ export default function PMPortal() {
 
       {/* Modal: Detalle de Viático */}
       {showModalViaticoDetalle && viaticoSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">
@@ -1090,8 +1090,8 @@ export default function PMPortal() {
 
       {/* Modal: Detalle de Viaje */}
       {showModalViajeDetalle && viajeSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Revisar Solicitud de Viaje</h2>
@@ -1218,8 +1218,8 @@ export default function PMPortal() {
 
       {/* Modal: Crear Proyecto */}
       {showModalCrearProyecto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Crear Nuevo Proyecto</h2>
@@ -1402,8 +1402,8 @@ export default function PMPortal() {
 
       {/* Modal: Detalle de Proyecto */}
       {showModalProyectoDetalle && proyectoSeleccionado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
             {(() => {
               const proyectoDetalle = proyectoForm ?? proyectoSeleccionado;
 

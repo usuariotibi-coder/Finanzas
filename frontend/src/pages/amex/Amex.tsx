@@ -891,7 +891,7 @@ export default function Amex() {
 
       {/* Modal de Exportación */}
       {showExportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 max-w-md w-full shadow-2xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Exportar a Excel</h3>
             <p className="text-sm text-gray-600 mb-6">
@@ -925,14 +925,14 @@ export default function Amex() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div
             className="absolute inset-0 bg-transparent"
             onClick={closeAddModal}
             aria-hidden="true"
           />
           <div
-            className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[94vh] overflow-y-auto"
+            className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
@@ -1224,7 +1224,7 @@ export default function Amex() {
       )}
 
       {showFacturaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div
             className="absolute inset-0 bg-transparent"
             onClick={() => setShowFacturaModal(false)}

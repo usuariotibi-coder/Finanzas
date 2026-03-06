@@ -609,7 +609,7 @@ function MontoGastadoModal({
     : viatico.saldoRestante ?? 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-transparent"
         onClick={onClose}
@@ -720,14 +720,14 @@ function RecuperacionModal({ viatico, onConfirm, onClose }: RecuperacionModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-transparent"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
@@ -842,14 +842,14 @@ function InfoViaticoModal({ viatico, onClose }: InfoViaticoModalProps) {
   const syncBadge = getSyncStatusBadge(viatico.efectifintechStatus);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-transparent"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[94vh] overflow-y-auto"
+        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">

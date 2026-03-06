@@ -586,8 +586,8 @@ function ConfirmacionDispersionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-2 backdrop-blur-sm sm:p-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-[95vw] sm:max-w-3xl max-h-[94vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-[95vw] sm:max-w-3xl max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
