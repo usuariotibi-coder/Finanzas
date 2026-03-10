@@ -21,6 +21,7 @@ interface ProyectoSelectorProps {
   label?: string;
   inputClassName?: string;
   compact?: boolean;
+  showOnlyJob?: boolean;
 }
 
 const STORAGE_KEY = 'proyectos_data';
@@ -57,6 +58,7 @@ export default function ProyectoSelector({
   label = 'Proyecto',
   inputClassName = '',
   compact = false,
+  showOnlyJob = false,
 }: ProyectoSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -166,7 +168,7 @@ export default function ProyectoSelector({
             <span className="text-sm font-medium text-gray-900">{NEW_PROJECT_LABEL}</span>
           </div>
         ) : selectedProyecto ? (
-          <div className={`flex flex-1 ${compact ? 'min-w-0 items-center' : 'flex-col'}`}>
+          <div className={`flex flex-1 ${compact || showOnlyJob ? 'min-w-0 items-center' : 'flex-col'}`}>
             {(() => {
               const selectedNombre = (selectedProyecto.nombre || '').trim();
               const selectedCliente = (selectedProyecto.cliente || '').trim();
@@ -176,9 +178,12 @@ export default function ProyectoSelector({
               const compactLabel = [selectedCodigo, selectedCliente]
                 .filter(Boolean)
                 .join(' - ') || selectedNombre || selectedProyecto.codigo;
+              const jobLabel = selectedCodigo || selectedNombre || selectedProyecto.id;
               return (
                 <>
-                  {compact ? (
+                  {showOnlyJob ? (
+                    <span className="truncate text-sm font-medium text-gray-900">{jobLabel}</span>
+                  ) : compact ? (
                     <span className="truncate text-sm font-medium text-gray-900">{compactLabel}</span>
                   ) : (
                     <>

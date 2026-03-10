@@ -3509,6 +3509,8 @@ export default function UsuarioView() {
                   required={true}
                   showCreateOption={true}
                   label="Proyecto"
+                  compact
+                  showOnlyJob
                   inputClassName={solicitarViajeErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
                 />
                 {solicitarViajeErrors.proyectoId && (
@@ -3654,8 +3656,8 @@ export default function UsuarioView() {
                       <textarea
                         value={formSolicitudViaje.detallesAvion}
                         onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, detallesAvion: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        rows={1}
+                        className="w-full min-h-[88px] resize-y px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        rows={3}
                         placeholder="Vuelo redondo, horarios, escalas..."
                       />
                     </div>
@@ -3684,8 +3686,8 @@ export default function UsuarioView() {
                       <textarea
                         value={formSolicitudViaje.detallesCamion}
                         onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, detallesCamion: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        rows={1}
+                        className="w-full min-h-[88px] resize-y px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        rows={3}
                         placeholder="Ej: Camión de carga, tipo de vehículo, capacidad necesaria..."
                       />
                     </div>
@@ -3714,8 +3716,8 @@ export default function UsuarioView() {
                       <textarea
                         value={formSolicitudViaje.detallesHotel}
                         onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, detallesHotel: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                        rows={1}
+                        className="w-full min-h-[88px] resize-y px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                        rows={3}
                         placeholder="Ej: Hotel cerca del aeropuerto, habitación sencilla, 3 noches..."
                       />
                     </div>
