@@ -3503,22 +3503,24 @@ export default function UsuarioView() {
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {/* Proyecto */}
-                <ProyectoSelector
-                  value={formSolicitudViaje.proyectoId}
-                  onChange={(proyectoId) => setFormSolicitudViaje({ ...formSolicitudViaje, proyectoId })}
-                  required={true}
-                  showCreateOption={true}
-                  label="Proyecto"
-                  compact
-                  showOnlyJob
-                  inputClassName={solicitarViajeErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
-                />
-                {solicitarViajeErrors.proyectoId && (
-                  <p className="text-xs text-rose-600">{solicitarViajeErrors.proyectoId}</p>
-                )}
+                <div className="min-w-0">
+                  <ProyectoSelector
+                    value={formSolicitudViaje.proyectoId}
+                    onChange={(proyectoId) => setFormSolicitudViaje({ ...formSolicitudViaje, proyectoId })}
+                    required={true}
+                    showCreateOption={true}
+                    label="Proyecto"
+                    compact
+                    showOnlyJob
+                    inputClassName={solicitarViajeErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
+                  />
+                  {solicitarViajeErrors.proyectoId && (
+                    <p className="mt-1 text-xs text-rose-600">{solicitarViajeErrors.proyectoId}</p>
+                  )}
+                </div>
 
                 {/* Origen */}
-                <div>
+                <div className="min-w-0">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Origen <span className="text-red-500">*</span>
                   </label>
