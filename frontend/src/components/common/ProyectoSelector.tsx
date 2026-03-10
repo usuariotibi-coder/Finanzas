@@ -22,6 +22,7 @@ interface ProyectoSelectorProps {
   inputClassName?: string;
   compact?: boolean;
   showOnlyJob?: boolean;
+  matchInputStyle?: boolean;
 }
 
 const STORAGE_KEY = 'proyectos_data';
@@ -59,6 +60,7 @@ export default function ProyectoSelector({
   inputClassName = '',
   compact = false,
   showOnlyJob = false,
+  matchInputStyle = false,
 }: ProyectoSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -155,8 +157,12 @@ export default function ProyectoSelector({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full px-4 text-left border rounded-lg flex items-center justify-between ${
-          compact ? 'min-h-[44px] py-2' : 'min-h-[74px] py-2'
+        className={`w-full text-left border rounded-lg flex items-center justify-between ${
+          compact
+            ? matchInputStyle
+              ? 'px-3 py-2'
+              : 'px-4 min-h-[44px] py-2'
+            : 'px-4 min-h-[74px] py-2'
         } ${
           disabled
             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
@@ -208,7 +214,7 @@ export default function ProyectoSelector({
           <span className="text-gray-500">Selecciona un proyecto...</span>
         )}
         <svg
-          className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+          className={`${matchInputStyle ? 'h-4 w-4' : 'h-5 w-5'} text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

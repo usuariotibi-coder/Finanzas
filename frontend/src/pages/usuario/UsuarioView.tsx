@@ -3501,7 +3501,7 @@ export default function UsuarioView() {
               <div className="space-y-2 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
 
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 {/* Proyecto */}
                 <div className="min-w-0">
                   <ProyectoSelector
@@ -3512,6 +3512,7 @@ export default function UsuarioView() {
                     label="Proyecto"
                     compact
                     showOnlyJob
+                    matchInputStyle
                     inputClassName={solicitarViajeErrors.proyectoId ? 'border-rose-300 bg-rose-50 ring-rose-200' : ''}
                   />
                   {solicitarViajeErrors.proyectoId && (
