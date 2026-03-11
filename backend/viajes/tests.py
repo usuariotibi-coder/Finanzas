@@ -27,8 +27,24 @@ class ViajesCreateTests(APITestCase):
             position='Administrador',
             password='SecurePass123',
         )
+        self.gerente_user = User.objects.create_user(
+            email='viajes.gerente@na.scio-automation.com',
+            full_name='Viajes Gerente',
+            department='manufactura',
+            category='gerente',
+            position='Gerente',
+            password='SecurePass123!',
+        )
+        self.operador_user = User.objects.create_user(
+            email='viajes.operador@na.scio-automation.com',
+            full_name='Viajes Operador',
+            department='ensamble',
+            category='operador',
+            position='Operador',
+            password='SecurePass123!',
+        )
 
-    def test_staff_create_trip_without_user_is_assigned_to_request_user(self):
+    def test_staff_operador_cannot_create_trip(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.post(
             '/api/viajes/',
@@ -45,10 +61,9 @@ class ViajesCreateTests(APITestCase):
             },
             format='json',
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], self.staff_user.id)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_staff_cannot_spoof_trip_user(self):
+    def test_staff_operador_cannot_spoof_trip_user(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.post(
             '/api/viajes/',
@@ -66,8 +81,28 @@ class ViajesCreateTests(APITestCase):
             },
             format='json',
         )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_gerente_can_create_trip_for_operator(self):
+        self.client.force_authenticate(user=self.gerente_user)
+        response = self.client.post(
+            '/api/viajes/',
+            {
+                'user': self.operador_user.id,
+                'origen': 'Monterrey',
+                'destino': 'Ciudad de Mexico',
+                'fecha_inicio': '2026-02-10',
+                'fecha_fin': '2026-02-12',
+                'motivo': 'Reunion con cliente',
+                'necesita_avion': False,
+                'necesita_camion': True,
+                'necesita_hotel': True,
+                'status': 'pendiente',
+            },
+            format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], self.staff_user.id)
+        self.assertEqual(response.data['user'], self.operador_user.id)
 
 
 class ViajesProjectSpentSyncTests(APITestCase):

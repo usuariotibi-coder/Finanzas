@@ -25,5 +25,10 @@ class SolicitudViajeViewSet(viewsets.ModelViewSet):
         payload_user = serializer.validated_data.get('user')
         if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             serializer.save(user=payload_user or request_user)
+        elif request_user.can_assign_self_service_requests_for_others():
+            assignable_users = request_user.get_assignable_request_users()
+            if payload_user and not assignable_users.filter(pk=payload_user.pk).exists():
+                raise PermissionDenied('No puedes asignar viajes a este usuario.')
+            serializer.save(user=payload_user or request_user)
         else:
             serializer.save(user=request_user)

@@ -38,6 +38,7 @@ const VEHICLE_ASSIGNMENTS_STORAGE_KEY = 'vehicle_assignments_data';
 const MS_POR_DIA = 1000 * 60 * 60 * 24;
 const VEHICLE_DESTINATION_MAP_CENTER: [number, number] = [20.6597, -103.3496];
 const SOLICITAR_VEHICULO_INITIAL_FORM = {
+  asignadoUserId: '',
   proyectoId: '',
   origen: '',
   destino: '',
@@ -46,6 +47,21 @@ const SOLICITAR_VEHICULO_INITIAL_FORM = {
   fechaFin: '',
   proposito: 'operaciones' as 'operaciones' | 'visita' | 'viaje',
   requiereGasolina: false,
+};
+const SOLICITAR_VIAJE_INITIAL_FORM = {
+  asignadoUserId: '',
+  proyectoId: '',
+  motivo: '',
+  origen: '',
+  destino: '',
+  fechaInicio: '',
+  fechaFin: '',
+  necesitaAvion: false,
+  necesitaCamion: false,
+  necesitaHotel: false,
+  detallesAvion: '',
+  detallesCamion: '',
+  detallesHotel: '',
 };
 
 type VehicleMapPoint = { lat: number; lng: number };
@@ -717,7 +733,10 @@ export default function UsuarioView() {
     destinoVehiculoSelectionRef.current += 1;
     destinoVehiculoAbortRef.current?.abort();
     destinoVehiculoAbortRef.current = null;
-    setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM });
+    setFormSolicitudVehiculo({
+      ...SOLICITAR_VEHICULO_INITIAL_FORM,
+      asignadoUserId: user ? String(user.id) : '',
+    });
     setShowSolicitarVehiculoErrors(false);
     setShowDestinoVehiculoMap(false);
     setShowDestinoVehiculoMapExpanded(false);
@@ -725,24 +744,66 @@ export default function UsuarioView() {
     setDestinoVehiculoDetalles(null);
     setIsResolviendoDestinoVehiculo(false);
     setDestinoVehiculoMapMensaje('');
-  }, [showModalSolicitarVehiculo, setFormSolicitudVehiculo]);
+  }, [showModalSolicitarVehiculo, setFormSolicitudVehiculo, user]);
 
   // Estado para solicitud de viaje
   const [showModalSolicitarViaje, setShowModalSolicitarViaje] = useLocalStorageState('usuario:showModalSolicitarViaje', false);
   const [formSolicitudViaje, setFormSolicitudViaje] = useLocalStorageState('usuario:formSolicitudViaje', {
-    proyectoId: '',
-    motivo: '',
-    origen: '',
-    destino: '',
-    fechaInicio: '',
-    fechaFin: '',
-    necesitaAvion: false,
-    necesitaCamion: false,
-    necesitaHotel: false,
-    detallesAvion: '',
-    detallesCamion: '',
-    detallesHotel: '',
+    ...SOLICITAR_VIAJE_INITIAL_FORM,
   });
+
+  useEffect(() => {
+    const currentUserId = user ? String(user.id) : '';
+    if (!currentUserId) {
+      return;
+    }
+
+    setFormSolicitudVehiculo((prev) => {
+      if (prev.asignadoUserId) {
+        return prev;
+      }
+      return {
+        ...prev,
+        asignadoUserId: currentUserId,
+      };
+    });
+    setFormSolicitudViaje((prev) => {
+      if (prev.asignadoUserId) {
+        return prev;
+      }
+      return {
+        ...prev,
+        asignadoUserId: currentUserId,
+      };
+    });
+  }, [user, setFormSolicitudVehiculo, setFormSolicitudViaje]);
+
+  useEffect(() => {
+    if (assignableUsers.length === 0) {
+      return;
+    }
+
+    setFormSolicitudVehiculo((prev) => {
+      const selectedUserExists = assignableUsers.some((item) => String(item.id) === prev.asignadoUserId);
+      if (selectedUserExists) {
+        return prev;
+      }
+      return {
+        ...prev,
+        asignadoUserId: String(assignableUsers[0].id),
+      };
+    });
+    setFormSolicitudViaje((prev) => {
+      const selectedUserExists = assignableUsers.some((item) => String(item.id) === prev.asignadoUserId);
+      if (selectedUserExists) {
+        return prev;
+      }
+      return {
+        ...prev,
+        asignadoUserId: String(assignableUsers[0].id),
+      };
+    });
+  }, [assignableUsers, setFormSolicitudVehiculo, setFormSolicitudViaje]);
 
   // Estado para extender viaje
   const [showModalExtenderViaje, setShowModalExtenderViaje] = useLocalStorageState('usuario:showModalExtenderViaje', false);
@@ -841,6 +902,12 @@ export default function UsuarioView() {
   const usuarioAsignadoSeleccionado = assignableUsers.find(
     (item) => String(item.id) === formNuevoViatico.asignadoUserId
   );
+  const usuarioVehiculoAsignadoSeleccionado = assignableUsers.find(
+    (item) => String(item.id) === formSolicitudVehiculo.asignadoUserId
+  );
+  const usuarioViajeAsignadoSeleccionado = assignableUsers.find(
+    (item) => String(item.id) === formSolicitudViaje.asignadoUserId
+  );
   const isFormValid = Boolean(
     formNuevoViatico.asignadoUserId &&
       (!proyectoRequeridoViatico || formNuevoViatico.proyectoId) &&
@@ -871,6 +938,7 @@ export default function UsuarioView() {
     : {};
   const solicitarVehiculoErrors = showSolicitarVehiculoErrors
     ? {
+      asignadoUserId: !formSolicitudVehiculo.asignadoUserId ? 'Selecciona el usuario asignado.' : '',
       proyectoId: !formSolicitudVehiculo.proyectoId ? 'Selecciona un proyecto.' : '',
       origen: !formSolicitudVehiculo.origen.trim() ? 'Ingresa el origen.' : '',
       destino: !formSolicitudVehiculo.destino.trim() ? 'Ingresa el destino.' : '',
@@ -886,6 +954,7 @@ export default function UsuarioView() {
     : '';
   const solicitarViajeErrors = showSolicitarViajeErrors
     ? {
+      asignadoUserId: !formSolicitudViaje.asignadoUserId ? 'Selecciona el usuario asignado.' : '',
       proyectoId: !formSolicitudViaje.proyectoId ? 'Selecciona un proyecto.' : '',
       origen: !formSolicitudViaje.origen.trim() ? 'Ingresa el origen.' : '',
       destino: !formSolicitudViaje.destino.trim() ? 'Ingresa el destino.' : '',
@@ -1576,7 +1645,7 @@ export default function UsuarioView() {
       return;
     }
 
-    if (!formSolicitudVehiculo.proyectoId || !formSolicitudVehiculo.origen || !formSolicitudVehiculo.destino || !formSolicitudVehiculo.motivo || !formSolicitudVehiculo.fechaInicio) {
+    if (!formSolicitudVehiculo.asignadoUserId || !formSolicitudVehiculo.proyectoId || !formSolicitudVehiculo.origen || !formSolicitudVehiculo.destino || !formSolicitudVehiculo.motivo || !formSolicitudVehiculo.fechaInicio) {
       setShowSolicitarVehiculoErrors(true);
       return;
     }
@@ -1588,16 +1657,17 @@ export default function UsuarioView() {
 
     const currentUserId = user ? String(user.id) : undefined;
     const snapshot = { ...formSolicitudVehiculo };
+    const assignedUserId = snapshot.asignadoUserId || currentUserId;
     solicitarVehiculoSubmitLockRef.current = true;
     setIsSubmittingSolicitarVehiculo(true);
     setShowModalSolicitarVehiculo(false);
     setShowSolicitarVehiculoErrors(false);
     resetSolicitarVehiculoMapState();
-    setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM });
+    setFormSolicitudVehiculo({ ...SOLICITAR_VEHICULO_INITIAL_FORM, asignadoUserId: currentUserId || '' });
 
     try {
       const nuevaSolicitud = await createFlotillaAsignacion({
-        userId: currentUserId,
+        userId: assignedUserId,
         proyectoId: snapshot.proyectoId,
         origen: snapshot.origen,
         destino: snapshot.destino,
@@ -1609,8 +1679,16 @@ export default function UsuarioView() {
         status: 'solicitado',
       });
 
-      saveVehicleAssignments([nuevaSolicitud, ...vehicleAssignments]);
-      showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
+      if ((nuevaSolicitud.userId || '') === (currentUserId || '')) {
+        saveVehicleAssignments([nuevaSolicitud, ...vehicleAssignments]);
+        showToast('Solicitud de vehiculo enviada. El administrador asignara un coche disponible.', 'success');
+      } else {
+        const assignedName =
+          usuarioVehiculoAsignadoSeleccionado?.full_name ||
+          nuevaSolicitud.userName ||
+          'el usuario seleccionado';
+        showToast(`Solicitud de vehiculo enviada para ${assignedName}.`, 'success');
+      }
       void syncCoreAppData({ userId: currentUserId }).catch(() => {});
     } catch (error) {
       skipSolicitarVehiculoResetRef.current = true;
@@ -1629,7 +1707,7 @@ export default function UsuarioView() {
       showToast('Tu categoria no puede solicitar viajes desde este portal.', 'info');
       return;
     }
-    if (!formSolicitudViaje.proyectoId || !formSolicitudViaje.motivo || !formSolicitudViaje.origen || !formSolicitudViaje.destino || !formSolicitudViaje.fechaInicio || !formSolicitudViaje.fechaFin) {
+    if (!formSolicitudViaje.asignadoUserId || !formSolicitudViaje.proyectoId || !formSolicitudViaje.motivo || !formSolicitudViaje.origen || !formSolicitudViaje.destino || !formSolicitudViaje.fechaInicio || !formSolicitudViaje.fechaFin) {
       setShowSolicitarViajeErrors(true);
       return;
     }
@@ -1641,6 +1719,7 @@ export default function UsuarioView() {
 
     const currentUserId = user ? String(user.id) : '';
     const snapshotFormSolicitudViaje = { ...formSolicitudViaje };
+    const assignedUserId = snapshotFormSolicitudViaje.asignadoUserId || currentUserId;
     const proyectoLabel = formatProyectoLabel(
       proyectos.find((p) => p.id === snapshotFormSolicitudViaje.proyectoId)?.nombre,
       snapshotFormSolicitudViaje.proyectoId
@@ -1648,24 +1727,14 @@ export default function UsuarioView() {
 
     setShowModalSolicitarViaje(false);
     setFormSolicitudViaje({
-      proyectoId: '',
-      motivo: '',
-      origen: '',
-      destino: '',
-      fechaInicio: '',
-      fechaFin: '',
-      necesitaAvion: false,
-      necesitaCamion: false,
-      necesitaHotel: false,
-      detallesAvion: '',
-      detallesCamion: '',
-      detallesHotel: '',
+      ...SOLICITAR_VIAJE_INITIAL_FORM,
+      asignadoUserId: currentUserId,
     });
     setShowSolicitarViajeErrors(false);
 
     try {
       const nuevaSolicitud = await createViaje({
-        userId: currentUserId || undefined,
+        userId: assignedUserId || undefined,
         proyectoId: snapshotFormSolicitudViaje.proyectoId,
         proyectoNombre: proyectoLabel,
         origen: snapshotFormSolicitudViaje.origen,
@@ -1685,8 +1754,16 @@ export default function UsuarioView() {
         statusHotel: snapshotFormSolicitudViaje.necesitaHotel ? 'pendiente' : undefined,
       });
 
-      setSolicitudesViaje((prev) => [...prev, nuevaSolicitud]);
-      showToast('Solicitud de viaje enviada. El administrador te contactara para coordinar los servicios.', 'success');
+      if ((nuevaSolicitud.userId || '') === currentUserId) {
+        setSolicitudesViaje((prev) => [...prev, nuevaSolicitud]);
+        showToast('Solicitud de viaje enviada. El administrador te contactara para coordinar los servicios.', 'success');
+      } else {
+        const assignedName =
+          usuarioViajeAsignadoSeleccionado?.full_name ||
+          nuevaSolicitud.userName ||
+          'el usuario seleccionado';
+        showToast(`Solicitud de viaje enviada para ${assignedName}.`, 'success');
+      }
       void syncCoreAppData({ userId: currentUserId || undefined }).catch(() => {});
     } catch (error) {
       setFormSolicitudViaje(snapshotFormSolicitudViaje);
@@ -2984,7 +3061,7 @@ export default function UsuarioView() {
                     )}
                     {assignableUsers.map((assignableUser) => (
                       <option key={assignableUser.id} value={String(assignableUser.id)}>
-                        {assignableUser.full_name} - {assignableUser.position}
+                        {assignableUser.full_name}
                       </option>
                     ))}
                   </select>
@@ -3297,6 +3374,45 @@ export default function UsuarioView() {
 
             <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-2">
               <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Asignado a <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formSolicitudVehiculo.asignadoUserId}
+                  onChange={(e) => setFormSolicitudVehiculo({ ...formSolicitudVehiculo, asignadoUserId: e.target.value })}
+                  disabled={assignableUsersLoading}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 ${
+                    solicitarVehiculoErrors.asignadoUserId
+                      ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-200'
+                      : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'
+                  } ${assignableUsersLoading ? 'cursor-wait bg-slate-100 text-slate-500' : ''}`}
+                >
+                  {assignableUsersLoading && (
+                    <option value={formSolicitudVehiculo.asignadoUserId || ''}>Cargando usuarios...</option>
+                  )}
+                  {!formSolicitudVehiculo.asignadoUserId && (
+                    <option value="">Selecciona un usuario</option>
+                  )}
+                  {assignableUsers.map((assignableUser) => (
+                    <option key={assignableUser.id} value={String(assignableUser.id)}>
+                      {assignableUser.full_name}
+                    </option>
+                  ))}
+                </select>
+                {assignableUsersError && (
+                  <p className="mt-1 text-xs text-rose-600">{assignableUsersError}</p>
+                )}
+                {!assignableUsersError && solicitarVehiculoErrors.asignadoUserId && (
+                  <p className="mt-1 text-xs text-rose-600">{solicitarVehiculoErrors.asignadoUserId}</p>
+                )}
+                {!assignableUsersError && usuarioVehiculoAsignadoSeleccionado && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    La solicitud de vehiculo se registrara para {usuarioVehiculoAsignadoSeleccionado.full_name}.
+                  </p>
+                )}
+              </div>
+
               {/* Proyecto */}
               <ProyectoSelector
                 value={formSolicitudVehiculo.proyectoId}
@@ -3655,6 +3771,45 @@ export default function UsuarioView() {
               {/* Información General */}
               <div className="space-y-2 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
                 <h3 className="text-md font-semibold text-gray-900">Información General</h3>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Asignado a <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formSolicitudViaje.asignadoUserId}
+                    onChange={(e) => setFormSolicitudViaje({ ...formSolicitudViaje, asignadoUserId: e.target.value })}
+                    disabled={assignableUsersLoading}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 ${
+                      solicitarViajeErrors.asignadoUserId
+                        ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-200'
+                        : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'
+                    } ${assignableUsersLoading ? 'cursor-wait bg-slate-100 text-slate-500' : ''}`}
+                  >
+                    {assignableUsersLoading && (
+                      <option value={formSolicitudViaje.asignadoUserId || ''}>Cargando usuarios...</option>
+                    )}
+                    {!formSolicitudViaje.asignadoUserId && (
+                      <option value="">Selecciona un usuario</option>
+                    )}
+                    {assignableUsers.map((assignableUser) => (
+                      <option key={assignableUser.id} value={String(assignableUser.id)}>
+                        {assignableUser.full_name}
+                      </option>
+                    ))}
+                  </select>
+                  {assignableUsersError && (
+                    <p className="mt-1 text-xs text-rose-600">{assignableUsersError}</p>
+                  )}
+                  {!assignableUsersError && solicitarViajeErrors.asignadoUserId && (
+                    <p className="mt-1 text-xs text-rose-600">{solicitarViajeErrors.asignadoUserId}</p>
+                  )}
+                  {!assignableUsersError && usuarioViajeAsignadoSeleccionado && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      La solicitud de viaje se registrara para {usuarioViajeAsignadoSeleccionado.full_name}.
+                    </p>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 {/* Proyecto */}

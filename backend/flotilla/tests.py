@@ -26,6 +26,22 @@ class FlotillaCreateTests(APITestCase):
             position='Administrador',
             password='SecurePass123',
         )
+        self.gerente_user = User.objects.create_user(
+            email='flotilla.gerente@na.scio-automation.com',
+            full_name='Flotilla Gerente',
+            department='manufactura',
+            category='gerente',
+            position='Gerente',
+            password='SecurePass123!',
+        )
+        self.operador_user = User.objects.create_user(
+            email='flotilla.operador@na.scio-automation.com',
+            full_name='Flotilla Operador',
+            department='ensamble',
+            category='operador',
+            position='Operador',
+            password='SecurePass123!',
+        )
         self.vehicle = Vehicle.objects.create(
             marca='Toyota',
             modelo='Corolla',
@@ -37,7 +53,7 @@ class FlotillaCreateTests(APITestCase):
             status=Vehicle.Status.DISPONIBLE,
         )
 
-    def test_staff_assignment_without_user_is_assigned_to_request_user(self):
+    def test_staff_operador_cannot_create_assignment(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.post(
             '/api/flotilla/asignaciones/',
@@ -50,10 +66,9 @@ class FlotillaCreateTests(APITestCase):
             },
             format='json',
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], self.staff_user.id)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_staff_assignment_user_spoof_is_overridden(self):
+    def test_staff_operador_assignment_user_spoof_is_blocked(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.post(
             '/api/flotilla/asignaciones/',
@@ -67,8 +82,24 @@ class FlotillaCreateTests(APITestCase):
             },
             format='json',
         )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_gerente_can_create_assignment_for_operator(self):
+        self.client.force_authenticate(user=self.gerente_user)
+        response = self.client.post(
+            '/api/flotilla/asignaciones/',
+            {
+                'vehicle': self.vehicle.id,
+                'user': self.operador_user.id,
+                'motivo': 'Prueba de asignacion',
+                'proposito': 'operaciones',
+                'fecha_inicio': '2026-02-01',
+                'km_inicial': 15000,
+            },
+            format='json',
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], self.staff_user.id)
+        self.assertEqual(response.data['user'], self.operador_user.id)
 
     def test_admin_gasoline_load_without_user_defaults_to_request_user(self):
         self.client.force_authenticate(user=self.admin_user)
