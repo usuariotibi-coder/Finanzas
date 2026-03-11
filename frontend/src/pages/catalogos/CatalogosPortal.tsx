@@ -152,6 +152,21 @@ export default function CatalogosPortal() {
         .filter(Boolean)
     )
   );
+  const viaticoMealRateValues = [
+    viaticoMealRateForm.desayuno,
+    viaticoMealRateForm.comida,
+    viaticoMealRateForm.cena,
+  ];
+  const areViaticoMealRateFieldsComplete = viaticoMealRateValues.every((value) => value.trim() !== '');
+  const areViaticoMealRateValuesValid = viaticoMealRateValues
+    .map((value) => Number(value))
+    .every((value) => Number.isFinite(value) && value >= 0);
+  const canSaveViaticoMealRates =
+    areViaticoMealRateFieldsComplete &&
+    areViaticoMealRateValuesValid &&
+    rateConfirmChecks.impact &&
+    rateConfirmChecks.reviewed &&
+    rateConfirmPhrase.trim() === 'ACTUALIZAR TARIFAS';
 
   const clearMessages = () => {
     setError('');
@@ -880,7 +895,8 @@ export default function CatalogosPortal() {
             <button
               type="button"
               onClick={saveViaticoMealRates}
-              className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800"
+              disabled={!canSaveViaticoMealRates}
+              className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:bg-rose-300 disabled:hover:bg-rose-300"
             >
               Guardar tarifas de viaticos
             </button>
