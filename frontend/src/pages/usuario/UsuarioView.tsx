@@ -1292,6 +1292,121 @@ export default function UsuarioView() {
     return icons[status] || 'PROC';
   };
 
+  const renderVehiculoStatusIcon = (status: VehicleAssignment['status']) => {
+    const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
+
+    if (status === 'solicitado') {
+      return (
+        <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+            <path strokeLinecap="round" strokeWidth="1.8" d="M12 7.5v5l3 2" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'asignado') {
+      return (
+        <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              d="M12 21s-5-4.35-5-9a5 5 0 1 1 10 0c0 4.65-5 9-5 9Z"
+            />
+            <circle cx="12" cy="12" r="1.6" strokeWidth="1.8" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'completado') {
+      return (
+        <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'rechazado') {
+      return (
+        <span className={`${baseClassName} border-rose-200 bg-rose-50 text-rose-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeWidth="2" d="m8 8 8 8m0-8-8 8" />
+          </svg>
+        </span>
+      );
+    }
+
+    return (
+      <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+            d="M7 15h10l1.5-4.5H5.5L7 15Zm0 0-.75 2.25M17 15l.75 2.25M8.5 17.25h.01M15.5 17.25h.01M6.5 10.5l1.25-3h8.5l1.25 3"
+          />
+        </svg>
+      </span>
+    );
+  };
+
+  const renderViajeStatusIcon = (status: SolicitudViaje['status']) => {
+    const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
+
+    if (status === 'pendiente') {
+      return (
+        <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+            <path strokeLinecap="round" strokeWidth="1.8" d="M12 7.5v5l3 2" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'confirmado' || status === 'completado') {
+      return (
+        <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'rechazado' || status === 'cancelado') {
+      return (
+        <span className={`${baseClassName} border-rose-200 bg-rose-50 text-rose-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeWidth="2" d="m8 8 8 8m0-8-8 8" />
+          </svg>
+        </span>
+      );
+    }
+
+    return (
+      <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+            d="M3 11.5h10m-4-4 4 4-4 4m12-1h-8m4-4-4 4 4 4"
+          />
+        </svg>
+      </span>
+    );
+  };
+
+  void getVehiculoStatusIcon;
+  void getViajeStatusIcon;
+
   const getProcesoViaje = (status: SolicitudViaje['status']) => {
     const procesos: Record<SolicitudViaje['status'], { texto: string; avance: number; barra: string }> = {
       pendiente: { texto: '1/4 Solicitud enviada', avance: 25, barra: 'bg-amber-500' },
@@ -2440,7 +2555,7 @@ export default function UsuarioView() {
                 visibleVehicleAssignments.map((assignment) => {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
                   const proyectoDisplay = resolveProyectoDisplay(assignment.proyectoId, assignment.proyectoNombre);
-                  const vehiculoStatusIcon = getVehiculoStatusIcon(assignment.status);
+                  const vehiculoStatusIcon = renderVehiculoStatusIcon(assignment.status);
                   const procesoVehiculo = getProcesoVehiculo(assignment.status);
                   const deletingVehiculo = deletingCardKey === `vehiculo:${assignment.id}`;
 
@@ -2449,12 +2564,12 @@ export default function UsuarioView() {
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            <span className="text-base">{vehiculoStatusIcon}</span>{' '}
+                          <p className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            {vehiculoStatusIcon}
                             {proyectoDisplay.jobLabel}
                           </p>
-                          <h3 className="mt-0.5 text-xs text-gray-600">
-                            <span className="text-base">{vehiculoStatusIcon}</span>{' '}
+                          <h3 className="mt-0.5 flex items-center gap-2 text-xs text-gray-600">
+                            {vehiculoStatusIcon}
                             {vehicle
                               ? `${vehicle.marca} ${vehicle.modelo} (${vehicle.placas})`
                               : assignment.vehiculoLabel || 'Vehículo pendiente de asignación'}
@@ -2589,7 +2704,7 @@ export default function UsuarioView() {
                   const confirmacionesCamion = solicitud.confirmaciones?.camion ?? [];
                   const confirmacionesHotel = solicitud.confirmaciones?.hotel ?? [];
                   const tieneConfirmaciones = confirmacionesAvion.length > 0 || confirmacionesCamion.length > 0 || confirmacionesHotel.length > 0;
-                  const viajeStatusIcon = getViajeStatusIcon(solicitud.status);
+                  const viajeStatusIcon = renderViajeStatusIcon(solicitud.status);
                   const procesoViaje = getProcesoViaje(solicitud.status);
                   const deletingViaje = deletingCardKey === `viaje:${solicitud.id}`;
 
@@ -2598,8 +2713,8 @@ export default function UsuarioView() {
                       <div className="flex flex-col gap-2.5">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
-                            <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                              <span className="text-base">{viajeStatusIcon}</span> {proyectoDisplay.jobLabel}
+                            <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
+                              {viajeStatusIcon} {proyectoDisplay.jobLabel}
                             </h3>
                             <p className="mt-0.5 text-xs text-gray-600">{solicitud.destino}</p>
                           </div>
