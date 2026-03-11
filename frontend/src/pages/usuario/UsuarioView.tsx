@@ -1507,6 +1507,9 @@ export default function UsuarioView() {
 
   void getVehiculoStatusIcon;
   void getViajeStatusIcon;
+  void renderVehiculoStatusIcon;
+  void renderViajeStatusIcon;
+  void renderViaticoStatusIcon;
 
   const getProcesoViaje = (status: SolicitudViaje['status']) => {
     const procesos: Record<SolicitudViaje['status'], { texto: string; avance: number; barra: string }> = {
@@ -1518,6 +1521,28 @@ export default function UsuarioView() {
       rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
     };
     return procesos[status] ?? procesos.pendiente;
+  };
+
+  const renderProcessBadge = (texto: string, barra: string) => {
+    const stepLabel = texto.match(/^\d+\/\d+/)?.[0] ?? 'Cerrado';
+    const paletteByBar: Record<string, string> = {
+      'bg-amber-500': 'border-amber-200 bg-amber-50 text-amber-700',
+      'bg-blue-500': 'border-blue-200 bg-blue-50 text-blue-700',
+      'bg-sky-500': 'border-sky-200 bg-sky-50 text-sky-700',
+      'bg-indigo-500': 'border-indigo-200 bg-indigo-50 text-indigo-700',
+      'bg-violet-500': 'border-violet-200 bg-violet-50 text-violet-700',
+      'bg-orange-500': 'border-orange-200 bg-orange-50 text-orange-700',
+      'bg-emerald-600': 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      'bg-rose-500': 'border-rose-200 bg-rose-50 text-rose-700',
+    };
+
+    return (
+      <span
+        className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${paletteByBar[barra] ?? 'border-slate-200 bg-slate-50 text-slate-700'}`}
+      >
+        {stepLabel}
+      </span>
+    );
   };
 
   const resetGastoDraft = () => {
@@ -2493,7 +2518,7 @@ export default function UsuarioView() {
                 const estadoInfo = getEstadoInfo(viatico.status);
                 const procesoViatico = getProcesoViatico(viatico);
                 const accionBoton = getAccionBoton(viatico);
-                const viaticoStatusIcon = renderViaticoStatusIcon(viatico.status);
+                const viaticoStatusBadge = renderProcessBadge(procesoViatico.texto, procesoViatico.barra);
                 const viaticoActionIcon = renderViaticoActionIcon(accionBoton.icon);
                 const deletingViatico = deletingCardKey === `viatico:${viatico.id}`;
                 const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
@@ -2509,7 +2534,7 @@ export default function UsuarioView() {
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
-                            {viaticoStatusIcon}
+                            {viaticoStatusBadge}
                             <span className="truncate">{proyectoDisplay.jobLabel}</span>
                           </h3>
                           {viatico.destino && normalizeText(viatico.destino) !== normalizeText(proyectoDisplay.jobLabel) && (
@@ -2658,8 +2683,8 @@ export default function UsuarioView() {
                 visibleVehicleAssignments.map((assignment) => {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
                   const proyectoDisplay = resolveProyectoDisplay(assignment.proyectoId, assignment.proyectoNombre);
-                  const vehiculoStatusIcon = renderVehiculoStatusIcon(assignment.status);
                   const procesoVehiculo = getProcesoVehiculo(assignment.status);
+                  const vehiculoStatusBadge = renderProcessBadge(procesoVehiculo.texto, procesoVehiculo.barra);
                   const deletingVehiculo = deletingCardKey === `vehiculo:${assignment.id}`;
 
                   return (
@@ -2668,11 +2693,10 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                           <p className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            {vehiculoStatusIcon}
+                            {vehiculoStatusBadge}
                             {proyectoDisplay.jobLabel}
                           </p>
-                          <h3 className="mt-0.5 flex items-center gap-2 text-xs text-gray-600">
-                            {vehiculoStatusIcon}
+                          <h3 className="mt-0.5 text-xs text-gray-600">
                             {vehicle
                               ? `${vehicle.marca} ${vehicle.modelo} (${vehicle.placas})`
                               : assignment.vehiculoLabel || 'Vehículo pendiente de asignación'}
@@ -2807,8 +2831,8 @@ export default function UsuarioView() {
                   const confirmacionesCamion = solicitud.confirmaciones?.camion ?? [];
                   const confirmacionesHotel = solicitud.confirmaciones?.hotel ?? [];
                   const tieneConfirmaciones = confirmacionesAvion.length > 0 || confirmacionesCamion.length > 0 || confirmacionesHotel.length > 0;
-                  const viajeStatusIcon = renderViajeStatusIcon(solicitud.status);
                   const procesoViaje = getProcesoViaje(solicitud.status);
+                  const viajeStatusBadge = renderProcessBadge(procesoViaje.texto, procesoViaje.barra);
                   const deletingViaje = deletingCardKey === `viaje:${solicitud.id}`;
 
                   return (
@@ -2817,7 +2841,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                             <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                              {viajeStatusIcon} {proyectoDisplay.jobLabel}
+                              {viajeStatusBadge} {proyectoDisplay.jobLabel}
                             </h3>
                             <p className="mt-0.5 text-xs text-gray-600">{solicitud.destino}</p>
                           </div>
