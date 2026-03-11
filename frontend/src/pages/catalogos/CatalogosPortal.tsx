@@ -787,7 +787,7 @@ export default function CatalogosPortal() {
         </article>
       </section>
 
-      <section>
+      <section className="grid items-start gap-6 xl:grid-cols-2">
         <article className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
@@ -901,9 +901,6 @@ export default function CatalogosPortal() {
             </button>
           </div>
         </article>
-      </section>
-
-      <section>
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">Categorias de usuario</h2>
           <p className="mt-1 text-xs text-slate-600">Dropdown para alta y edicion de usuarios (Categoria).</p>
