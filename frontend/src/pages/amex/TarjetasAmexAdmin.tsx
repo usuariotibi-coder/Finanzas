@@ -12,9 +12,6 @@ import {
 
 type TarjetaFormState = {
   userId: string;
-  cardHolder: string;
-  externalPersonnel: boolean;
-  externalEmail: string;
   cardNumber: string;
   employeeNumber: string;
   accountNumber: string;
@@ -24,9 +21,6 @@ type TarjetaFormState = {
 
 const EMPTY_FORM: TarjetaFormState = {
   userId: '',
-  cardHolder: '',
-  externalPersonnel: false,
-  externalEmail: '',
   cardNumber: '',
   employeeNumber: '',
   accountNumber: '',
@@ -113,7 +107,7 @@ export default function TarjetasAmexAdmin() {
   const usersWithoutCard = useMemo(() => {
     return users.filter((user) => {
       return !cards.some((card) => {
-        if (card.id === editingCard?.id || card.comodin || card.externalPersonnel) {
+        if (card.id === editingCard?.id || card.comodin) {
           return false;
         }
         if (card.userId && card.userId === String(user.id)) {
@@ -131,12 +125,10 @@ export default function TarjetasAmexAdmin() {
       [
         card.userName,
         card.cardHolder,
-        card.externalEmail,
         card.cardNumber,
         card.employeeNumber,
         card.accountNumber,
         card.department,
-        card.externalPersonnel ? 'externo' : 'interno',
         card.comodin ? 'comodin' : 'asignada',
       ]
         .map((value) => normalizeText(String(value || '')))
@@ -160,9 +152,6 @@ export default function TarjetasAmexAdmin() {
     setEditingCard(card);
     setForm({
       userId: card.userId || '',
-      cardHolder: card.cardHolder || '',
-      externalPersonnel: Boolean(card.externalPersonnel),
-      externalEmail: card.externalEmail || '',
       cardNumber: card.cardNumber.replace(/\D/g, '').slice(0, 16),
       employeeNumber: card.employeeNumber || '',
       accountNumber: card.accountNumber || '',
@@ -208,13 +197,8 @@ export default function TarjetasAmexAdmin() {
     const accountNumber = form.accountNumber.trim();
     const expirationDate = form.expirationDate.trim();
     const selectedUser = users.find((user) => String(user.id) === form.userId) || null;
-    const cardHolder = form.externalPersonnel
-      ? form.cardHolder.trim()
-      : selectedUser?.full_name || (form.comodin ? 'Tarjeta comodin' : '');
-    const department = form.externalPersonnel
-      ? 'Personal externo'
-      : selectedUser?.department || (form.comodin ? 'Comodin' : '');
-    const externalEmail = form.externalEmail.trim();
+    const cardHolder = selectedUser?.full_name || (form.comodin ? 'Tarjeta comodin' : '');
+    const department = selectedUser?.department || (form.comodin ? 'Comodin' : '');
 
     if (!cardNumber || !employeeNumber || !accountNumber || !expirationDate) {
       setError('Completa numero de tarjeta, numero de empleado, cuenta y vigencia.');
@@ -231,22 +215,7 @@ export default function TarjetasAmexAdmin() {
       return;
     }
 
-    if (form.externalPersonnel && !cardHolder) {
-      setError('Captura el nombre del titular externo.');
-      return;
-    }
-
-    if (form.externalPersonnel && !externalEmail) {
-      setError('Captura el correo del personal externo.');
-      return;
-    }
-
-    if (form.externalPersonnel && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(externalEmail)) {
-      setError('Captura un correo externo valido.');
-      return;
-    }
-
-    if (!form.comodin && !form.externalPersonnel && !selectedUser) {
+    if (!form.comodin && !selectedUser) {
       setError('Selecciona un usuario para la tarjeta.');
       return;
     }
@@ -254,11 +223,9 @@ export default function TarjetasAmexAdmin() {
     setSubmitting(true);
     try {
       const payload = {
-        userId: !form.externalPersonnel && selectedUser ? form.userId : '',
+        userId: selectedUser ? form.userId : '',
         cardNumber,
         cardHolder,
-        externalPersonnel: form.externalPersonnel,
-        externalEmail: form.externalPersonnel ? externalEmail : '',
         department,
         employeeNumber,
         accountNumber,
@@ -287,7 +254,7 @@ export default function TarjetasAmexAdmin() {
   const totalCards = cards.length;
   const comodinCards = cards.filter((card) => card.comodin).length;
   const usersWithoutCardCount = users.filter((user) =>
-    !cards.some((card) => !card.comodin && !card.externalPersonnel && (
+    !cards.some((card) => !card.comodin && (
       (card.userId && card.userId === String(user.id)) ||
       normalizeText(card.userName || card.cardHolder) === normalizeText(user.full_name)
     ))
@@ -390,47 +357,23 @@ export default function TarjetasAmexAdmin() {
           </div>
 
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-            {form.externalPersonnel ? (
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Titular externo</span>
-                <input
-                  value={form.cardHolder}
-                  onChange={(event) => setForm((prev) => ({ ...prev, cardHolder: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
-                  placeholder="Nombre del titular externo"
-                />
-              </label>
-            ) : (
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Titular</span>
-                <select
-                  value={form.userId}
-                  onChange={(event) => setForm((prev) => ({ ...prev, userId: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
-                >
-                  <option value="">{form.comodin ? 'Opcional para tarjeta comodin' : 'Selecciona un usuario sin tarjeta'}</option>
-                  {usersWithoutCard.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.full_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Titular</span>
+              <select
+                value={form.userId}
+                onChange={(event) => setForm((prev) => ({ ...prev, userId: event.target.value }))}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
+              >
+                <option value="">{form.comodin ? 'Opcional para tarjeta comodin' : 'Selecciona un usuario sin tarjeta'}</option>
+                {usersWithoutCard.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.full_name}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-              {form.externalPersonnel ? (
-                <label className="block sm:col-span-2 xl:col-span-1 2xl:col-span-2">
-                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Correo externo</span>
-                  <input
-                    type="email"
-                    value={form.externalEmail}
-                    onChange={(event) => setForm((prev) => ({ ...prev, externalEmail: event.target.value }))}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
-                    placeholder="usuario@proveedor.com"
-                  />
-                </label>
-              ) : null}
               <label className="block">
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Numero de tarjeta</span>
                 <input
@@ -477,37 +420,19 @@ export default function TarjetasAmexAdmin() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-col gap-3">
-                <label className="inline-flex items-center gap-3 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.comodin}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        comodin: event.target.checked,
-                        ...(event.target.checked ? { externalPersonnel: false, externalEmail: '', cardHolder: '' } : {}),
-                      }))
-                    }
-                  />
-                  Tarjeta comodin
-                </label>
-                <label className="inline-flex items-center gap-3 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={form.externalPersonnel}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        externalPersonnel: event.target.checked,
-                        userId: event.target.checked ? '' : prev.userId,
-                        ...(event.target.checked ? { comodin: false } : { externalEmail: '' }),
-                      }))
-                    }
-                  />
-                  Personal externo
-                </label>
-              </div>
+              <label className="inline-flex items-center gap-3 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.comodin}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      comodin: event.target.checked,
+                    }))
+                  }
+                />
+                Tarjeta comodin
+              </label>
             </div>
 
             <button
@@ -565,24 +490,15 @@ export default function TarjetasAmexAdmin() {
                       <tr key={card.id} className="border-t border-slate-200 align-top">
                         <td className="px-4 py-3">
                           <p className="font-semibold text-slate-900">{card.userName || card.cardHolder || 'Tarjeta comodin'}</p>
-                          <p className="text-xs text-slate-500">
-                            {card.department || 'Sin departamento'}
-                            {card.externalEmail ? ` · ${card.externalEmail}` : ''}
-                          </p>
+                          <p className="text-xs text-slate-500">{card.department || 'Sin departamento'}</p>
                         </td>
                         <td className="px-4 py-3 font-mono text-slate-700">{card.cardNumber}</td>
                         <td className="px-4 py-3 text-slate-700">{card.employeeNumber || 'Sin dato'}</td>
                         <td className="px-4 py-3 text-slate-700">{card.accountNumber || 'Sin dato'}</td>
                         <td className="px-4 py-3 text-slate-700">{formatDate(card.expirationDate)}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            card.comodin
-                              ? 'bg-amber-100 text-amber-800'
-                              : card.externalPersonnel
-                                ? 'bg-sky-100 text-sky-800'
-                                : 'bg-slate-100 text-slate-700'
-                          }`}>
-                            {card.comodin ? 'Comodin' : card.externalPersonnel ? 'Externo' : 'Asignada'}
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${card.comodin ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}>
+                            {card.comodin ? 'Comodin' : 'Asignada'}
                           </span>
                         </td>
                         <td className="px-4 py-3">
