@@ -35,6 +35,13 @@ const normalizeText = (value: string) =>
     .toLowerCase()
     .trim();
 
+const formatCardNumberInput = (value: string) =>
+  value
+    .replace(/\D/g, '')
+    .slice(0, 16)
+    .replace(/(.{4})/g, '$1 ')
+    .trim();
+
 const formatDate = (value?: string) => {
   const normalized = String(value || '').trim();
   if (!normalized) return 'Sin vigencia';
@@ -145,7 +152,7 @@ export default function TarjetasAmexAdmin() {
     setEditingCard(card);
     setForm({
       userId: card.userId || '',
-      cardNumber: card.cardNumber,
+      cardNumber: card.cardNumber.replace(/\D/g, '').slice(0, 16),
       employeeNumber: card.employeeNumber || '',
       accountNumber: card.accountNumber || '',
       expirationDate: card.expirationDate || '',
@@ -370,7 +377,7 @@ export default function TarjetasAmexAdmin() {
               <label className="block">
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Numero de tarjeta</span>
                 <input
-                  value={form.cardNumber}
+                  value={formatCardNumberInput(form.cardNumber)}
                   onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,
@@ -378,9 +385,9 @@ export default function TarjetasAmexAdmin() {
                     }))
                   }
                   className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
-                  placeholder="0000000000000000"
+                  placeholder="0000 0000 0000 0000"
                   inputMode="numeric"
-                  maxLength={16}
+                  maxLength={19}
                 />
               </label>
               <label className="block">
