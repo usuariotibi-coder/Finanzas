@@ -17,7 +17,6 @@ type TarjetaFormState = {
   accountNumber: string;
   expirationDate: string;
   comodin: boolean;
-  activa: boolean;
 };
 
 const EMPTY_FORM: TarjetaFormState = {
@@ -27,7 +26,6 @@ const EMPTY_FORM: TarjetaFormState = {
   accountNumber: '',
   expirationDate: '',
   comodin: false,
-  activa: true,
 };
 
 const normalizeText = (value: string) =>
@@ -152,7 +150,6 @@ export default function TarjetasAmexAdmin() {
       accountNumber: card.accountNumber || '',
       expirationDate: card.expirationDate || '',
       comodin: Boolean(card.comodin),
-      activa: card.activa,
     });
     setError('');
     setSuccess('');
@@ -215,7 +212,7 @@ export default function TarjetasAmexAdmin() {
         accountNumber,
         expirationDate,
         comodin: form.comodin,
-        activa: form.activa,
+        activa: true,
       };
 
       if (editingCard) {
@@ -397,7 +394,7 @@ export default function TarjetasAmexAdmin() {
               </label>
             </div>
 
-            <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <label className="inline-flex items-center gap-3 text-sm text-slate-700">
                 <input
                   type="checkbox"
@@ -411,14 +408,6 @@ export default function TarjetasAmexAdmin() {
                   }
                 />
                 Tarjeta comodin
-              </label>
-              <label className="inline-flex items-center gap-3 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.activa}
-                  onChange={(event) => setForm((prev) => ({ ...prev, activa: event.target.checked }))}
-                />
-                Tarjeta activa
               </label>
             </div>
 
