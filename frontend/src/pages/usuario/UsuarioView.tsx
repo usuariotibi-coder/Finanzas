@@ -1404,6 +1404,107 @@ export default function UsuarioView() {
     );
   };
 
+  const renderViaticoStatusIcon = (status: Viatico['status']) => {
+    const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
+
+    if (status === 'pendiente' || status === 'aprobado') {
+      return (
+        <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+            <path strokeLinecap="round" strokeWidth="1.8" d="M12 7.5v5l3 2" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'dispersado') {
+      return (
+        <span className={`${baseClassName} border-sky-200 bg-sky-50 text-sky-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 3v18m-4-4 4 4 4-4M8 7l4-4 4 4" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'en_viaje') {
+      return (
+        <span className={`${baseClassName} border-violet-200 bg-violet-50 text-violet-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 16.5 21 12 3 7.5l2.5 4.5L3 16.5Z" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'viaje_finalizado') {
+      return (
+        <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 12.5 10 16l8-8" />
+            <path strokeLinecap="round" strokeWidth="1.8" d="M4 19.5h16" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'en_recuperacion') {
+      return (
+        <span className={`${baseClassName} border-orange-200 bg-orange-50 text-orange-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 8a4 4 0 1 0-8 0c0 1.5.8 2.7 2 3.4V14a2 2 0 0 0 4 0v-2.6A3.98 3.98 0 0 0 16 8Z" />
+            <path strokeLinecap="round" strokeWidth="1.8" d="M9.5 18.5h5" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'rechazado') {
+      return (
+        <span className={`${baseClassName} border-rose-200 bg-rose-50 text-rose-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeWidth="2" d="m8 8 8 8m0-8-8 8" />
+          </svg>
+        </span>
+      );
+    }
+
+    return (
+      <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
+        </svg>
+      </span>
+    );
+  };
+
+  const renderViaticoActionIcon = (icon: string) => {
+    if (icon === 'DOC') {
+      return (
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 4.5h6l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V6A1.5 1.5 0 0 1 7.5 4.5H8Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 4.5V9h4.5M9 13h6M9 16h4" />
+        </svg>
+      );
+    }
+
+    if (icon === 'i') {
+      return (
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+          <path strokeLinecap="round" strokeWidth="1.8" d="M12 10.5v5m0-8h.01" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
+      </svg>
+    );
+  };
+
   void getVehiculoStatusIcon;
   void getViajeStatusIcon;
 
@@ -2392,6 +2493,8 @@ export default function UsuarioView() {
                 const estadoInfo = getEstadoInfo(viatico.status);
                 const procesoViatico = getProcesoViatico(viatico);
                 const accionBoton = getAccionBoton(viatico);
+                const viaticoStatusIcon = renderViaticoStatusIcon(viatico.status);
+                const viaticoActionIcon = renderViaticoActionIcon(accionBoton.icon);
                 const deletingViatico = deletingCardKey === `viatico:${viatico.id}`;
                 const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
                 const extensionResuelta = !extensionPendiente
@@ -2406,7 +2509,7 @@ export default function UsuarioView() {
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
-                            <span className="text-base">{estadoInfo.icon}</span>
+                            {viaticoStatusIcon}
                             <span className="truncate">{proyectoDisplay.jobLabel}</span>
                           </h3>
                           {viatico.destino && normalizeText(viatico.destino) !== normalizeText(proyectoDisplay.jobLabel) && (
@@ -2478,7 +2581,7 @@ export default function UsuarioView() {
                             className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold transition-colors ${accionBoton.color} hover:opacity-90`}
                             type="button"
                           >
-                            <span>{accionBoton.icon}</span>
+                            {viaticoActionIcon}
                             <span>{accionBoton.label}</span>
                           </button>
                         )}
