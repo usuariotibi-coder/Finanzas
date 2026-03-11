@@ -19,12 +19,14 @@ import type {
 } from '../types';
 import type { DepartmentOption } from '../data/departments';
 import type { UserCategoryOption } from '../data/userCategories';
+import type { ViaticoMealRates } from '../data/viaticoMealRates';
 import type { GSActivity } from '../data/gsActivities';
 import { CUENTAS_CONTABLES, replaceCuentasContables } from '../data/cuentasContables';
 import { DEPARTMENT_OPTIONS, replaceDepartmentOptions } from '../data/departments';
 import { GS_ACTIVITIES, replaceGSActivities } from '../data/gsActivities';
 import { replaceTarjetasAmex, TARJETAS_AMEX } from '../data/tarjetasAMEX';
 import { replaceUserCategoryOptions, USER_CATEGORY_OPTIONS } from '../data/userCategories';
+import { replaceViaticoMealRates, VIATICO_MEAL_RATES } from '../data/viaticoMealRates';
 import { apiFetch } from './api';
 import { sanitizeProyectoMontos } from './proyectoMetrics';
 import { toStorageKey } from './storage';
@@ -351,6 +353,13 @@ const mapDepartmentOptionFromApi = (raw: RawRecord): DepartmentOption => ({
 const mapUserCategoryOptionFromApi = (raw: RawRecord): UserCategoryOption => ({
   value: parseString(raw.value),
   label: parseString(raw.label),
+});
+
+const mapViaticoMealRatesFromApi = (raw: RawRecord): ViaticoMealRates => ({
+  desayuno: parseNumber(raw.desayuno, VIATICO_MEAL_RATES.desayuno),
+  comida: parseNumber(raw.comida, VIATICO_MEAL_RATES.comida),
+  cena: parseNumber(raw.cena, VIATICO_MEAL_RATES.cena),
+  updatedAt: parseString(raw.updated_at),
 });
 
 const mapVehicleFromApi = (raw: RawRecord): Vehicle => ({
@@ -1053,6 +1062,11 @@ export const fetchCatalogUserCategories = async (): Promise<UserCategoryOption[]
   return asArrayRecords(data).map(mapUserCategoryOptionFromApi);
 };
 
+export const fetchViaticoMealRates = async (): Promise<ViaticoMealRates> => {
+  const data = (await apiFetch('/catalogos/tarifas-viaticos/')) as RawRecord;
+  return mapViaticoMealRatesFromApi(data);
+};
+
 export const fetchFlotillaVehiculos = async (): Promise<Vehicle[]> => {
   const data = await apiFetch('/flotilla/vehiculos/');
   return asArrayRecords(data).map(mapVehicleFromApi);
@@ -1357,6 +1371,18 @@ export const createCatalogUserCategory = async (payload: {
 
 export const deleteCatalogUserCategory = async (value: string): Promise<void> => {
   await apiFetch(`/catalogos/categorias-usuario/${encodeURIComponent(value)}/`, { method: 'DELETE' });
+};
+
+export const updateViaticoMealRates = async (payload: ViaticoMealRates): Promise<ViaticoMealRates> => {
+  const data = (await apiFetch('/catalogos/tarifas-viaticos/', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      desayuno: payload.desayuno,
+      comida: payload.comida,
+      cena: payload.cena,
+    }),
+  })) as RawRecord;
+  return mapViaticoMealRatesFromApi(data);
 };
 
 export const createAmexTarjeta = async (payload: {
@@ -1700,6 +1726,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     cuentasContables,
     departments,
     userCategories,
+    viaticoMealRates,
     flotillaVehiculos,
     flotillaAsignaciones,
     flotillaAlertas,
@@ -1719,6 +1746,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     loadOptional(fetchCatalogCuentasContables, [...CUENTAS_CONTABLES]),
     loadOptional(fetchCatalogDepartments, [...DEPARTMENT_OPTIONS]),
     loadOptional(fetchCatalogUserCategories, [...USER_CATEGORY_OPTIONS]),
+    loadOptional(fetchViaticoMealRates, { ...VIATICO_MEAL_RATES }),
     loadOptional(fetchFlotillaVehiculos, readStorageList<Vehicle>('flotilla:vehiculos')),
     loadOptional(fetchFlotillaAsignaciones, readStorageList<VehicleAssignment>('vehicle_assignments_data', { legacy: true })),
     loadOptional(fetchFlotillaAlertas, readStorageList<VehicleAlert>('flotilla:alertas')),
@@ -1752,6 +1780,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
   replaceCuentasContables(cuentasContables);
   replaceDepartmentOptions(departments);
   replaceUserCategoryOptions(userCategories);
+  replaceViaticoMealRates(viaticoMealRates);
 
   writeStorageList('flotilla:vehiculos', flotillaVehiculos);
   writeStorageList('flotilla:alertas', flotillaAlertas);

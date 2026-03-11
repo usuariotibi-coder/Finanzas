@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption
+from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption, ViaticoMealConfig
 
 
 class GSActivitySerializer(serializers.ModelSerializer):
@@ -47,3 +47,13 @@ class UserCategoryOptionSerializer(serializers.ModelSerializer):
         if not normalized:
             raise serializers.ValidationError('El valor interno no puede ir vacio.')
         return normalized
+
+
+class ViaticoMealConfigSerializer(serializers.ModelSerializer):
+    desayuno = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    comida = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    cena = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+
+    class Meta:
+        model = ViaticoMealConfig
+        fields = ('desayuno', 'comida', 'cena', 'updated_at')

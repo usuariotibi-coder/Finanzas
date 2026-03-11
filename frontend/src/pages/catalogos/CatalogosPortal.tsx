@@ -25,6 +25,11 @@ import {
   replaceUserCategoryOptions,
   type UserCategoryOption,
 } from '../../data/userCategories';
+import {
+  VIATICO_MEAL_RATES,
+  replaceViaticoMealRates,
+  type ViaticoMealRates,
+} from '../../data/viaticoMealRates';
 import type { CuentaContable, TarjetaAMEX } from '../../types';
 import {
   createAmexTarjeta,
@@ -42,6 +47,8 @@ import {
   fetchCatalogDepartments,
   fetchCatalogUserCategories,
   fetchCatalogGSActivities,
+  fetchViaticoMealRates,
+  updateViaticoMealRates,
 } from '../../utils/backendSync';
 
 const ACTIVITY_CATEGORIES: GSActivity['category'][] = ['job', 'travel', 'facility', 'employee', 'office', 'vehicle'];
@@ -91,6 +98,7 @@ export default function CatalogosPortal() {
   const [tarjetas, setTarjetas] = useState<TarjetaAMEX[]>(() => [...TARJETAS_AMEX]);
   const [departments, setDepartments] = useState<DepartmentOption[]>(() => [...DEPARTMENT_OPTIONS]);
   const [userCategories, setUserCategories] = useState<UserCategoryOption[]>(() => [...USER_CATEGORY_OPTIONS]);
+  const [viaticoMealRates, setViaticoMealRates] = useState<ViaticoMealRates>(() => ({ ...VIATICO_MEAL_RATES }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -126,6 +134,16 @@ export default function CatalogosPortal() {
     label: '',
     value: '',
   });
+  const [viaticoMealRateForm, setViaticoMealRateForm] = useState({
+    desayuno: String(VIATICO_MEAL_RATES.desayuno),
+    comida: String(VIATICO_MEAL_RATES.comida),
+    cena: String(VIATICO_MEAL_RATES.cena),
+  });
+  const [rateConfirmChecks, setRateConfirmChecks] = useState({
+    impact: false,
+    reviewed: false,
+  });
+  const [rateConfirmPhrase, setRateConfirmPhrase] = useState('');
 
   const availableDepartmentLabels = Array.from(
     new Set(
@@ -146,12 +164,13 @@ export default function CatalogosPortal() {
   const refreshCatalogs = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextActivities, nextCuentas, nextTarjetas, nextDepartments, nextUserCategories] = await Promise.all([
+      const [nextActivities, nextCuentas, nextTarjetas, nextDepartments, nextUserCategories, nextViaticoMealRates] = await Promise.all([
         fetchCatalogGSActivities(),
         fetchCatalogCuentasContables(),
         fetchAmexTarjetas(),
         fetchCatalogDepartments(),
         fetchCatalogUserCategories(),
+        fetchViaticoMealRates(),
       ]);
 
       replaceGSActivities(nextActivities);
@@ -159,12 +178,19 @@ export default function CatalogosPortal() {
       replaceTarjetasAmex(nextTarjetas);
       replaceDepartmentOptions(nextDepartments);
       replaceUserCategoryOptions(nextUserCategories);
+      replaceViaticoMealRates(nextViaticoMealRates);
 
       setActivities([...nextActivities].sort((a, b) => a.id - b.id));
       setCuentas([...nextCuentas]);
       setTarjetas([...nextTarjetas]);
       setDepartments([...nextDepartments]);
       setUserCategories([...nextUserCategories]);
+      setViaticoMealRates(nextViaticoMealRates);
+      setViaticoMealRateForm({
+        desayuno: String(nextViaticoMealRates.desayuno),
+        comida: String(nextViaticoMealRates.comida),
+        cena: String(nextViaticoMealRates.cena),
+      });
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
     } finally {
@@ -372,6 +398,50 @@ export default function CatalogosPortal() {
       await deleteCatalogUserCategory(value);
       await refreshCatalogs();
       setSuccess('Categoria de usuario eliminada.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const resetViaticoRateConfirmations = () => {
+    setRateConfirmChecks({ impact: false, reviewed: false });
+    setRateConfirmPhrase('');
+  };
+
+  const saveViaticoMealRates = async () => {
+    clearMessages();
+    const desayuno = Number(viaticoMealRateForm.desayuno);
+    const comida = Number(viaticoMealRateForm.comida);
+    const cena = Number(viaticoMealRateForm.cena);
+
+    if (![desayuno, comida, cena].every((value) => Number.isFinite(value) && value >= 0)) {
+      setError('Las tarifas de viaticos deben ser numeros validos mayores o iguales a 0.');
+      return;
+    }
+
+    if (!rateConfirmChecks.impact || !rateConfirmChecks.reviewed || rateConfirmPhrase.trim() !== 'ACTUALIZAR TARIFAS') {
+      setError('Completa todos los candados antes de guardar las tarifas de viaticos.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Confirma el cambio de tarifas de viaticos.\nDesayuno: $${desayuno}\nComida: $${comida}\nCena: $${cena}`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const nextRates = await updateViaticoMealRates({ desayuno, comida, cena });
+      replaceViaticoMealRates(nextRates);
+      setViaticoMealRates(nextRates);
+      setViaticoMealRateForm({
+        desayuno: String(nextRates.desayuno),
+        comida: String(nextRates.comida),
+        cena: String(nextRates.cena),
+      });
+      resetViaticoRateConfirmations();
+      setSuccess('Tarifas de viaticos actualizadas.');
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
     }
@@ -713,6 +783,122 @@ export default function CatalogosPortal() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </article>
+      </section>
+
+      <section>
+        <article className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Tarifas de viaticos</h2>
+              <p className="mt-1 text-xs text-slate-600">
+                Cambia los montos de desayuno, comida y cena usados en solicitudes nuevas y extensiones.
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              <p className="font-semibold">Valores actuales</p>
+              <p>{`Desayuno: $${viaticoMealRates.desayuno.toLocaleString()}`}</p>
+              <p>{`Comida: $${viaticoMealRates.comida.toLocaleString()}`}</p>
+              <p>{`Cena: $${viaticoMealRates.cena.toLocaleString()}`}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            <label className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Desayuno</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={viaticoMealRateForm.desayuno}
+                onChange={(event) => setViaticoMealRateForm((prev) => ({ ...prev, desayuno: event.target.value }))}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Comida</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={viaticoMealRateForm.comida}
+                onChange={(event) => setViaticoMealRateForm((prev) => ({ ...prev, comida: event.target.value }))}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Cena</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={viaticoMealRateForm.cena}
+                onChange={(event) => setViaticoMealRateForm((prev) => ({ ...prev, cena: event.target.value }))}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <p className="text-sm font-semibold text-rose-900">Candados de guardado</p>
+            <p className="mt-1 text-xs text-rose-700">
+              Este cambio impacta solicitudes futuras. Completa todos los candados antes de guardar.
+            </p>
+            <div className="mt-3 space-y-2">
+              <label className="flex items-start gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={rateConfirmChecks.impact}
+                  onChange={(event) => setRateConfirmChecks((prev) => ({ ...prev, impact: event.target.checked }))}
+                  className="mt-0.5"
+                />
+                Entiendo que este cambio modifica el calculo de viaticos y extensiones futuras.
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={rateConfirmChecks.reviewed}
+                  onChange={(event) => setRateConfirmChecks((prev) => ({ ...prev, reviewed: event.target.checked }))}
+                  className="mt-0.5"
+                />
+                Ya revise los montos y confirmo que son correctos antes de guardar.
+              </label>
+              <label className="block text-sm text-slate-700">
+                <span className="mb-1 block font-medium">Escribe `ACTUALIZAR TARIFAS` para desbloquear</span>
+                <input
+                  value={rateConfirmPhrase}
+                  onChange={(event) => setRateConfirmPhrase(event.target.value)}
+                  placeholder="ACTUALIZAR TARIFAS"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={saveViaticoMealRates}
+              className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800"
+            >
+              Guardar tarifas de viaticos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViaticoMealRateForm({
+                  desayuno: String(viaticoMealRates.desayuno),
+                  comida: String(viaticoMealRates.comida),
+                  cena: String(viaticoMealRates.cena),
+                });
+                resetViaticoRateConfirmations();
+                clearMessages();
+              }}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Revertir cambios
+            </button>
           </div>
         </article>
       </section>

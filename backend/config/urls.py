@@ -11,6 +11,7 @@ from catalogos.views import (
     DepartmentOptionViewSet,
     GSActivityViewSet,
     UserCategoryOptionViewSet,
+    ViaticoMealConfigView,
 )
 from conciliacion.views import (
     AlertaConciliacionViewSet,
@@ -66,6 +67,7 @@ urlpatterns = [
     path('api/geocode/search/', GeocodeSearchView.as_view(), name='search-geocode'),
     path('api/geocode/reverse/', ReverseGeocodeView.as_view(), name='reverse-geocode'),
     path('api/dashboard/metrics/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
+    path('api/catalogos/tarifas-viaticos/', ViaticoMealConfigView.as_view(), name='catalogos-tarifas-viaticos'),
     path('api/', include(router.urls)),
 ]
 

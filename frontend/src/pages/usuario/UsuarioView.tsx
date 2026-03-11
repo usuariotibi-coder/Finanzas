@@ -17,11 +17,13 @@ import {
   deleteViatico,
   fetchFlotillaAsignaciones,
   fetchProyectos,
+  fetchViaticoMealRates,
   syncCoreAppData,
   uploadFlotillaEntregaFotos,
   updateFlotillaAsignacion,
   updateViatico,
 } from '../../utils/backendSync';
+import { VIATICO_MEAL_RATES, type ViaticoMealRates } from '../../data/viaticoMealRates';
 import { API_ROOT, api } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
@@ -537,6 +539,7 @@ export default function UsuarioView() {
   const { user } = useAuth();
   const isStaffOperator = user?.role === 'staff' && normalizeText(user?.category || '') === 'operador';
   const canCreatePortalRequests = !isStaffOperator;
+  const [viaticoMealRates, setViaticoMealRates] = useState<ViaticoMealRates>(() => ({ ...VIATICO_MEAL_RATES }));
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticoSeleccionado, setViaticoSeleccionado] = useLocalStorageState<string | null>('usuario:viaticoSeleccionado', null);
   const [filtro, setFiltro] = useState<'todos' | 'activos' | 'completados'>('activos');
@@ -607,6 +610,29 @@ export default function UsuarioView() {
   const solicitarVehiculoSubmitLockRef = useRef(false);
 
   useEffect(() => () => destinoVehiculoAbortRef.current?.abort(), []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadViaticoMealRates = async () => {
+      try {
+        const data = await fetchViaticoMealRates();
+        if (!active) {
+          return;
+        }
+        setViaticoMealRates(data);
+      } catch {
+        if (active) {
+          setViaticoMealRates({ ...VIATICO_MEAL_RATES });
+        }
+      }
+    };
+
+    void loadViaticoMealRates();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!user || !canCreatePortalRequests) {
@@ -860,9 +886,9 @@ export default function UsuarioView() {
     };
   }, [setProyectos]);
   const totalAlimentos =
-    formNuevoViatico.desayunos * 150 +
-    formNuevoViatico.comidas * 200 +
-    formNuevoViatico.cenas * 250;
+    formNuevoViatico.desayunos * viaticoMealRates.desayuno +
+    formNuevoViatico.comidas * viaticoMealRates.comida +
+    formNuevoViatico.cenas * viaticoMealRates.cena;
   const diasViajeSugeridos = calcularDiasViaje(formNuevoViatico.fechaInicio, formNuevoViatico.fechaFin);
   const placeholderAlimentos = diasViajeSugeridos > 0 ? String(diasViajeSugeridos) : '0';
   const diasExtensionSugeridos = viaticoParaExtender
@@ -870,11 +896,12 @@ export default function UsuarioView() {
     : 0;
   const extensionMinDate = viaticoParaExtender ? getExtensionMinDate(viaticoParaExtender.fechaFin) : '';
   const placeholderAlimentosExtension = diasExtensionSugeridos > 0 ? String(diasExtensionSugeridos) : '0';
-  const totalAlimentosExtensionSugeridos = diasExtensionSugeridos * (150 + 200 + 250);
+  const totalAlimentosExtensionSugeridos =
+    diasExtensionSugeridos * (viaticoMealRates.desayuno + viaticoMealRates.comida + viaticoMealRates.cena);
   const totalAlimentosExtensionCapturados =
-    alimentosExtension.desayunos * 150 +
-    alimentosExtension.comidas * 200 +
-    alimentosExtension.cenas * 250;
+    alimentosExtension.desayunos * viaticoMealRates.desayuno +
+    alimentosExtension.comidas * viaticoMealRates.comida +
+    alimentosExtension.cenas * viaticoMealRates.cena;
   const extensionPendienteModal = viaticoParaExtender
     ? getPendingViaticoExtension(viaticoParaExtender.comentarios)
     : null;
@@ -3264,7 +3291,7 @@ export default function UsuarioView() {
                 </label>
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Desayunos ($150)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{`Desayunos ($${viaticoMealRates.desayuno.toLocaleString()})`}</label>
                     <input
                       type="number"
                       value={formNuevoViatico.desayunos === 0 ? '' : formNuevoViatico.desayunos}
@@ -3279,7 +3306,7 @@ export default function UsuarioView() {
                 />
               </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Comidas ($200)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{`Comidas ($${viaticoMealRates.comida.toLocaleString()})`}</label>
                     <input
                       type="number"
                       value={formNuevoViatico.comidas === 0 ? '' : formNuevoViatico.comidas}
@@ -3294,7 +3321,7 @@ export default function UsuarioView() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Cenas ($250)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">{`Cenas ($${viaticoMealRates.cena.toLocaleString()})`}</label>
                     <input
                       type="number"
                       value={formNuevoViatico.cenas === 0 ? '' : formNuevoViatico.cenas}
@@ -4198,7 +4225,7 @@ export default function UsuarioView() {
                     </p>
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
-                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Desayunos ($150)</label>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">{`Desayunos ($${viaticoMealRates.desayuno.toLocaleString()})`}</label>
                         <input
                           type="number"
                           value={alimentosExtension.desayunos === 0 ? '' : alimentosExtension.desayunos}
@@ -4212,7 +4239,7 @@ export default function UsuarioView() {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Comidas ($200)</label>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">{`Comidas ($${viaticoMealRates.comida.toLocaleString()})`}</label>
                         <input
                           type="number"
                           value={alimentosExtension.comidas === 0 ? '' : alimentosExtension.comidas}
@@ -4226,7 +4253,7 @@ export default function UsuarioView() {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Cenas ($250)</label>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">{`Cenas ($${viaticoMealRates.cena.toLocaleString()})`}</label>
                         <input
                           type="number"
                           value={alimentosExtension.cenas === 0 ? '' : alimentosExtension.cenas}

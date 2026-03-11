@@ -60,3 +60,22 @@ class UserCategoryOption(models.Model):
 
     def __str__(self) -> str:
         return f'{self.label} ({self.value})'
+
+
+class ViaticoMealConfig(models.Model):
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    desayuno = models.DecimalField(max_digits=10, decimal_places=2, default=150)
+    comida = models.DecimalField(max_digits=10, decimal_places=2, default=200)
+    cena = models.DecimalField(max_digits=10, decimal_places=2, default=250)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Configuracion de tarifas de viatico'
+        verbose_name_plural = 'Configuracion de tarifas de viatico'
+
+    def save(self, *args, **kwargs):
+        self.id = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return 'Tarifas de viatico'

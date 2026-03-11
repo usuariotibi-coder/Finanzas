@@ -1,13 +1,15 @@
 from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .defaults import GS_ACTIVITY_OTHER_ID, PROTECTED_DEPARTMENT_VALUES
-from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption
+from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption, ViaticoMealConfig
 from .serializers import (
     CuentaContableSerializer,
     DepartmentOptionSerializer,
     GSActivitySerializer,
     UserCategoryOptionSerializer,
+    ViaticoMealConfigSerializer,
 )
 
 
@@ -62,3 +64,29 @@ class UserCategoryOptionViewSet(viewsets.ModelViewSet):
     serializer_class = UserCategoryOptionSerializer
     permission_classes = [AuthenticatedReadOnlyAdminFinanceWrite]
     lookup_field = 'value'
+
+
+class ViaticoMealConfigView(APIView):
+    permission_classes = [AuthenticatedReadOnlyAdminFinanceWrite]
+
+    def get_object(self) -> ViaticoMealConfig:
+        config, _ = ViaticoMealConfig.objects.get_or_create(
+            pk=1,
+            defaults={
+                'desayuno': 150,
+                'comida': 200,
+                'cena': 250,
+            },
+        )
+        return config
+
+    def get(self, request):
+        serializer = ViaticoMealConfigSerializer(self.get_object())
+        return Response(serializer.data)
+
+    def patch(self, request):
+        config = self.get_object()
+        serializer = ViaticoMealConfigSerializer(config, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
