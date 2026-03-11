@@ -49,6 +49,7 @@ def validate_user_password(password: str, user_data: dict | None = None) -> str:
             email=user_data.get('email') or '',
             full_name=user_data.get('full_name') or '',
             department=user_data.get('department') or 'finanzas',
+            category=user_data.get('category') or 'operador',
             position=user_data.get('position') or 'Colaborador',
         )
 
@@ -63,7 +64,7 @@ def validate_user_password(password: str, user_data: dict | None = None) -> str:
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'department', 'position', 'role')
+        fields = ('id', 'email', 'full_name', 'department', 'category', 'position', 'role')
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -71,7 +72,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'department', 'position', 'password')
+        fields = ('email', 'full_name', 'department', 'category', 'position', 'password')
+        extra_kwargs = {
+            'category': {'required': False},
+        }
 
     def validate_email(self, value):
         return validate_allowed_email(value)
@@ -97,11 +101,12 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'department', 'position', 'password')
+        fields = ('email', 'full_name', 'department', 'category', 'position', 'password')
         extra_kwargs = {
             'email': {'required': False},
             'full_name': {'required': False},
             'department': {'required': False},
+            'category': {'required': False},
             'position': {'required': False},
         }
 
@@ -117,6 +122,7 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
             'email': attrs.get('email', getattr(self.instance, 'email', '')),
             'full_name': attrs.get('full_name', getattr(self.instance, 'full_name', '')),
             'department': attrs.get('department', getattr(self.instance, 'department', '')),
+            'category': attrs.get('category', getattr(self.instance, 'category', 'operador')),
             'position': attrs.get('position', getattr(self.instance, 'position', '')),
         }
         validate_user_password(password, user_data)
@@ -148,6 +154,7 @@ class ChangePasswordSerializer(serializers.Serializer):
             'email': getattr(user, 'email', ''),
             'full_name': getattr(user, 'full_name', ''),
             'department': getattr(user, 'department', ''),
+            'category': getattr(user, 'category', 'operador'),
             'position': getattr(user, 'position', ''),
         }
         validate_user_password(value, user_data)

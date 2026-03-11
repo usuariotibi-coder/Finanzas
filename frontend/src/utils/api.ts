@@ -139,7 +139,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
-  register: (payload: { email: string; full_name: string; department: string; position: string; password: string }) =>
+  register: (payload: {
+    email: string;
+    full_name: string;
+    department: string;
+    category?: string;
+    position: string;
+    password: string;
+  }) =>
     apiFetch('/auth/register/', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -148,6 +155,7 @@ export const api = {
     email: string;
     full_name: string;
     department: string;
+    category?: string;
     position: string;
     password: string;
   }) =>
@@ -162,6 +170,7 @@ export const api = {
       email: string;
       full_name: string;
       department: string;
+      category: string;
       position: string;
       password: string;
     }>

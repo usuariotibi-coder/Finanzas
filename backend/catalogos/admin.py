@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CuentaContable, DepartmentOption, GSActivity
+from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption
 
 
 @admin.register(GSActivity)
@@ -19,5 +19,11 @@ class CuentaContableAdmin(admin.ModelAdmin):
 
 @admin.register(DepartmentOption)
 class DepartmentOptionAdmin(admin.ModelAdmin):
+    list_display = ('label', 'value')
+    search_fields = ('label', 'value')
+
+
+@admin.register(UserCategoryOption)
+class UserCategoryOptionAdmin(admin.ModelAdmin):
     list_display = ('label', 'value')
     search_fields = ('label', 'value')

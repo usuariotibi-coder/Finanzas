@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import CuentaContable, DepartmentOption, GSActivity
+from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption
 
 
 class GSActivitySerializer(serializers.ModelSerializer):
@@ -28,6 +28,18 @@ class CuentaContableSerializer(serializers.ModelSerializer):
 class DepartmentOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DepartmentOption
+        fields = ('id', 'value', 'label')
+
+    def validate_value(self, value: str):
+        normalized = value.strip().lower()
+        if not normalized:
+            raise serializers.ValidationError('El valor interno no puede ir vacio.')
+        return normalized
+
+
+class UserCategoryOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserCategoryOption
         fields = ('id', 'value', 'label')
 
     def validate_value(self, value: str):

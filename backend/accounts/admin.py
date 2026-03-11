@@ -8,13 +8,13 @@ from .models import User
 class UserAdmin(DjangoUserAdmin):
     model = User
     ordering = ('email',)
-    list_display = ('email', 'full_name', 'department', 'position', 'role', 'is_staff', 'is_active')
-    list_filter = ('department', 'position', 'role', 'is_staff', 'is_active')
+    list_display = ('email', 'full_name', 'department', 'category', 'position', 'role', 'is_staff', 'is_active')
+    list_filter = ('department', 'category', 'position', 'role', 'is_staff', 'is_active')
     search_fields = ('email', 'full_name')
 
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
-        ('Perfil', {'fields': ('full_name', 'department', 'position', 'role')}),
+        ('Perfil', {'fields': ('full_name', 'department', 'category', 'position', 'role')}),
         ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Fechas', {'fields': ('last_login',)}),
     )
@@ -22,7 +22,7 @@ class UserAdmin(DjangoUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'full_name', 'department', 'position', 'password1', 'password2', 'is_staff', 'is_active'),
+            'fields': ('email', 'full_name', 'department', 'category', 'position', 'password1', 'password2', 'is_staff', 'is_active'),
         }),
     )
 

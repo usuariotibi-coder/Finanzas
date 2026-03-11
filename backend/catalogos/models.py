@@ -49,3 +49,14 @@ class DepartmentOption(models.Model):
 
     def __str__(self) -> str:
         return f'{self.label} ({self.value})'
+
+
+class UserCategoryOption(models.Model):
+    value = models.CharField(max_length=50, unique=True)
+    label = models.CharField(max_length=120)
+
+    class Meta:
+        ordering = ('label',)
+
+    def __str__(self) -> str:
+        return f'{self.label} ({self.value})'

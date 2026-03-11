@@ -20,19 +20,27 @@ import {
   replaceDepartmentOptions,
   type DepartmentOption,
 } from '../../data/departments';
+import {
+  USER_CATEGORY_OPTIONS,
+  replaceUserCategoryOptions,
+  type UserCategoryOption,
+} from '../../data/userCategories';
 import type { CuentaContable, TarjetaAMEX } from '../../types';
 import {
   createAmexTarjeta,
   createCatalogCuentaContable,
   createCatalogDepartment,
+  createCatalogUserCategory,
   createCatalogGSActivity,
   deleteAmexTarjeta,
   deleteCatalogCuentaContable,
   deleteCatalogDepartment,
+  deleteCatalogUserCategory,
   deleteCatalogGSActivity,
   fetchAmexTarjetas,
   fetchCatalogCuentasContables,
   fetchCatalogDepartments,
+  fetchCatalogUserCategories,
   fetchCatalogGSActivities,
 } from '../../utils/backendSync';
 
@@ -42,6 +50,14 @@ const DEFAULT_ACTIVITY_ACCOUNT = '5450';
 const DEFAULT_ACTIVITY_CODE = 'N/A';
 
 const normalizeDepartmentValue = (input: string) =>
+  input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 50);
+
+const normalizeCategoryValue = (input: string) =>
   input
     .trim()
     .toLowerCase()
@@ -74,6 +90,7 @@ export default function CatalogosPortal() {
   const [cuentas, setCuentas] = useState<CuentaContable[]>(() => [...CUENTAS_CONTABLES]);
   const [tarjetas, setTarjetas] = useState<TarjetaAMEX[]>(() => [...TARJETAS_AMEX]);
   const [departments, setDepartments] = useState<DepartmentOption[]>(() => [...DEPARTMENT_OPTIONS]);
+  const [userCategories, setUserCategories] = useState<UserCategoryOption[]>(() => [...USER_CATEGORY_OPTIONS]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -105,6 +122,10 @@ export default function CatalogosPortal() {
     label: '',
     value: '',
   });
+  const [userCategoryForm, setUserCategoryForm] = useState({
+    label: '',
+    value: '',
+  });
 
   const availableDepartmentLabels = Array.from(
     new Set(
@@ -125,22 +146,25 @@ export default function CatalogosPortal() {
   const refreshCatalogs = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextActivities, nextCuentas, nextTarjetas, nextDepartments] = await Promise.all([
+      const [nextActivities, nextCuentas, nextTarjetas, nextDepartments, nextUserCategories] = await Promise.all([
         fetchCatalogGSActivities(),
         fetchCatalogCuentasContables(),
         fetchAmexTarjetas(),
         fetchCatalogDepartments(),
+        fetchCatalogUserCategories(),
       ]);
 
       replaceGSActivities(nextActivities);
       replaceCuentasContables(nextCuentas);
       replaceTarjetasAmex(nextTarjetas);
       replaceDepartmentOptions(nextDepartments);
+      replaceUserCategoryOptions(nextUserCategories);
 
       setActivities([...nextActivities].sort((a, b) => a.id - b.id));
       setCuentas([...nextCuentas]);
       setTarjetas([...nextTarjetas]);
       setDepartments([...nextDepartments]);
+      setUserCategories([...nextUserCategories]);
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
     } finally {
@@ -315,6 +339,39 @@ export default function CatalogosPortal() {
       await deleteCatalogDepartment(value);
       await refreshCatalogs();
       setSuccess('Departamento eliminado.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const addUserCategory = async () => {
+    clearMessages();
+    const label = userCategoryForm.label.trim();
+    const value = (userCategoryForm.value.trim() || normalizeCategoryValue(label)).slice(0, 50);
+    if (!label || !value) {
+      setError('La categoria requiere etiqueta y valor.');
+      return;
+    }
+    if (userCategories.some((item) => item.value === value)) {
+      setError('Ya existe una categoria con ese valor.');
+      return;
+    }
+    try {
+      await createCatalogUserCategory({ label, value });
+      await refreshCatalogs();
+      setSuccess('Categoria de usuario agregada.');
+      setUserCategoryForm({ label: '', value: '' });
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const removeUserCategory = async (value: string) => {
+    clearMessages();
+    try {
+      await deleteCatalogUserCategory(value);
+      await refreshCatalogs();
+      setSuccess('Categoria de usuario eliminada.');
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
     }
@@ -648,6 +705,65 @@ export default function CatalogosPortal() {
                         onClick={() => removeDepartment(item.value)}
                         disabled={PROTECTED_DEPARTMENTS.has(item.value)}
                         className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section>
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Categorias de usuario</h2>
+          <p className="mt-1 text-xs text-slate-600">Dropdown para alta y edicion de usuarios (Categoria).</p>
+
+          <div className="mt-4 grid gap-2 md:grid-cols-2">
+            <input
+              value={userCategoryForm.label}
+              onChange={(event) => setUserCategoryForm((prev) => ({ ...prev, label: event.target.value }))}
+              placeholder="Etiqueta visible"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <input
+              value={userCategoryForm.value}
+              onChange={(event) => setUserCategoryForm((prev) => ({ ...prev, value: event.target.value }))}
+              placeholder="Valor interno (opcional)"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={addUserCategory}
+            className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Agregar categoria
+          </button>
+
+          <div className="mt-4 max-h-72 overflow-auto rounded-xl border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-left text-slate-600">
+                <tr>
+                  <th className="px-3 py-2">Etiqueta</th>
+                  <th className="px-3 py-2">Valor</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {userCategories.map((item) => (
+                  <tr key={item.value} className="border-t border-slate-200">
+                    <td className="px-3 py-2">{item.label}</td>
+                    <td className="px-3 py-2">{item.value}</td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => removeUserCategory(item.value)}
+                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
                       >
                         Eliminar
                       </button>

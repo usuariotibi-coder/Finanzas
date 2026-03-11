@@ -18,11 +18,13 @@ import type {
   Viatico,
 } from '../types';
 import type { DepartmentOption } from '../data/departments';
+import type { UserCategoryOption } from '../data/userCategories';
 import type { GSActivity } from '../data/gsActivities';
 import { CUENTAS_CONTABLES, replaceCuentasContables } from '../data/cuentasContables';
 import { DEPARTMENT_OPTIONS, replaceDepartmentOptions } from '../data/departments';
 import { GS_ACTIVITIES, replaceGSActivities } from '../data/gsActivities';
 import { replaceTarjetasAmex, TARJETAS_AMEX } from '../data/tarjetasAMEX';
+import { replaceUserCategoryOptions, USER_CATEGORY_OPTIONS } from '../data/userCategories';
 import { apiFetch } from './api';
 import { sanitizeProyectoMontos } from './proyectoMetrics';
 import { toStorageKey } from './storage';
@@ -342,6 +344,11 @@ const mapCuentaContableFromApi = (raw: RawRecord): CuentaContable => ({
 });
 
 const mapDepartmentOptionFromApi = (raw: RawRecord): DepartmentOption => ({
+  value: parseString(raw.value),
+  label: parseString(raw.label),
+});
+
+const mapUserCategoryOptionFromApi = (raw: RawRecord): UserCategoryOption => ({
   value: parseString(raw.value),
   label: parseString(raw.label),
 });
@@ -1041,6 +1048,11 @@ export const fetchCatalogDepartments = async (): Promise<DepartmentOption[]> => 
   return asArrayRecords(data).map(mapDepartmentOptionFromApi);
 };
 
+export const fetchCatalogUserCategories = async (): Promise<UserCategoryOption[]> => {
+  const data = await apiFetch('/catalogos/categorias-usuario/');
+  return asArrayRecords(data).map(mapUserCategoryOptionFromApi);
+};
+
 export const fetchFlotillaVehiculos = async (): Promise<Vehicle[]> => {
   const data = await apiFetch('/flotilla/vehiculos/');
   return asArrayRecords(data).map(mapVehicleFromApi);
@@ -1330,6 +1342,21 @@ export const createCatalogDepartment = async (payload: {
 
 export const deleteCatalogDepartment = async (value: string): Promise<void> => {
   await apiFetch(`/catalogos/departamentos/${encodeURIComponent(value)}/`, { method: 'DELETE' });
+};
+
+export const createCatalogUserCategory = async (payload: {
+  value: string;
+  label: string;
+}): Promise<UserCategoryOption> => {
+  const data = (await apiFetch('/catalogos/categorias-usuario/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })) as RawRecord;
+  return mapUserCategoryOptionFromApi(data);
+};
+
+export const deleteCatalogUserCategory = async (value: string): Promise<void> => {
+  await apiFetch(`/catalogos/categorias-usuario/${encodeURIComponent(value)}/`, { method: 'DELETE' });
 };
 
 export const createAmexTarjeta = async (payload: {
@@ -1672,6 +1699,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     gsActivities,
     cuentasContables,
     departments,
+    userCategories,
     flotillaVehiculos,
     flotillaAsignaciones,
     flotillaAlertas,
@@ -1690,6 +1718,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
     loadOptional(fetchCatalogGSActivities, [...GS_ACTIVITIES]),
     loadOptional(fetchCatalogCuentasContables, [...CUENTAS_CONTABLES]),
     loadOptional(fetchCatalogDepartments, [...DEPARTMENT_OPTIONS]),
+    loadOptional(fetchCatalogUserCategories, [...USER_CATEGORY_OPTIONS]),
     loadOptional(fetchFlotillaVehiculos, readStorageList<Vehicle>('flotilla:vehiculos')),
     loadOptional(fetchFlotillaAsignaciones, readStorageList<VehicleAssignment>('vehicle_assignments_data', { legacy: true })),
     loadOptional(fetchFlotillaAlertas, readStorageList<VehicleAlert>('flotilla:alertas')),
@@ -1722,6 +1751,7 @@ export const syncCoreAppData = async ({ userId }: { userId?: string } = {}) => {
   replaceGSActivities(gsActivities);
   replaceCuentasContables(cuentasContables);
   replaceDepartmentOptions(departments);
+  replaceUserCategoryOptions(userCategories);
 
   writeStorageList('flotilla:vehiculos', flotillaVehiculos);
   writeStorageList('flotilla:alertas', flotillaAlertas);

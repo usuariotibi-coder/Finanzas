@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { AuthUser, UserRole } from '../types';
 import { DEPARTMENT_OPTIONS } from '../data/departments';
+import { USER_CATEGORY_OPTIONS } from '../data/userCategories';
 import { syncCoreAppData } from '../utils/backendSync';
 import { api } from '../utils/api';
 
@@ -13,6 +14,7 @@ interface AuthContextValue {
     full_name: string;
     email: string;
     department: string;
+    category?: string;
     position: string;
     password: string;
   }) => Promise<void>;
@@ -22,6 +24,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const departmentOptions = DEPARTMENT_OPTIONS;
+export const categoryOptions = USER_CATEGORY_OPTIONS;
 
 export const roleLabels: Record<UserRole, string> = {
   admin: 'Administrador',
@@ -64,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     full_name: string;
     email: string;
     department: string;
+    category?: string;
     position: string;
     password: string;
   }) => {

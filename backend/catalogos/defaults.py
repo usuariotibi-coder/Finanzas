@@ -165,5 +165,10 @@ DEFAULT_DEPARTMENTS = [
     {'value': 'otro', 'label': 'Otro'},
 ]
 
+DEFAULT_USER_CATEGORIES = [
+    {'value': 'gerente', 'label': 'Gerente'},
+    {'value': 'operador', 'label': 'Operador'},
+]
+
 PROTECTED_DEPARTMENT_VALUES = {'business_intelligence', 'finanzas', 'operaciones'}
 GS_ACTIVITY_OTHER_ID = 9

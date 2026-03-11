@@ -2,8 +2,13 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
 
 from .defaults import GS_ACTIVITY_OTHER_ID, PROTECTED_DEPARTMENT_VALUES
-from .models import CuentaContable, DepartmentOption, GSActivity
-from .serializers import CuentaContableSerializer, DepartmentOptionSerializer, GSActivitySerializer
+from .models import CuentaContable, DepartmentOption, GSActivity, UserCategoryOption
+from .serializers import (
+    CuentaContableSerializer,
+    DepartmentOptionSerializer,
+    GSActivitySerializer,
+    UserCategoryOptionSerializer,
+)
 
 
 class AuthenticatedReadOnlyAdminFinanceWrite(permissions.BasePermission):
@@ -50,3 +55,10 @@ class DepartmentOptionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return super().destroy(request, *args, **kwargs)
+
+
+class UserCategoryOptionViewSet(viewsets.ModelViewSet):
+    queryset = UserCategoryOption.objects.all().order_by('label')
+    serializer_class = UserCategoryOptionSerializer
+    permission_classes = [AuthenticatedReadOnlyAdminFinanceWrite]
+    lookup_field = 'value'

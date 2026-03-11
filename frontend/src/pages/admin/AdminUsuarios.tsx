@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import useAuth from '../../hooks/useAuth';
-import { departmentOptions, roleLabels } from '../../context/AuthContext';
+import { categoryOptions, departmentOptions, roleLabels } from '../../context/AuthContext';
 import type { AuthUser } from '../../types';
 import { api } from '../../utils/api';
 
@@ -15,8 +15,15 @@ const strengthMeta = [
 ];
 
 const initialDepartment = departmentOptions[0]?.value || 'finanzas';
+const initialCategory =
+  categoryOptions.find((option) => option.value === 'operador')?.value ||
+  categoryOptions[0]?.value ||
+  'operador';
 const departmentLabelMap = Object.fromEntries(
   departmentOptions.map((option) => [option.value, option.label])
+) as Record<string, string>;
+const categoryLabelMap = Object.fromEntries(
+  categoryOptions.map((option) => [option.value, option.label])
 ) as Record<string, string>;
 
 const sortUsers = (users: AuthUser[]) =>
@@ -63,6 +70,7 @@ export default function AdminUsuarios() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [department, setDepartment] = useState(initialDepartment);
+  const [category, setCategory] = useState(initialCategory);
   const [position, setPosition] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -80,6 +88,7 @@ export default function AdminUsuarios() {
   const [editFullName, setEditFullName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editDepartment, setEditDepartment] = useState(initialDepartment);
+  const [editCategory, setEditCategory] = useState(initialCategory);
   const [editPosition, setEditPosition] = useState('');
   const [editPassword, setEditPassword] = useState('');
   const [editConfirmPassword, setEditConfirmPassword] = useState('');
@@ -145,6 +154,7 @@ export default function AdminUsuarios() {
     setFullName('');
     setEmail('');
     setDepartment(initialDepartment);
+    setCategory(initialCategory);
     setPosition('');
     setPassword('');
     setConfirmPassword('');
@@ -157,6 +167,7 @@ export default function AdminUsuarios() {
     setEditFullName(selectedUser.full_name);
     setEditEmail(selectedUser.email);
     setEditDepartment(selectedUser.department);
+    setEditCategory(selectedUser.category || initialCategory);
     setEditPosition(selectedUser.position);
     setEditPassword('');
     setEditConfirmPassword('');
@@ -170,6 +181,7 @@ export default function AdminUsuarios() {
     setEditFullName('');
     setEditEmail('');
     setEditDepartment(initialDepartment);
+    setEditCategory(initialCategory);
     setEditPosition('');
     setEditPassword('');
     setEditConfirmPassword('');
@@ -188,6 +200,7 @@ export default function AdminUsuarios() {
       !fullName.trim() ||
       !email.trim() ||
       !department ||
+      !category ||
       !position.trim() ||
       !password ||
       !confirmPassword
@@ -220,6 +233,7 @@ export default function AdminUsuarios() {
         full_name: fullName.trim(),
         email: normalizedEmail,
         department,
+        category,
         position: position.trim(),
         password,
       })) as AuthUser;
@@ -246,7 +260,7 @@ export default function AdminUsuarios() {
     const editAllowedDomain =
       normalizedEditEmail.length > 0 && editEmailDomain === ALLOWED_EMAIL_DOMAIN;
 
-    if (!editFullName.trim() || !normalizedEditEmail || !editDepartment || !editPosition.trim()) {
+    if (!editFullName.trim() || !normalizedEditEmail || !editDepartment || !editCategory || !editPosition.trim()) {
       setEditError('Completa todos los campos para actualizar el usuario.');
       return;
     }
@@ -279,6 +293,7 @@ export default function AdminUsuarios() {
       editFullName,
       editEmail,
       editDepartment,
+      editCategory,
       editPosition,
       editPassword,
       editConfirmPassword,
@@ -294,12 +309,14 @@ export default function AdminUsuarios() {
         full_name: string;
         email: string;
         department: string;
+        category: string;
         position: string;
         password?: string;
       } = {
         full_name: snapshot.editFullName.trim(),
         email: normalizedEditEmail,
         department: snapshot.editDepartment,
+        category: snapshot.editCategory,
         position: snapshot.editPosition.trim(),
       };
       if (wantsToChangePassword && snapshot.editPassword) {
@@ -321,6 +338,7 @@ export default function AdminUsuarios() {
       setEditFullName(snapshot.editFullName);
       setEditEmail(snapshot.editEmail);
       setEditDepartment(snapshot.editDepartment);
+      setEditCategory(snapshot.editCategory);
       setEditPosition(snapshot.editPosition);
       setEditPassword(snapshot.editPassword);
       setEditConfirmPassword(snapshot.editConfirmPassword);
@@ -379,6 +397,20 @@ export default function AdminUsuarios() {
                     className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                   >
                     {departmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Categoria</label>
+                  <select
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  >
+                    {categoryOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -505,7 +537,7 @@ export default function AdminUsuarios() {
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Usuarios registrados</h2>
                 <p className="text-xs text-slate-600">
-                  Editar nombre, correo, departamento, puesto y cambiar contrasena.
+                  Editar nombre, correo, departamento, categoria, puesto y cambiar contrasena.
                 </p>
               </div>
               <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
@@ -539,7 +571,8 @@ export default function AdminUsuarios() {
                           </p>
                           <p className="truncate text-[11px] text-slate-600">{item.email}</p>
                           <p className="mt-0.5 text-[11px] text-slate-600">
-                            {departmentLabelMap[item.department] || item.department} · {roleLabels[item.role]}
+                            {departmentLabelMap[item.department] || item.department} ·{' '}
+                            {categoryLabelMap[item.category || ''] || item.category || 'Operador'} · {roleLabels[item.role]}
                           </p>
                           <p className="truncate text-[11px] text-slate-500">{item.position}</p>
                         </div>
@@ -611,6 +644,21 @@ export default function AdminUsuarios() {
                     className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                   >
                     {departmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Categoria</label>
+                  <select
+                    value={editCategory}
+                    onChange={(event) => setEditCategory(event.target.value)}
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  >
+                    {categoryOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
