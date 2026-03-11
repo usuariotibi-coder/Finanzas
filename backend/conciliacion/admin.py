@@ -12,7 +12,7 @@ class FacturaAdmin(admin.ModelAdmin):
 
 @admin.register(Consumo)
 class ConsumoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'comercio', 'monto', 'fecha', 'matched')
+    list_display = ('id', 'user', 'card_number', 'employee_number', 'comercio', 'monto', 'fecha', 'matched')
     list_filter = ('matched', 'autorizado')
 
 

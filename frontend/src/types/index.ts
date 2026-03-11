@@ -155,8 +155,13 @@ export interface Consumo {
   userId: string;
   userName?: string;
   viaticoId?: string;
+  cardNumber?: string;
+  employeeNumber?: string;
   fecha: string;
   comercio: string;
+  paisComercio?: string;
+  tipoMovimiento?: string;
+  concepto?: string;
   monto: number;
   categoria: string;
   facturaId?: string;

@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { read, utils as XLSXUtils } from 'xlsx';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Factura, AlertaConciliacion, Consumo, TicketAMEX, FacturaStatus } from '../../types';
+import type { Factura, AlertaConciliacion, Consumo, TarjetaAMEX, TicketAMEX, FacturaStatus } from '../../types';
 import {
+  createConsumo,
   createFactura,
+  fetchAmexTarjetas,
   syncCoreAppData,
   updateAmexTicket,
   updateConsumo,
@@ -71,8 +74,107 @@ const downloadFacturaAsset = (tipo: 'PDF' | 'XML', archivoPath?: string | null, 
   document.body.removeChild(link);
 };
 
+type StatementRow = {
+  cardNumber: string;
+  employeeNumber: string;
+  employeeName: string;
+  fecha: string;
+  comercio: string;
+  paisComercio: string;
+  tipoMovimiento: string;
+  monto: number;
+  montoUsd: number;
+  concepto: string;
+};
+
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const normalizeExcelHeader = (value: unknown) =>
+  normalizeText(String(value || '')).replace(/[^a-z0-9]/g, '');
+
+const normalizeCardNumber = (value: unknown) => String(value || '').replace(/\D/g, '');
+
+const normalizeEmployeeNumber = (value: unknown) => String(value || '').replace(/\D/g, '');
+
+const normalizeMerchant = (value: unknown) => normalizeText(String(value || ''));
+
+const parseMoney = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const normalized = String(value || '')
+    .replace(/[^\d.-]/g, '')
+    .trim();
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toIsoDate = (value: unknown) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const candidate = raw.includes(' ') ? raw.split(' ')[0] : raw;
+  const parsed = new Date(candidate);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toISOString().slice(0, 10);
+};
+
+const diffDays = (left: string, right: string) => {
+  const leftDate = new Date(`${left}T00:00:00`);
+  const rightDate = new Date(`${right}T00:00:00`);
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) return Number.MAX_SAFE_INTEGER;
+  return Math.abs(Math.round((leftDate.getTime() - rightDate.getTime()) / 86400000));
+};
+
+const readStatementRows = async (file: File): Promise<StatementRow[]> => {
+  const buffer = await file.arrayBuffer();
+  const workbook = read(buffer, { type: 'array', cellDates: true });
+  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!firstSheet) {
+    throw new Error('El archivo no contiene hojas para importar.');
+  }
+
+  const matrix = XLSXUtils.sheet_to_json<(string | number | null)[]>(firstSheet, {
+    header: 1,
+    raw: false,
+    defval: '',
+  });
+  const headerRowIndex = matrix.findIndex((row) => row.some((cell) => normalizeExcelHeader(cell) === 'tarjeta'));
+  if (headerRowIndex < 0) {
+    throw new Error('No se encontro la fila de encabezados del estado de cuenta.');
+  }
+
+  const headers = matrix[headerRowIndex].map((cell) => normalizeExcelHeader(cell));
+  const headerIndex = (names: string[]) => headers.findIndex((header) => names.includes(header));
+  const rowValue = (row: (string | number | null)[], names: string[]) => {
+    const index = headerIndex(names);
+    return index >= 0 ? row[index] : '';
+  };
+
+  return matrix
+    .slice(headerRowIndex + 1)
+    .filter((row) => row.some((cell) => String(cell || '').trim()))
+    .map((row) => ({
+      cardNumber: normalizeCardNumber(rowValue(row, ['tarjeta'])),
+      employeeNumber: normalizeEmployeeNumber(rowValue(row, ['numempleado', 'numdeempleado', 'nudempleado'])),
+      employeeName: String(rowValue(row, ['empleado'])).trim(),
+      fecha: toIsoDate(rowValue(row, ['fechayhora', 'fecha'])),
+      comercio: String(rowValue(row, ['comercio'])).trim(),
+      paisComercio: String(rowValue(row, ['paiscomercio'])).trim(),
+      tipoMovimiento: String(rowValue(row, ['tipodemovimiento'])).trim(),
+      monto: parseMoney(rowValue(row, ['importemxn'])),
+      montoUsd: parseMoney(rowValue(row, ['importeorigenusd'])),
+      concepto: String(rowValue(row, ['concepto'])).trim(),
+    }))
+    .filter((row) => row.cardNumber && row.employeeNumber && row.fecha && row.comercio && row.monto > 0);
+};
+
 export default function Conciliacion() {
   const { user } = useAuth();
+  const statementInputRef = useRef<HTMLInputElement | null>(null);
   const [facturas, setFacturas] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
   const [consumos, setConsumos] = useLocalStorageState<Consumo[]>('conciliacion:consumos', []);
   const [ticketsAMEX, setTicketsAMEX] = useLocalStorageState<TicketAMEX[]>('conciliacion:amex', []);
@@ -90,6 +192,9 @@ export default function Conciliacion() {
   const [uploadNotas, setUploadNotas] = useState('');
   const [uploadSaving, setUploadSaving] = useState(false);
   const [showUploadErrors, setShowUploadErrors] = useState(false);
+  const [statementImporting, setStatementImporting] = useState(false);
+  const [statementImportMessage, setStatementImportMessage] = useState('');
+  const [statementImportError, setStatementImportError] = useState('');
   const [selectedMes, setSelectedMes] = useLocalStorageState('conciliacion:selectedMes', 'todos');
   const [selectedUsuario, setSelectedUsuario] = useLocalStorageState('conciliacion:selectedUsuario', 'todos');
   const [vistaActiva, setVistaActiva] = useLocalStorageState<'facturas' | 'consumos' | 'amex'>('conciliacion:vistaActiva', 'facturas');
@@ -213,6 +318,171 @@ export default function Conciliacion() {
     });
   };
 
+  const findMatchingCard = (cards: TarjetaAMEX[], row: StatementRow) => {
+    const cardsByNumber = cards.filter((card) => normalizeCardNumber(card.cardNumber) === row.cardNumber && card.userId);
+    const exactCard = cardsByNumber.find(
+      (card) => normalizeEmployeeNumber(card.employeeNumber || '') === row.employeeNumber
+    );
+    if (exactCard) {
+      return { card: exactCard, warning: '' };
+    }
+    if (cardsByNumber.length === 1) {
+      return {
+        card: cardsByNumber[0],
+        warning: `Se importo ${row.comercio} (${row.fecha}) usando tarjeta asignada, aunque el numero de empleado no coincidió exactamente.`,
+      };
+    }
+
+    const cardsByEmployee = cards.filter(
+      (card) => normalizeEmployeeNumber(card.employeeNumber || '') === row.employeeNumber && card.userId
+    );
+    if (cardsByEmployee.length === 1) {
+      return {
+        card: cardsByEmployee[0],
+        warning: `Se importo ${row.comercio} (${row.fecha}) usando numero de empleado, aunque la tarjeta no coincidió exactamente.`,
+      };
+    }
+
+    return {
+      card: null,
+      warning: `No se pudo relacionar usuario para ${row.comercio} (${row.fecha}) con tarjeta ${row.cardNumber} y empleado ${row.employeeNumber}.`,
+    };
+  };
+
+  const findMatchingFactura = (availableFacturas: Factura[], row: StatementRow, userId?: string) => {
+    const candidates = availableFacturas
+      .filter((factura) =>
+        (!userId || factura.userId === userId) &&
+        Math.abs(factura.total - row.monto) < 0.01 &&
+        diffDays(factura.fecha, row.fecha) <= 3
+      )
+      .sort((left, right) => diffDays(left.fecha, row.fecha) - diffDays(right.fecha, row.fecha));
+
+    if (candidates.length === 1) {
+      return candidates[0];
+    }
+    if (candidates.length > 1) {
+      const bestDistance = diffDays(candidates[0].fecha, row.fecha);
+      const nextDistance = diffDays(candidates[1].fecha, row.fecha);
+      if (bestDistance < nextDistance) {
+        return candidates[0];
+      }
+    }
+    return null;
+  };
+
+  const handleEstadoCuentaFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setStatementImporting(true);
+    setStatementImportError('');
+    setStatementImportMessage('');
+
+    try {
+      const rows = await readStatementRows(file);
+      if (rows.length === 0) {
+        throw new Error('El archivo no contiene movimientos utilizables.');
+      }
+
+      const cards = await fetchAmexTarjetas();
+      let nextConsumos = [...consumos];
+      let nextFacturas = [...facturas];
+      let createdCount = 0;
+      let updatedCount = 0;
+      let matchedCount = 0;
+      let skippedCount = 0;
+      const warnings: string[] = [];
+
+      for (const row of rows) {
+        const relation = findMatchingCard(cards, row);
+        if (!relation.card?.userId) {
+          skippedCount += 1;
+          warnings.push(relation.warning);
+          continue;
+        }
+        if (relation.warning) {
+          warnings.push(relation.warning);
+        }
+
+        const matchedFactura = findMatchingFactura(nextFacturas, row, relation.card.userId);
+        const existingConsumo = nextConsumos.find((item) =>
+          normalizeCardNumber(item.cardNumber || '') === row.cardNumber &&
+          normalizeEmployeeNumber(item.employeeNumber || '') === row.employeeNumber &&
+          item.fecha === row.fecha &&
+          normalizeMerchant(item.comercio) === normalizeMerchant(row.comercio) &&
+          Math.abs(item.monto - row.monto) < 0.01
+        );
+
+        const facturaId = matchedFactura?.id || existingConsumo?.facturaId;
+        const matched = Boolean(matchedFactura || existingConsumo?.matched);
+        const payload: Partial<Consumo> = {
+          userId: relation.card.userId,
+          viaticoId: existingConsumo?.viaticoId,
+          cardNumber: row.cardNumber,
+          employeeNumber: row.employeeNumber,
+          fecha: row.fecha,
+          comercio: row.comercio,
+          paisComercio: row.paisComercio,
+          tipoMovimiento: row.tipoMovimiento,
+          concepto: row.concepto,
+          monto: row.monto,
+          categoria: row.concepto || row.tipoMovimiento || 'Estado de cuenta',
+          facturaId,
+          facturaPdfName: existingConsumo?.facturaPdfName,
+          facturaXmlName: existingConsumo?.facturaXmlName,
+          facturaNotas: existingConsumo?.facturaNotas,
+          matched,
+          autorizado: existingConsumo?.autorizado ?? false,
+        };
+
+        const persisted = existingConsumo
+          ? await updateConsumo(existingConsumo.id, payload)
+          : await createConsumo(payload);
+
+        if (existingConsumo) {
+          updatedCount += 1;
+        } else {
+          createdCount += 1;
+        }
+
+        nextConsumos = [
+          ...nextConsumos.filter((item) => item.id !== persisted.id),
+          persisted,
+        ].sort((left, right) => right.fecha.localeCompare(left.fecha));
+
+        if (matchedFactura) {
+          matchedCount += 1;
+          if (!matchedFactura.matchConsumo) {
+            const updatedFactura = await updateFactura(matchedFactura.id, { matchConsumo: true });
+            nextFacturas = nextFacturas.map((item) => (
+              item.id === updatedFactura.id ? { ...item, ...updatedFactura } : item
+            ));
+          }
+        }
+      }
+
+      setConsumos(nextConsumos);
+      setFacturas(nextFacturas);
+      setStatementImportMessage(
+        [
+          `Estado de cuenta procesado: ${createdCount} nuevos, ${updatedCount} actualizados, ${matchedCount} relacionados con XML/factura y ${skippedCount} omitidos.`,
+          warnings.length > 0 ? `Observaciones: ${warnings.slice(0, 3).join(' ')}` : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+      );
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
+    } catch (error) {
+      setStatementImportError(error instanceof Error ? error.message : 'No se pudo importar el estado de cuenta.');
+    } finally {
+      setStatementImporting(false);
+      event.target.value = '';
+    }
+  };
+
   const handleGuardarFactura = async () => {
     if (!uploadTarget) {
       return;
@@ -258,6 +528,7 @@ export default function Conciliacion() {
         };
 
       const facturaCreada = await createFactura({
+        userId: targetConsumo?.userId || targetTicket?.userId,
         viaticoId: baseData.viaticoId,
         folio: `FAC-CON-${baseTimestamp}`,
         uuid: `TMP-CON-${baseTimestamp}`,
@@ -339,6 +610,21 @@ export default function Conciliacion() {
                 <p className="text-[11px] text-slate-600">Control de facturas y consumos asociados por gasto.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={statementInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleEstadoCuentaFileChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => statementInputRef.current?.click()}
+                  disabled={statementImporting}
+                  className="px-3 py-1.5 text-[11px] rounded-lg bg-slate-900 font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {statementImporting ? 'Importando estado...' : 'Subir Estado de Cuenta'}
+                </button>
                 <select
                   value={selectedMes}
                   onChange={(e) => setSelectedMes(e.target.value)}
@@ -374,6 +660,17 @@ export default function Conciliacion() {
               <MetricCard label="Pendientes" value={facturasPendientes + consumosSinMatch + amexSinMatch} color="yellow" icon="P" />
               <MetricCard label="Alertas" value={alertas.length} color="red" icon="!" />
             </div>
+
+            {statementImportError ? (
+              <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">
+                {statementImportError}
+              </p>
+            ) : null}
+            {statementImportMessage ? (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
+                {statementImportMessage}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -584,9 +881,19 @@ export default function Conciliacion() {
                   <tr key={consumo.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900">{consumo.id}</p>
+                      {(consumo.cardNumber || consumo.employeeNumber) ? (
+                        <p className="mt-1 text-[11px] text-gray-500">
+                          {consumo.cardNumber ? `Tarjeta: ${consumo.cardNumber}` : ''}
+                          {consumo.cardNumber && consumo.employeeNumber ? ' · ' : ''}
+                          {consumo.employeeNumber ? `Empleado: ${consumo.employeeNumber}` : ''}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm text-gray-900">{consumo.comercio}</p>
+                      {consumo.userName ? (
+                        <p className="mt-1 text-[11px] text-gray-500">{consumo.userName}</p>
+                      ) : null}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <p className="text-sm text-gray-900">{consumo.fecha}</p>

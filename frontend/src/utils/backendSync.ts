@@ -269,8 +269,13 @@ const mapConsumoFromApi = (raw: RawRecord): Consumo => ({
   userId: toStringId(raw.user),
   userName: toNullableString(raw.user_name),
   viaticoId: toNullableString(raw.viatico ? toStringId(raw.viatico) : undefined),
+  cardNumber: toNullableString(raw.card_number ?? raw.cardNumber),
+  employeeNumber: toNullableString(raw.employee_number ?? raw.employeeNumber),
   fecha: parseString(raw.fecha),
   comercio: parseString(raw.comercio),
+  paisComercio: toNullableString(raw.pais_comercio ?? raw.paisComercio),
+  tipoMovimiento: toNullableString(raw.tipo_movimiento ?? raw.tipoMovimiento),
+  concepto: toNullableString(raw.concepto),
   monto: parseNumber(raw.monto),
   categoria: parseString(raw.categoria),
   facturaId: toNullableString(raw.factura ? toStringId(raw.factura) : undefined),
@@ -913,8 +918,13 @@ const toConsumoPayload = (value: Partial<Consumo>) => {
   if ('userId' in value) payload.user = toApiId(value.userId) ?? null;
   if ('viaticoId' in value) payload.viatico = toApiId(value.viaticoId) ?? null;
   if ('facturaId' in value) payload.factura = toApiId(value.facturaId) ?? null;
+  if ('cardNumber' in value) payload.card_number = parseString(value.cardNumber);
+  if ('employeeNumber' in value) payload.employee_number = parseString(value.employeeNumber);
   if ('fecha' in value) payload.fecha = parseString(value.fecha);
   if ('comercio' in value) payload.comercio = parseString(value.comercio);
+  if ('paisComercio' in value) payload.pais_comercio = parseString(value.paisComercio);
+  if ('tipoMovimiento' in value) payload.tipo_movimiento = parseString(value.tipoMovimiento);
+  if ('concepto' in value) payload.concepto = parseString(value.concepto);
   if ('monto' in value) payload.monto = parseNumber(value.monto);
   if ('categoria' in value) payload.categoria = parseString(value.categoria);
   if ('facturaPdfName' in value) payload.factura_pdf_name = parseString(value.facturaPdfName);
@@ -1234,6 +1244,7 @@ export const deleteViaje = async (id: string): Promise<void> => {
 };
 
 export const createFactura = async (payload: {
+  userId?: string;
   viaticoId?: string;
   folio: string;
   uuid: string;
@@ -1249,6 +1260,12 @@ export const createFactura = async (payload: {
   archivoXml?: File | null;
 }) => {
   const body = new FormData();
+  if (payload.userId) {
+    const userApiId = toApiId(payload.userId);
+    if (userApiId !== undefined) {
+      body.append('user', String(userApiId));
+    }
+  }
   if (payload.viaticoId) {
     const viaticoApiId = toApiId(payload.viaticoId);
     if (viaticoApiId !== undefined) {
@@ -1290,6 +1307,14 @@ export const updateFactura = async (id: string, payload: Partial<Factura>): Prom
 export const updateConsumo = async (id: string, payload: Partial<Consumo>): Promise<Consumo> => {
   const data = (await apiFetch(`/conciliacion/consumos/${id}/`, {
     method: 'PATCH',
+    body: JSON.stringify(toConsumoPayload(payload)),
+  })) as RawRecord;
+  return mapConsumoFromApi(data);
+};
+
+export const createConsumo = async (payload: Partial<Consumo>): Promise<Consumo> => {
+  const data = (await apiFetch('/conciliacion/consumos/', {
+    method: 'POST',
     body: JSON.stringify(toConsumoPayload(payload)),
   })) as RawRecord;
   return mapConsumoFromApi(data);
