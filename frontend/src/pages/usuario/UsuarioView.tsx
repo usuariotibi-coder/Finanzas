@@ -1242,6 +1242,25 @@ export default function UsuarioView() {
     return procesos[viatico.status] ?? procesos.pendiente;
   };
 
+  const getViaticoTooltipLabel = (viatico: Viatico) => {
+    if (viatico.status === 'aprobado' && (viatico.montoDispersado || 0) > 0) {
+      return 'Extensión aprobada, pendiente de dispersión adicional';
+    }
+
+    const labels: Record<Viatico['status'], string> = {
+      pendiente: 'Solicitud enviada',
+      aprobado: 'Aprobado por PM',
+      dispersado: 'Dispersado',
+      en_viaje: 'En viaje',
+      viaje_finalizado: 'Cierre de viaje',
+      en_recuperacion: 'En recuperación',
+      completado: 'Completado',
+      rechazado: 'Rechazado',
+    };
+
+    return labels[viatico.status] ?? 'Solicitud enviada';
+  };
+
   const getAccionBoton = (viatico: Viatico) => {
     if (viatico.status === 'dispersado' || viatico.status === 'viaje_finalizado') {
       const facturasCompletas = (viatico.montoGastado || 0) >= (viatico.montoDispersado || 0) * 0.9;
@@ -1278,6 +1297,18 @@ export default function UsuarioView() {
       rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
     };
     return procesos[status] ?? procesos.solicitado;
+  };
+
+  const getVehiculoTooltipLabel = (status: VehicleAssignment['status']) => {
+    const labels: Record<VehicleAssignment['status'], string> = {
+      solicitado: 'Solicitud enviada',
+      asignado: 'Vehículo asignado',
+      activo: 'En uso',
+      completado: 'Vehículo devuelto',
+      rechazado: 'Rechazado',
+    };
+
+    return labels[status] ?? 'Solicitud enviada';
   };
 
   const getViajeStatusIcon = (status: SolicitudViaje['status']) => {
@@ -1555,6 +1586,19 @@ export default function UsuarioView() {
       rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
     };
     return procesos[status] ?? procesos.pendiente;
+  };
+
+  const getViajeTooltipLabel = (status: SolicitudViaje['status']) => {
+    const labels: Record<SolicitudViaje['status'], string> = {
+      pendiente: 'Solicitud enviada',
+      en_proceso: 'Gestión de servicios',
+      confirmado: 'Confirmado',
+      completado: 'Completado',
+      cancelado: 'Cancelado',
+      rechazado: 'Rechazado',
+    };
+
+    return labels[status] ?? 'Solicitud enviada';
   };
 
   const resetGastoDraft = () => {
@@ -2531,6 +2575,7 @@ export default function UsuarioView() {
                 const procesoViatico = getProcesoViatico(viatico);
                 const accionBoton = getAccionBoton(viatico);
                 const viaticoStatusIcon = renderViaticoStatusIcon(viatico.status);
+                const viaticoTooltipLabel = getViaticoTooltipLabel(viatico);
                 const viaticoActionIcon = renderViaticoActionIcon(accionBoton.icon);
                 const deletingViatico = deletingCardKey === `viatico:${viatico.id}`;
                 const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
@@ -2546,7 +2591,7 @@ export default function UsuarioView() {
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
-                            <span title={procesoViatico.texto}>{viaticoStatusIcon}</span>
+                            <span title={viaticoTooltipLabel}>{viaticoStatusIcon}</span>
                             <span className="truncate">{proyectoDisplay.jobLabel}</span>
                           </h3>
                           {viatico.destino && normalizeText(viatico.destino) !== normalizeText(proyectoDisplay.jobLabel) && (
@@ -2697,6 +2742,7 @@ export default function UsuarioView() {
                   const proyectoDisplay = resolveProyectoDisplay(assignment.proyectoId, assignment.proyectoNombre);
                   const procesoVehiculo = getProcesoVehiculo(assignment.status);
                   const vehiculoStatusIcon = renderVehiculoStatusIcon(assignment.status);
+                  const vehiculoTooltipLabel = getVehiculoTooltipLabel(assignment.status);
                   const deletingVehiculo = deletingCardKey === `vehiculo:${assignment.id}`;
 
                   return (
@@ -2705,7 +2751,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                           <p className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            <span title={procesoVehiculo.texto}>{vehiculoStatusIcon}</span>
+                            <span title={vehiculoTooltipLabel}>{vehiculoStatusIcon}</span>
                             {proyectoDisplay.jobLabel}
                           </p>
                           <h3 className="mt-0.5 text-xs text-gray-600">
@@ -2845,6 +2891,7 @@ export default function UsuarioView() {
                   const tieneConfirmaciones = confirmacionesAvion.length > 0 || confirmacionesCamion.length > 0 || confirmacionesHotel.length > 0;
                   const procesoViaje = getProcesoViaje(solicitud.status);
                   const viajeStatusIcon = renderViajeStatusIcon(solicitud.status);
+                  const viajeTooltipLabel = getViajeTooltipLabel(solicitud.status);
                   const deletingViaje = deletingCardKey === `viaje:${solicitud.id}`;
 
                   return (
@@ -2853,7 +2900,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                             <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                              <span title={procesoViaje.texto}>{viajeStatusIcon}</span> {proyectoDisplay.jobLabel}
+                              <span title={viajeTooltipLabel}>{viajeStatusIcon}</span> {proyectoDisplay.jobLabel}
                             </h3>
                             <p className="mt-0.5 text-xs text-gray-600">{solicitud.destino}</p>
                           </div>
