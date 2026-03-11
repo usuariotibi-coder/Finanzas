@@ -845,7 +845,7 @@ export default function CatalogosPortal() {
             <p className="mt-1 text-xs text-rose-700">
               Este cambio impacta solicitudes futuras. Completa todos los candados antes de guardar.
             </p>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
               <label className="flex items-start gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
@@ -864,7 +864,7 @@ export default function CatalogosPortal() {
                 />
                 Ya revise los montos y confirmo que son correctos antes de guardar.
               </label>
-              <label className="block text-sm text-slate-700">
+              <label className="block text-sm text-slate-700 md:col-span-2">
                 <span className="mb-1 block font-medium">Escribe `ACTUALIZAR TARIFAS` para desbloquear</span>
                 <input
                   value={rateConfirmPhrase}
