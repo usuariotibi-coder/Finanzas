@@ -185,7 +185,7 @@ export default function TarjetasAmexAdmin() {
     setError('');
     setSuccess('');
 
-    const cardNumber = form.cardNumber.trim();
+    const cardNumber = form.cardNumber.replace(/\D/g, '').trim();
     const employeeNumber = form.employeeNumber.trim();
     const accountNumber = form.accountNumber.trim();
     const expirationDate = form.expirationDate.trim();
@@ -195,6 +195,16 @@ export default function TarjetasAmexAdmin() {
 
     if (!cardNumber || !employeeNumber || !accountNumber || !expirationDate) {
       setError('Completa numero de tarjeta, numero de empleado, cuenta y vigencia.');
+      return;
+    }
+
+    if (cardNumber.length !== 16) {
+      const missingDigits = 16 - cardNumber.length;
+      setError(
+        missingDigits > 0
+          ? `Al numero de tarjeta le faltan ${missingDigits} digitos para completar 16.`
+          : 'El numero de tarjeta debe tener exactamente 16 digitos.'
+      );
       return;
     }
 
@@ -361,9 +371,16 @@ export default function TarjetasAmexAdmin() {
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Numero de tarjeta</span>
                 <input
                   value={form.cardNumber}
-                  onChange={(event) => setForm((prev) => ({ ...prev, cardNumber: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      cardNumber: event.target.value.replace(/\D/g, '').slice(0, 16),
+                    }))
+                  }
                   className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
                   placeholder="0000000000000000"
+                  inputMode="numeric"
+                  maxLength={16}
                 />
               </label>
               <label className="block">
