@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import useEscapeKey from '../../hooks/useEscapeKey';
 import { replaceTarjetasAmex } from '../../data/tarjetasAMEX';
 import type { AuthUser, TarjetaAMEX } from '../../types';
 import { api } from '../../utils/api';
@@ -62,6 +63,7 @@ export default function TarjetasAmexAdmin() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<TarjetaAMEX | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -92,6 +94,10 @@ export default function TarjetasAmexAdmin() {
   useEffect(() => {
     void loadData();
   }, []);
+
+  useEscapeKey(() => {
+    setDeleteTarget(null);
+  }, Boolean(deleteTarget));
 
   const usersWithoutCard = useMemo(() => {
     return users.filter((user) => {
@@ -154,18 +160,21 @@ export default function TarjetasAmexAdmin() {
   };
 
   const handleDelete = async (card: TarjetaAMEX) => {
-    const confirmed = window.confirm(`Se eliminará la tarjeta ${card.cardNumber} de ${card.userName || card.cardHolder}.`);
-    if (!confirmed) return;
+    setDeleteTarget(card);
+  };
 
-    setDeletingId(card.id);
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
     setError('');
     setSuccess('');
     try {
-      await deleteAmexTarjeta(card.id);
+      await deleteAmexTarjeta(deleteTarget.id);
       await loadData();
-      if (editingCard?.id === card.id) {
+      if (editingCard?.id === deleteTarget.id) {
         resetForm();
       }
+      setDeleteTarget(null);
       setSuccess('Tarjeta eliminada correctamente.');
     } catch (unknownError) {
       setError(unknownError instanceof Error ? unknownError.message : 'No se pudo eliminar la tarjeta.');
@@ -238,36 +247,36 @@ export default function TarjetasAmexAdmin() {
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-6 bg-[linear-gradient(135deg,#0f172a_0%,#1d4ed8_55%,#e0f2fe_100%)] px-6 py-7 text-white lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.85fr)]">
+        <div className="grid gap-6 bg-[linear-gradient(135deg,#fff8ec_0%,#f6efe0_38%,#ecf0f5_100%)] px-6 py-7 text-slate-900 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.85fr)]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-100">Administracion AMEX</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">Administracion AMEX</p>
             <h1 className="mt-3 text-2xl font-semibold">Tarjetas corporativas</h1>
-            <p className="mt-3 max-w-2xl text-sm text-slate-100/90">
+            <p className="mt-3 max-w-2xl text-sm text-slate-600">
               Registra tarjetas por usuario, detecta quienes siguen sin asignacion y controla comodines desde una sola vista.
             </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={openNewCardForm}
-                className="inline-flex items-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
               >
                 Agregar tarjeta
               </button>
             </div>
           </div>
 
-          <div className="grid gap-3 rounded-[24px] border border-white/20 bg-slate-950/25 p-4 backdrop-blur">
-            <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-sky-100">Tarjetas</p>
+          <div className="grid gap-3 rounded-[24px] border border-amber-200 bg-white/75 p-4">
+            <div className="rounded-2xl border border-amber-100 bg-white px-4 py-3">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-amber-700">Tarjetas</p>
               <p className="mt-2 text-3xl font-semibold">{totalCards}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-sky-100">Comodin</p>
+              <div className="rounded-2xl border border-amber-100 bg-white px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-amber-700">Comodin</p>
                 <p className="mt-2 text-2xl font-semibold">{comodinCards}</p>
               </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-sky-100">Sin tarjeta</p>
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Sin tarjeta</p>
                 <p className="mt-2 text-2xl font-semibold">{usersWithoutCardCount}</p>
               </div>
             </div>
@@ -410,7 +419,7 @@ export default function TarjetasAmexAdmin() {
           </div>
 
           {loading ? (
-            <p className="mt-6 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">Cargando tarjetas...</p>
+            <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">Cargando tarjetas...</p>
           ) : filteredCards.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
               <p className="text-sm font-semibold text-slate-900">No hay registros que mostrar</p>
@@ -444,7 +453,7 @@ export default function TarjetasAmexAdmin() {
                         <td className="px-4 py-3 text-slate-700">{card.accountNumber || 'Sin dato'}</td>
                         <td className="px-4 py-3 text-slate-700">{formatDate(card.expirationDate)}</td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${card.comodin ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'}`}>
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${card.comodin ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}`}>
                             {card.comodin ? 'Comodin' : 'Asignada'}
                           </span>
                         </td>
@@ -483,6 +492,48 @@ export default function TarjetasAmexAdmin() {
           )}
         </article>
       </section>
+
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[24px] border border-rose-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-4">
+              <div className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-700">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10.29 3.86 1.82 18a2 2 0 0 0 1.72 3h16.92a2 2 0 0 0 1.72-3L13.71 3.86a2 2 0 0 0-3.42 0ZM12 9v4m0 4h.01" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-500">Confirmacion</p>
+                <h3 className="mt-2 text-xl font-semibold text-slate-900">Eliminar tarjeta</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Se eliminará la tarjeta <span className="font-semibold text-slate-900">{deleteTarget.cardNumber}</span> de{' '}
+                  <span className="font-semibold text-slate-900">{deleteTarget.userName || deleteTarget.cardHolder}</span>.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingId === deleteTarget.id}
+                onClick={() => {
+                  void confirmDelete();
+                }}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-rose-300"
+              >
+                {deletingId === deleteTarget.id ? 'Eliminando...' : 'Eliminar tarjeta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
