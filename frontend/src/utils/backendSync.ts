@@ -323,6 +323,8 @@ const mapTarjetaAmexFromApi = (raw: RawRecord): TarjetaAMEX => ({
   userName: toNullableString(raw.user_name),
   cardNumber: parseString(raw.card_number) || parseString(raw.cardNumber),
   cardHolder: parseString(raw.card_holder) || parseString(raw.cardHolder),
+  externalPersonnel: parseBoolean(raw.external_personnel ?? raw.externalPersonnel),
+  externalEmail: toNullableString(raw.external_email ?? raw.externalEmail),
   employeeNumber: toNullableString(raw.employee_number ?? raw.employeeNumber),
   accountNumber: toNullableString(raw.account_number ?? raw.accountNumber),
   expirationDate: toNullableString(raw.expiration_date ?? raw.expirationDate),
@@ -1396,6 +1398,8 @@ export const createAmexTarjeta = async (payload: {
   cardHolder: string;
   department: string;
   userId?: string;
+  externalPersonnel?: boolean;
+  externalEmail?: string;
   employeeNumber?: string;
   accountNumber?: string;
   expirationDate?: string;
@@ -1408,6 +1412,8 @@ export const createAmexTarjeta = async (payload: {
       user: payload.userId ? toApiId(payload.userId) ?? null : null,
       card_number: payload.cardNumber,
       card_holder: payload.cardHolder,
+      external_personnel: Boolean(payload.externalPersonnel),
+      external_email: payload.externalEmail || '',
       employee_number: payload.employeeNumber || '',
       account_number: payload.accountNumber || '',
       expiration_date: payload.expirationDate || null,
@@ -1426,6 +1432,8 @@ export const updateAmexTarjeta = async (
     cardHolder: string;
     department: string;
     userId: string;
+    externalPersonnel: boolean;
+    externalEmail: string;
     employeeNumber: string;
     accountNumber: string;
     expirationDate: string;
@@ -1439,6 +1447,8 @@ export const updateAmexTarjeta = async (
       ...(payload.userId !== undefined ? { user: payload.userId ? toApiId(payload.userId) ?? null : null } : {}),
       ...(payload.cardNumber !== undefined ? { card_number: payload.cardNumber } : {}),
       ...(payload.cardHolder !== undefined ? { card_holder: payload.cardHolder } : {}),
+      ...(payload.externalPersonnel !== undefined ? { external_personnel: payload.externalPersonnel } : {}),
+      ...(payload.externalEmail !== undefined ? { external_email: payload.externalEmail } : {}),
       ...(payload.employeeNumber !== undefined ? { employee_number: payload.employeeNumber } : {}),
       ...(payload.accountNumber !== undefined ? { account_number: payload.accountNumber } : {}),
       ...(payload.expirationDate !== undefined ? { expiration_date: payload.expirationDate || null } : {}),

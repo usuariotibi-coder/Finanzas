@@ -11,5 +11,16 @@ class TicketAMEXAdmin(admin.ModelAdmin):
 
 @admin.register(TarjetaAMEX)
 class TarjetaAMEXAdmin(admin.ModelAdmin):
-    list_display = ('card_holder', 'card_number', 'employee_number', 'account_number', 'expiration_date', 'comodin', 'department', 'activa')
-    list_filter = ('comodin', 'activa')
+    list_display = (
+        'card_holder',
+        'card_number',
+        'external_personnel',
+        'external_email',
+        'employee_number',
+        'account_number',
+        'expiration_date',
+        'comodin',
+        'department',
+        'activa',
+    )
+    list_filter = ('external_personnel', 'comodin', 'activa')

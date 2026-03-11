@@ -203,6 +203,8 @@ export interface TarjetaAMEX {
   cardHolder: string;
   userId?: string;
   userName?: string;
+  externalPersonnel?: boolean;
+  externalEmail?: string;
   employeeNumber?: string;
   accountNumber?: string;
   expirationDate?: string;
