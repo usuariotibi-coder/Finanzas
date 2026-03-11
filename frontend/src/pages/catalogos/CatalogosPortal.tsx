@@ -845,26 +845,26 @@ export default function CatalogosPortal() {
             <p className="mt-1 text-xs text-rose-700">
               Este cambio impacta solicitudes futuras. Completa todos los candados antes de guardar.
             </p>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <label className="flex items-start gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+            <div className="mt-3 flex flex-wrap gap-2">
+              <label className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={rateConfirmChecks.impact}
                   onChange={(event) => setRateConfirmChecks((prev) => ({ ...prev, impact: event.target.checked }))}
-                  className="mt-0.5"
+                  className="shrink-0"
                 />
                 Entiendo que este cambio modifica el calculo de viaticos y extensiones futuras.
               </label>
-              <label className="flex items-start gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
+              <label className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={rateConfirmChecks.reviewed}
                   onChange={(event) => setRateConfirmChecks((prev) => ({ ...prev, reviewed: event.target.checked }))}
-                  className="mt-0.5"
+                  className="shrink-0"
                 />
                 Ya revise los montos y confirmo que son correctos antes de guardar.
               </label>
-              <label className="block text-sm text-slate-700 md:col-span-2">
+              <label className="block w-full text-sm text-slate-700">
                 <span className="mb-1 block font-medium">Escribe `ACTUALIZAR TARIFAS` para desbloquear</span>
                 <input
                   value={rateConfirmPhrase}
