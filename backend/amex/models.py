@@ -6,8 +6,13 @@ from conciliacion.models import Factura
 
 
 class TarjetaAMEX(models.Model):
-    card_number = models.CharField(max_length=10)
-    card_holder = models.CharField(max_length=120)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    card_number = models.CharField(max_length=32)
+    card_holder = models.CharField(max_length=120, blank=True)
+    employee_number = models.CharField(max_length=50, blank=True)
+    account_number = models.CharField(max_length=50, blank=True)
+    expiration_date = models.DateField(null=True, blank=True)
+    comodin = models.BooleanField(default=False)
     department = models.CharField(max_length=120, blank=True)
     activa = models.BooleanField(default=True)
 

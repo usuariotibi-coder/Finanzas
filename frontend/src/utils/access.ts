@@ -12,6 +12,7 @@ const ACCESS_MAP: Record<string, UserRole[]> = {
   '/dispersion': ['admin', 'finance'],
   '/recuperacion': ['admin', 'finance'],
   '/amex': ['admin', 'finance'],
+  '/amex/tarjetas': ['admin', 'finance'],
   '/flotilla': ['admin', 'finance'],
   '/viajes': ['admin', 'finance'],
   '/reportes': ['admin', 'finance'],

@@ -30,6 +30,7 @@ const menuItems: MenuItem[] = [
   { path: '/recuperacion', label: 'Recuperación', icon: 'return' },
   { path: '/conciliacion', label: 'Conciliación', icon: 'check' },
   { path: '/amex', label: 'AMEX', icon: 'credit-card' },
+  { path: '/amex/tarjetas', label: 'Tarjetas', icon: 'credit-card' },
   { path: '/flotilla', label: 'Flotilla', icon: 'car' },
   { path: '/viajes', label: 'Viajes', icon: 'airplane' },
   { path: '/reportes', label: 'Reportes', icon: 'document' },

@@ -12,6 +12,6 @@ class TicketAMEXViewSet(viewsets.ModelViewSet):
 
 
 class TarjetaAMEXViewSet(viewsets.ModelViewSet):
-    queryset = TarjetaAMEX.objects.all().order_by('card_holder')
+    queryset = TarjetaAMEX.objects.select_related('user').order_by('card_holder', 'card_number')
     serializer_class = TarjetaAMEXSerializer
     permission_classes = [IsAdminOrFinance]

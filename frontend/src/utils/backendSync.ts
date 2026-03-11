@@ -319,8 +319,14 @@ const mapTicketAmexFromApi = (raw: RawRecord): TicketAMEX => ({
 
 const mapTarjetaAmexFromApi = (raw: RawRecord): TarjetaAMEX => ({
   id: toStringId(raw.id),
+  userId: toNullableString(raw.user ? toStringId(raw.user) : raw.userId),
+  userName: toNullableString(raw.user_name),
   cardNumber: parseString(raw.card_number) || parseString(raw.cardNumber),
   cardHolder: parseString(raw.card_holder) || parseString(raw.cardHolder),
+  employeeNumber: toNullableString(raw.employee_number ?? raw.employeeNumber),
+  accountNumber: toNullableString(raw.account_number ?? raw.accountNumber),
+  expirationDate: toNullableString(raw.expiration_date ?? raw.expirationDate),
+  comodin: parseBoolean(raw.comodin),
   department: parseString(raw.department),
   activa: parseBoolean(raw.activa, true),
 });
@@ -1389,15 +1395,56 @@ export const createAmexTarjeta = async (payload: {
   cardNumber: string;
   cardHolder: string;
   department: string;
+  userId?: string;
+  employeeNumber?: string;
+  accountNumber?: string;
+  expirationDate?: string;
+  comodin?: boolean;
   activa: boolean;
 }): Promise<TarjetaAMEX> => {
   const data = (await apiFetch('/amex/tarjetas/', {
     method: 'POST',
     body: JSON.stringify({
+      user: payload.userId ? toApiId(payload.userId) ?? null : null,
       card_number: payload.cardNumber,
       card_holder: payload.cardHolder,
+      employee_number: payload.employeeNumber || '',
+      account_number: payload.accountNumber || '',
+      expiration_date: payload.expirationDate || null,
+      comodin: Boolean(payload.comodin),
       department: payload.department,
       activa: payload.activa,
+    }),
+  })) as RawRecord;
+  return mapTarjetaAmexFromApi(data);
+};
+
+export const updateAmexTarjeta = async (
+  id: string,
+  payload: Partial<{
+    cardNumber: string;
+    cardHolder: string;
+    department: string;
+    userId: string;
+    employeeNumber: string;
+    accountNumber: string;
+    expirationDate: string;
+    comodin: boolean;
+    activa: boolean;
+  }>
+): Promise<TarjetaAMEX> => {
+  const data = (await apiFetch(`/amex/tarjetas/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(payload.userId !== undefined ? { user: payload.userId ? toApiId(payload.userId) ?? null : null } : {}),
+      ...(payload.cardNumber !== undefined ? { card_number: payload.cardNumber } : {}),
+      ...(payload.cardHolder !== undefined ? { card_holder: payload.cardHolder } : {}),
+      ...(payload.employeeNumber !== undefined ? { employee_number: payload.employeeNumber } : {}),
+      ...(payload.accountNumber !== undefined ? { account_number: payload.accountNumber } : {}),
+      ...(payload.expirationDate !== undefined ? { expiration_date: payload.expirationDate || null } : {}),
+      ...(payload.comodin !== undefined ? { comodin: payload.comodin } : {}),
+      ...(payload.department !== undefined ? { department: payload.department } : {}),
+      ...(payload.activa !== undefined ? { activa: payload.activa } : {}),
     }),
   })) as RawRecord;
   return mapTarjetaAmexFromApi(data);

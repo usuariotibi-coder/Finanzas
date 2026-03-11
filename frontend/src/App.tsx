@@ -10,6 +10,7 @@ import Dispersion from './pages/dispersion/Dispersion';
 import Recuperacion from './pages/recuperacion/Recuperacion';
 import Conciliacion from './pages/conciliacion/Conciliacion';
 import Amex from './pages/amex/Amex';
+import TarjetasAmexAdmin from './pages/amex/TarjetasAmexAdmin';
 import Flotilla from './pages/flotilla/Flotilla';
 import Viajes from './pages/viajes/Viajes';
 import Reportes from './pages/reportes/Reportes';
@@ -83,6 +84,14 @@ function App() {
             element={
               <RequireRole allowed={['admin', 'finance']}>
                 <Amex />
+              </RequireRole>
+            }
+          />
+          <Route
+            path="/amex/tarjetas"
+            element={
+              <RequireRole allowed={['admin', 'finance']}>
+                <TarjetasAmexAdmin />
               </RequireRole>
             }
           />
