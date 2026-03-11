@@ -352,7 +352,7 @@ export default function TarjetasAmexAdmin() {
                 <option value="">{form.comodin ? 'Tarjeta comodin' : 'Selecciona un usuario sin tarjeta'}</option>
                 {usersWithoutCard.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {`${user.full_name} · ${user.department}`}
+                    {user.full_name}
                   </option>
                 ))}
               </select>
