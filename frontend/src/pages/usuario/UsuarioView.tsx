@@ -1293,12 +1293,12 @@ export default function UsuarioView() {
   };
 
   const renderVehiculoStatusIcon = (status: VehicleAssignment['status']) => {
-    const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
+    const baseClassName = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border';
 
     if (status === 'solicitado') {
       return (
         <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 4.5h6l3 3V18a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 18V6a1.5 1.5 0 0 1 1-1.5Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 4.5V8h3M9.5 11h5M9.5 14h5" />
           </svg>
@@ -1309,7 +1309,7 @@ export default function UsuarioView() {
     if (status === 'asignado') {
       return (
         <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="8.5" cy="12" r="2.25" strokeWidth="1.8" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10.75 12H19m-3 0v-2.25m0 2.25v2.25m-8.5-4.5V7.5" />
           </svg>
@@ -1320,7 +1320,7 @@ export default function UsuarioView() {
     if (status === 'activo') {
       return (
         <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 15h10l1.5-4.5H5.5L7 15Zm0 0-.75 2.25M17 15l.75 2.25M8.5 17.25h.01M15.5 17.25h.01M6.5 10.5l1.25-3h8.5l1.25 3" />
           </svg>
         </span>
@@ -1330,7 +1330,7 @@ export default function UsuarioView() {
     if (status === 'completado') {
       return (
         <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6.5 15.5h11M8.5 12.5 11 15l4.5-4.5" />
           </svg>
         </span>
@@ -1349,7 +1349,7 @@ export default function UsuarioView() {
 
     return (
       <span className={`${baseClassName} border-slate-200 bg-slate-50 text-slate-700`} aria-hidden="true">
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="8.5" strokeWidth="1.8" />
           <path strokeLinecap="round" strokeWidth="1.8" d="M12 8.5v4l2.5 1.5" />
         </svg>
@@ -1358,12 +1358,12 @@ export default function UsuarioView() {
   };
 
   const renderViajeStatusIcon = (status: SolicitudViaje['status']) => {
-    const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
+    const baseClassName = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border';
 
     if (status === 'pendiente') {
       return (
         <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 4.5h6l3 3V18a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 18V6a1.5 1.5 0 0 1 1-1.5Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 4.5V8h3M9.5 13h5M12 10v3l1.5 1" />
           </svg>
@@ -1374,7 +1374,7 @@ export default function UsuarioView() {
     if (status === 'en_proceso') {
       return (
         <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M4.5 8.5h8l2.5 3h4.5M9.5 15.5h-5m11 0H12m4.5 0 3-3m-3 3 3 3" />
           </svg>
         </span>
@@ -1384,7 +1384,7 @@ export default function UsuarioView() {
     if (status === 'confirmado') {
       return (
         <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 9.5h12M7.5 6.5h9A1.5 1.5 0 0 1 18 8v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 16V8A1.5 1.5 0 0 1 7.5 6.5Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
           </svg>
@@ -1395,7 +1395,7 @@ export default function UsuarioView() {
     if (status === 'completado') {
       return (
         <span className={`${baseClassName} border-violet-200 bg-violet-50 text-violet-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18h12M8.5 12.5 11 15l4.5-4.5" />
             <path strokeLinecap="round" strokeWidth="1.8" d="M6 6.5h12" />
           </svg>
@@ -1415,7 +1415,7 @@ export default function UsuarioView() {
 
     return (
       <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -1428,12 +1428,12 @@ export default function UsuarioView() {
   };
 
   const renderViaticoStatusIcon = (status: Viatico['status']) => {
-    const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
+    const baseClassName = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border';
 
     if (status === 'pendiente') {
       return (
         <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v10A1.5 1.5 0 0 1 16 18.5H8A1.5 1.5 0 0 1 6.5 17V7A1.5 1.5 0 0 1 8 5.5Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 10.5h6M9 13.5h4.5" />
           </svg>
@@ -1444,7 +1444,7 @@ export default function UsuarioView() {
     if (status === 'aprobado') {
       return (
         <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="8.5" strokeWidth="1.8" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="m8.5 12 2.5 2.5 4.5-5" />
           </svg>
@@ -1455,7 +1455,7 @@ export default function UsuarioView() {
     if (status === 'dispersado') {
       return (
         <span className={`${baseClassName} border-sky-200 bg-sky-50 text-sky-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 8.5h12m-10 4h8m-9.5 4h11A1.5 1.5 0 0 0 19 15V9A1.5 1.5 0 0 0 17.5 7.5h-11A1.5 1.5 0 0 0 5 9v6a1.5 1.5 0 0 0 1.5 1.5Z" />
           </svg>
         </span>
@@ -1465,7 +1465,7 @@ export default function UsuarioView() {
     if (status === 'en_viaje') {
       return (
         <span className={`${baseClassName} border-violet-200 bg-violet-50 text-violet-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 16.5 21 12 3 7.5l2.5 4.5L3 16.5Z" />
           </svg>
         </span>
@@ -1475,7 +1475,7 @@ export default function UsuarioView() {
     if (status === 'viaje_finalizado') {
       return (
         <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18V7.5h8.5L18 11v7H6Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="m9 13 2 2 4-4" />
           </svg>
@@ -1486,7 +1486,7 @@ export default function UsuarioView() {
     if (status === 'en_recuperacion') {
       return (
         <span className={`${baseClassName} border-orange-200 bg-orange-50 text-orange-700`} aria-hidden="true">
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v10A1.5 1.5 0 0 1 16 18.5H8A1.5 1.5 0 0 1 6.5 17V7A1.5 1.5 0 0 1 8 5.5Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 10.5h6M9 13.5h3M13.5 14.5 15 16l2.5-2.5" />
           </svg>
@@ -1506,7 +1506,7 @@ export default function UsuarioView() {
 
     return (
       <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
         </svg>
       </span>
@@ -2546,7 +2546,7 @@ export default function UsuarioView() {
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
-                            {viaticoStatusIcon}
+                            <span title={procesoViatico.texto}>{viaticoStatusIcon}</span>
                             <span className="truncate">{proyectoDisplay.jobLabel}</span>
                           </h3>
                           {viatico.destino && normalizeText(viatico.destino) !== normalizeText(proyectoDisplay.jobLabel) && (
@@ -2705,7 +2705,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                           <p className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            {vehiculoStatusIcon}
+                            <span title={procesoVehiculo.texto}>{vehiculoStatusIcon}</span>
                             {proyectoDisplay.jobLabel}
                           </p>
                           <h3 className="mt-0.5 text-xs text-gray-600">
@@ -2853,7 +2853,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                             <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                              {viajeStatusIcon} {proyectoDisplay.jobLabel}
+                              <span title={procesoViaje.texto}>{viajeStatusIcon}</span> {proyectoDisplay.jobLabel}
                             </h3>
                             <p className="mt-0.5 text-xs text-gray-600">{solicitud.destino}</p>
                           </div>
