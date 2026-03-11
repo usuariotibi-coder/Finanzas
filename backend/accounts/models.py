@@ -21,6 +21,11 @@ class Role(models.TextChoices):
     STAFF = 'staff', 'Colaborador'
 
 
+class Category(models.TextChoices):
+    GERENTE = 'gerente', 'Gerente'
+    OPERADOR = 'operador', 'Operador'
+
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
@@ -47,7 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=120)
     department = models.CharField(max_length=50)
-    category = models.CharField(max_length=50, default='operador')
+    category = models.CharField(max_length=50, default=Category.OPERADOR)
     position = models.CharField(max_length=50, default='Colaborador')
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STAFF)
 
@@ -74,6 +79,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def save(self, *args, **kwargs):
         self.role = self.resolve_role()
         super().save(*args, **kwargs)
+
+    def can_create_self_service_requests(self) -> bool:
+        return not (self.role == Role.STAFF and self.category == Category.OPERADOR)
 
     def __str__(self) -> str:
         return f'{self.full_name} ({self.email})'

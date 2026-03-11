@@ -519,6 +519,8 @@ const parseCfdiAmountFromXmlFile = async (file: File): Promise<number> => {
 
 export default function UsuarioView() {
   const { user } = useAuth();
+  const isStaffOperator = user?.role === 'staff' && normalizeText(user?.category || '') === 'operador';
+  const canCreatePortalRequests = !isStaffOperator;
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticoSeleccionado, setViaticoSeleccionado] = useLocalStorageState<string | null>('usuario:viaticoSeleccionado', null);
   const [filtro, setFiltro] = useState<'todos' | 'activos' | 'completados'>('activos');
@@ -865,6 +867,11 @@ export default function UsuarioView() {
   };
 
   const handleSolicitarExtension = async () => {
+    if (!canCreatePortalRequests) {
+      showToast('Tu categoria no puede solicitar extensiones desde este portal.', 'info');
+      return;
+    }
+
     if (!viaticoParaExtender || !nuevaFechaFin || nuevaFechaFin <= viaticoParaExtender.fechaFin || isSavingExtension) {
       return;
     }
@@ -1287,6 +1294,10 @@ export default function UsuarioView() {
   const proyectoActual = proyectos.find(p => p.id === viaticoActual?.proyectoId);
 
   const handleCrearNuevoViatico = async () => {
+    if (!canCreatePortalRequests) {
+      showToast('Tu categoria no puede solicitar viaticos desde este portal.', 'info');
+      return;
+    }
     if (!isFormValid) {
       setShowNuevoViaticoErrors(true);
       return;
@@ -1465,6 +1476,10 @@ export default function UsuarioView() {
   };
 
   const handleSolicitarVehiculo = async () => {
+    if (!canCreatePortalRequests) {
+      showToast('Tu categoria no puede solicitar vehiculos desde este portal.', 'info');
+      return;
+    }
     if (isSubmittingSolicitarVehiculo || solicitarVehiculoSubmitLockRef.current) {
       return;
     }
@@ -1518,6 +1533,10 @@ export default function UsuarioView() {
 
   // Función para solicitar viaje (avión, camión, hotel)
   const handleSolicitarViaje = async () => {
+    if (!canCreatePortalRequests) {
+      showToast('Tu categoria no puede solicitar viajes desde este portal.', 'info');
+      return;
+    }
     if (!formSolicitudViaje.proyectoId || !formSolicitudViaje.motivo || !formSolicitudViaje.origen || !formSolicitudViaje.destino || !formSolicitudViaje.fechaInicio || !formSolicitudViaje.fechaFin) {
       setShowSolicitarViajeErrors(true);
       return;
@@ -1939,9 +1958,12 @@ export default function UsuarioView() {
                   <div className="space-y-1">
                     <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Usuario</p>
                     <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Mi Portal</h1>
+                    {isStaffOperator && <p className="text-[11px] font-medium text-amber-700">Modo operador: puedes consultar estatus, pero no generar solicitudes desde este portal.</p>}
                     <p className="text-[11px] text-slate-600">Gestiona tus viáticos, vehículos, viajes y comprobantes.</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5 w-full sm:w-auto sm:justify-end">
+                  {canCreatePortalRequests && (
+                    <>
                   <button
                     onClick={() => {
                       setFormNuevoViatico((prev) => ({
@@ -1983,6 +2005,8 @@ export default function UsuarioView() {
                     </svg>
                     <span>Viaje</span>
                   </button>
+                    </>
+                  )}
                   <button
                     onClick={handleClearLocalData}
                     className="w-full sm:w-auto px-2 py-1 border border-red-200 text-red-700 rounded-md hover:bg-red-50 flex items-center justify-center gap-1 text-[11px]"
@@ -2132,7 +2156,7 @@ export default function UsuarioView() {
                           </button>
                         )}
 
-                        {(viatico.status === 'dispersado' || viatico.status === 'en_viaje') && !extensionPendiente && (
+                        {canCreatePortalRequests && (viatico.status === 'dispersado' || viatico.status === 'en_viaje') && !extensionPendiente && (
                           <button
                             onClick={() => {
                               const minExtensionDate = getExtensionMinDate(viatico.fechaFin) || viatico.fechaFin;
@@ -2820,7 +2844,7 @@ export default function UsuarioView() {
       )}
 
       {/* Modal para crear nuevo viático */}
-      {showModalNuevoViatico && (
+      {showModalNuevoViatico && canCreatePortalRequests && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
@@ -3115,7 +3139,7 @@ export default function UsuarioView() {
       )}
 
       {/* Modal para solicitar vehículo (solo coches) */}
-      {showModalSolicitarVehiculo && (
+      {showModalSolicitarVehiculo && canCreatePortalRequests && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
@@ -3404,7 +3428,7 @@ export default function UsuarioView() {
       )}
 
       {/* Modal para solicitar viaje (avión, camión, hotel) */}
-      {showModalSolicitarVehiculo && showDestinoVehiculoMapExpanded && (
+      {showModalSolicitarVehiculo && showDestinoVehiculoMapExpanded && canCreatePortalRequests && (
         <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-900/70 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="flex h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:h-[88vh] sm:max-h-[calc(100dvh-2rem)]">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 sm:px-5">
@@ -3472,7 +3496,7 @@ export default function UsuarioView() {
           </div>
         </div>
       )}
-      {showModalSolicitarViaje && (
+      {showModalSolicitarViaje && canCreatePortalRequests && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />
@@ -3836,7 +3860,7 @@ export default function UsuarioView() {
       )}
 
       {/* Modal Extender Viaje */}
-      {showModalExtenderViaje && viaticoParaExtender && (
+      {showModalExtenderViaje && viaticoParaExtender && canCreatePortalRequests && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
             <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500" />

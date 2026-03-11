@@ -64,6 +64,14 @@ export default function Viaticos() {
   const [filter, setFilter] = useLocalStorageState<StoredViaticoFilter>('viaticos:filter', 'todos');
   const [selectedViatico, setSelectedViatico] = useLocalStorageState<Viatico | null>('viaticos:selectedViatico', null);
   const [showStatusModal, setShowStatusModal] = useLocalStorageState('viaticos:showStatusModal', false);
+  const isStaffOperator = user?.role === 'staff' && (user?.category || '').trim().toLowerCase() === 'operador';
+  const canCreateViaticos = !isStaffOperator;
+
+  useEffect(() => {
+    if (!canCreateViaticos && showNewForm) {
+      setShowNewForm(false);
+    }
+  }, [canCreateViaticos, setShowNewForm, showNewForm]);
 
   useEffect(() => {
     if (viaticosUsuario.length === 0) {
@@ -111,6 +119,11 @@ export default function Viaticos() {
                 <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Panel de Viáticos</p>
                 <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Solicitudes de Viáticos</h1>
                 <p className="text-[11px] text-slate-600">Gestión y aprobación de solicitudes de viáticos.</p>
+                {isStaffOperator && (
+                  <p className="text-[11px] font-medium text-amber-700">
+                    Modo operador: puedes consultar estatus, pero no generar solicitudes desde este modulo.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-1.5 text-[10px] text-slate-500">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-2 py-0.5">
                     Fuente: Mi Portal
@@ -262,7 +275,7 @@ export default function Viaticos() {
         </div>
       </div>
 
-      {showNewForm && (
+      {showNewForm && canCreateViaticos && (
         <NewViaticoModal
           currentUser={user}
           onClose={() => setShowNewForm(false)}

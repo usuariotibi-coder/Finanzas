@@ -1,4 +1,5 @@
 ﻿from rest_framework import viewsets
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import Role
@@ -19,6 +20,8 @@ class SolicitudViajeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         request_user = self.request.user
+        if not request_user.can_create_self_service_requests():
+            raise PermissionDenied('Tu categoria no puede solicitar viajes desde este portal.')
         payload_user = serializer.validated_data.get('user')
         if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             serializer.save(user=payload_user or request_user)
