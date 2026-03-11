@@ -246,38 +246,69 @@ export default function TarjetasAmexAdmin() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-6 bg-[linear-gradient(135deg,#fff8ec_0%,#f6efe0_38%,#ecf0f5_100%)] px-6 py-7 text-slate-900 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.85fr)]">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">Administracion AMEX</p>
-            <h1 className="mt-3 text-2xl font-semibold">Tarjetas corporativas</h1>
-            <p className="mt-3 max-w-2xl text-sm text-slate-600">
-              Registra tarjetas por usuario, detecta quienes siguen sin asignacion y controla comodines desde una sola vista.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
+      <section className="pt-0 pb-1">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-4 sm:p-5 shadow-sm">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-28 w-28 rounded-full bg-amber-200/35 blur-3xl" />
+          <div className="pointer-events-none absolute -left-8 bottom-0 h-24 w-24 rounded-full bg-slate-200/65 blur-3xl" />
+          <div className="relative space-y-3">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1">
+                <p className="text-[9px] uppercase tracking-[0.28em] text-slate-500">Administracion AMEX</p>
+                <h1 className="text-lg sm:text-xl font-semibold text-slate-900">Tarjetas corporativas</h1>
+                <p className="text-[11px] text-slate-600">
+                  Registra tarjetas por usuario, detecta quienes siguen sin asignacion y controla comodines desde una sola vista.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={openNewCardForm}
-                className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                className="px-3 py-1.5 text-[11px] rounded-lg bg-slate-900 font-medium text-white transition-colors hover:bg-slate-800"
               >
-                Agregar tarjeta
+                + Agregar tarjeta
               </button>
             </div>
-          </div>
 
-          <div className="grid gap-3 rounded-[24px] border border-amber-200 bg-white/75 p-4">
-            <div className="rounded-2xl border border-amber-100 bg-white px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-amber-700">Tarjetas</p>
-              <p className="mt-2 text-3xl font-semibold">{totalCards}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-amber-100 bg-white px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-amber-700">Comodin</p>
-                <p className="mt-2 text-2xl font-semibold">{comodinCards}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-lg border border-slate-100 bg-white p-4 shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">Tarjetas registradas</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">{totalCards}</p>
+                  </div>
+                  <div className="rounded-lg bg-amber-100 p-2">
+                    <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8.5h18M7 15h2m3 0h5m-11 5h12a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3Z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Sin tarjeta</p>
-                <p className="mt-2 text-2xl font-semibold">{usersWithoutCardCount}</p>
+
+              <div className="rounded-lg border border-slate-100 bg-white p-4 shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">Tarjetas comodin</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">{comodinCards}</p>
+                  </div>
+                  <div className="rounded-lg bg-yellow-100 p-2">
+                    <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.5 6.5a4 4 0 1 0-5.66 5.66l.66.67-3 3v2h2l3-3 .67.66a4 4 0 0 0 5.66-5.66l-1.09-1.09 1.8-1.8a1 1 0 1 0-1.42-1.42l-1.8 1.8-1.82-1.82Z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-100 bg-white p-4 shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">Usuarios sin tarjeta</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">{usersWithoutCardCount}</p>
+                  </div>
+                  <div className="rounded-lg bg-rose-100 p-2">
+                    <svg className="h-5 w-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 18.5A3.5 3.5 0 0 0 14.5 15h-5A3.5 3.5 0 0 0 6 18.5M15.5 7.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0ZM19 8v6m-3-3h6" />
+                    </svg>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
