@@ -5,6 +5,7 @@ export interface AuthUser {
   id: number;
   email: string;
   full_name: string;
+  external_personnel?: boolean;
   department: string;
   category?: string;
   position: string;

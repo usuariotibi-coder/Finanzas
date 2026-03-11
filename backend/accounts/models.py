@@ -51,6 +51,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=120)
+    external_personnel = models.BooleanField(default=False)
     department = models.CharField(max_length=50)
     category = models.CharField(max_length=50, default=Category.OPERADOR)
     position = models.CharField(max_length=50, default='Colaborador')

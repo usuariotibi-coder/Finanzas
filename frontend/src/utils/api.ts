@@ -142,6 +142,7 @@ export const api = {
   register: (payload: {
     email: string;
     full_name: string;
+    external_personnel?: boolean;
     department: string;
     category?: string;
     position: string;
@@ -154,6 +155,7 @@ export const api = {
   adminRegister: (payload: {
     email: string;
     full_name: string;
+    external_personnel?: boolean;
     department: string;
     category?: string;
     position: string;
@@ -170,6 +172,7 @@ export const api = {
     payload: Partial<{
       email: string;
       full_name: string;
+      external_personnel: boolean;
       department: string;
       category: string;
       position: string;

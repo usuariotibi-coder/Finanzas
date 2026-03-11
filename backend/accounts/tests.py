@@ -178,6 +178,23 @@ class AdminRegisterTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
 
+    def test_admin_can_register_external_user_with_non_company_domain(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            'email': 'consultor@proveedor.com',
+            'full_name': 'Consultor Externo',
+            'external_personnel': True,
+            'department': 'ensamble',
+            'position': 'Consultor',
+            'password': 'SecurePass123!',
+        }
+
+        response = self.client.post('/api/auth/admin/register/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = User.objects.get(email=payload['email'])
+        self.assertTrue(created.external_personnel)
+
 
 class AdminUserManagementTests(APITestCase):
     def setUp(self):
@@ -280,6 +297,24 @@ class AdminUserManagementTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
+
+    def test_admin_can_update_user_as_external_with_non_company_domain(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            'email': 'staff.externo@proveedor.com',
+            'external_personnel': True,
+        }
+
+        response = self.client.patch(
+            f'/api/auth/admin/users/{self.staff_user.id}/',
+            payload,
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.staff_user.refresh_from_db()
+        self.assertEqual(self.staff_user.email, payload['email'])
+        self.assertTrue(self.staff_user.external_personnel)
 
 
 class AssignableUserListTests(APITestCase):

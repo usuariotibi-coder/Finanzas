@@ -69,6 +69,7 @@ export default function AdminUsuarios() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [externalPersonnel, setExternalPersonnel] = useState(false);
   const [department, setDepartment] = useState(initialDepartment);
   const [category, setCategory] = useState(initialCategory);
   const [position, setPosition] = useState('');
@@ -87,6 +88,7 @@ export default function AdminUsuarios() {
   const [editingUser, setEditingUser] = useState<AuthUser | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editExternalPersonnel, setEditExternalPersonnel] = useState(false);
   const [editDepartment, setEditDepartment] = useState(initialDepartment);
   const [editCategory, setEditCategory] = useState(initialCategory);
   const [editPosition, setEditPosition] = useState('');
@@ -99,7 +101,7 @@ export default function AdminUsuarios() {
 
   const normalizedEmail = email.trim().toLowerCase();
   const emailDomain = normalizedEmail.split('@')[1] || '';
-  const isAllowedDomain = normalizedEmail.length > 0 && emailDomain === ALLOWED_EMAIL_DOMAIN;
+  const isAllowedDomain = externalPersonnel || (normalizedEmail.length > 0 && emailDomain === ALLOWED_EMAIL_DOMAIN);
 
   const passwordChecks = useMemo(
     () => buildPasswordChecks(password),
@@ -153,6 +155,7 @@ export default function AdminUsuarios() {
   const resetForm = () => {
     setFullName('');
     setEmail('');
+    setExternalPersonnel(false);
     setDepartment(initialDepartment);
     setCategory(initialCategory);
     setPosition('');
@@ -166,6 +169,7 @@ export default function AdminUsuarios() {
     setEditingUser(selectedUser);
     setEditFullName(selectedUser.full_name);
     setEditEmail(selectedUser.email);
+    setEditExternalPersonnel(Boolean(selectedUser.external_personnel));
     setEditDepartment(selectedUser.department);
     setEditCategory(selectedUser.category || initialCategory);
     setEditPosition(selectedUser.position);
@@ -180,6 +184,7 @@ export default function AdminUsuarios() {
     setEditingUser(null);
     setEditFullName('');
     setEditEmail('');
+    setEditExternalPersonnel(false);
     setEditDepartment(initialDepartment);
     setEditCategory(initialCategory);
     setEditPosition('');
@@ -232,6 +237,7 @@ export default function AdminUsuarios() {
       const createdUser = (await api.adminRegister({
         full_name: fullName.trim(),
         email: normalizedEmail,
+        external_personnel: externalPersonnel,
         department,
         category,
         position: position.trim(),
@@ -258,7 +264,7 @@ export default function AdminUsuarios() {
     const normalizedEditEmail = editEmail.trim().toLowerCase();
     const editEmailDomain = normalizedEditEmail.split('@')[1] || '';
     const editAllowedDomain =
-      normalizedEditEmail.length > 0 && editEmailDomain === ALLOWED_EMAIL_DOMAIN;
+      editExternalPersonnel || (normalizedEditEmail.length > 0 && editEmailDomain === ALLOWED_EMAIL_DOMAIN);
 
     if (!editFullName.trim() || !normalizedEditEmail || !editDepartment || !editCategory || !editPosition.trim()) {
       setEditError('Completa todos los campos para actualizar el usuario.');
@@ -292,6 +298,7 @@ export default function AdminUsuarios() {
       editingUser,
       editFullName,
       editEmail,
+      editExternalPersonnel,
       editDepartment,
       editCategory,
       editPosition,
@@ -308,6 +315,7 @@ export default function AdminUsuarios() {
       const payload: {
         full_name: string;
         email: string;
+        external_personnel: boolean;
         department: string;
         category: string;
         position: string;
@@ -315,6 +323,7 @@ export default function AdminUsuarios() {
       } = {
         full_name: snapshot.editFullName.trim(),
         email: normalizedEditEmail,
+        external_personnel: snapshot.editExternalPersonnel,
         department: snapshot.editDepartment,
         category: snapshot.editCategory,
         position: snapshot.editPosition.trim(),
@@ -337,6 +346,7 @@ export default function AdminUsuarios() {
       setEditingUser(snapshot.editingUser);
       setEditFullName(snapshot.editFullName);
       setEditEmail(snapshot.editEmail);
+      setEditExternalPersonnel(snapshot.editExternalPersonnel);
       setEditDepartment(snapshot.editDepartment);
       setEditCategory(snapshot.editCategory);
       setEditPosition(snapshot.editPosition);
@@ -388,6 +398,16 @@ export default function AdminUsuarios() {
                     className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     placeholder={`usuario@${ALLOWED_EMAIL_DOMAIN}`}
                   />
+                </div>
+                <div className="flex items-end">
+                  <label className="inline-flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={externalPersonnel}
+                      onChange={(event) => setExternalPersonnel(event.target.checked)}
+                    />
+                    Personal externo
+                  </label>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">Departamento</label>
@@ -497,7 +517,11 @@ export default function AdminUsuarios() {
               </div>
 
               <div className="mt-2 text-[11px] text-slate-600">
-                Dominio permitido: <span className="font-semibold text-primary-700">@{ALLOWED_EMAIL_DOMAIN}</span>
+                {externalPersonnel ? (
+                  <>Personal externo: se permiten correos con cualquier dominio.</>
+                ) : (
+                  <>Dominio permitido: <span className="font-semibold text-primary-700">@{ALLOWED_EMAIL_DOMAIN}</span></>
+                )}
               </div>
 
               <div className="mt-2 space-y-2">
@@ -570,6 +594,9 @@ export default function AdminUsuarios() {
                             {isCurrentUser ? ' (tu usuario)' : ''}
                           </p>
                           <p className="truncate text-[11px] text-slate-600">{item.email}</p>
+                          {item.external_personnel ? (
+                            <p className="mt-0.5 text-[11px] font-semibold text-sky-700">Personal externo</p>
+                          ) : null}
                           <p className="mt-0.5 text-[11px] text-slate-600">
                             {departmentLabelMap[item.department] || item.department} ·{' '}
                             {categoryLabelMap[item.category || ''] || item.category || 'Operador'} · {roleLabels[item.role]}
@@ -634,6 +661,22 @@ export default function AdminUsuarios() {
                     className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                     placeholder={`usuario@${ALLOWED_EMAIL_DOMAIN}`}
                   />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="inline-flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={editExternalPersonnel}
+                      onChange={(event) => setEditExternalPersonnel(event.target.checked)}
+                    />
+                    Personal externo
+                  </label>
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    {editExternalPersonnel
+                      ? 'Se permiten correos con cualquier dominio para este usuario.'
+                      : `Se requiere el dominio @${ALLOWED_EMAIL_DOMAIN}.`}
+                  </p>
                 </div>
 
                 <div>

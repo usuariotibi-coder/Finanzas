@@ -10,12 +10,12 @@ User = get_user_model()
 ALLOWED_EMAIL_DOMAIN = 'na.scio-automation.com'
 
 
-def validate_allowed_email(value: str, instance: User | None = None) -> str:
+def validate_allowed_email(value: str, instance: User | None = None, allow_external: bool = False) -> str:
     normalized = value.strip().lower()
     if '@' not in normalized:
         raise serializers.ValidationError('Ingresa un correo valido.')
     domain = normalized.split('@', 1)[1]
-    if domain != ALLOWED_EMAIL_DOMAIN:
+    if not allow_external and domain != ALLOWED_EMAIL_DOMAIN:
         raise serializers.ValidationError(
             f'Solo se permiten correos @{ALLOWED_EMAIL_DOMAIN}.'
         )
@@ -64,7 +64,7 @@ def validate_user_password(password: str, user_data: dict | None = None) -> str:
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'department', 'category', 'position', 'role')
+        fields = ('id', 'email', 'full_name', 'external_personnel', 'department', 'category', 'position', 'role')
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -72,15 +72,17 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'department', 'category', 'position', 'password')
+        fields = ('email', 'full_name', 'external_personnel', 'department', 'category', 'position', 'password')
         extra_kwargs = {
+            'external_personnel': {'required': False},
             'category': {'required': False},
         }
 
-    def validate_email(self, value):
-        return validate_allowed_email(value)
-
     def validate(self, attrs):
+        attrs['email'] = validate_allowed_email(
+            attrs.get('email', ''),
+            allow_external=attrs.get('external_personnel', False),
+        )
         validate_user_password(attrs.get('password', ''), attrs)
         return attrs
 
@@ -101,19 +103,24 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'department', 'category', 'position', 'password')
+        fields = ('email', 'full_name', 'external_personnel', 'department', 'category', 'position', 'password')
         extra_kwargs = {
             'email': {'required': False},
             'full_name': {'required': False},
+            'external_personnel': {'required': False},
             'department': {'required': False},
             'category': {'required': False},
             'position': {'required': False},
         }
 
-    def validate_email(self, value):
-        return validate_allowed_email(value, self.instance)
-
     def validate(self, attrs):
+        allow_external = attrs.get('external_personnel', getattr(self.instance, 'external_personnel', False))
+        email = attrs.get('email')
+        if email is not None:
+            attrs['email'] = validate_allowed_email(email, self.instance, allow_external=allow_external)
+        elif 'external_personnel' in attrs and not allow_external:
+            validate_allowed_email(getattr(self.instance, 'email', ''), self.instance, allow_external=False)
+
         password = attrs.get('password')
         if password is None:
             return attrs
