@@ -399,16 +399,6 @@ export default function AdminUsuarios() {
                     placeholder={`usuario@${ALLOWED_EMAIL_DOMAIN}`}
                   />
                 </div>
-                <div className="flex items-end">
-                  <label className="inline-flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={externalPersonnel}
-                      onChange={(event) => setExternalPersonnel(event.target.checked)}
-                    />
-                    Personal externo
-                  </label>
-                </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700">Departamento</label>
                   <select
@@ -514,6 +504,17 @@ export default function AdminUsuarios() {
                     </span>
                   ))}
                 </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="inline-flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={externalPersonnel}
+                    onChange={(event) => setExternalPersonnel(event.target.checked)}
+                  />
+                  Personal externo
+                </label>
               </div>
 
               <div className="mt-2 text-[11px] text-slate-600">
