@@ -538,7 +538,9 @@ const parseCfdiAmountFromXmlFile = async (file: File): Promise<number> => {
 export default function UsuarioView() {
   const { user } = useAuth();
   const isStaffOperator = user?.role === 'staff' && normalizeText(user?.category || '') === 'operador';
+  const isStaffGerente = user?.role === 'staff' && normalizeText(user?.category || '') === 'gerente';
   const canCreatePortalRequests = !isStaffOperator;
+  const canDeleteActivePortalRequests = isStaffGerente;
   const [viaticoMealRates, setViaticoMealRates] = useState<ViaticoMealRates>(() => ({ ...VIATICO_MEAL_RATES }));
   const [viaticos, setViaticos] = useLocalStorageState<Viatico[]>('usuario:viaticos', []);
   const [viaticoSeleccionado, setViaticoSeleccionado] = useLocalStorageState<string | null>('usuario:viaticoSeleccionado', null);
@@ -1803,6 +1805,10 @@ export default function UsuarioView() {
   const handleEliminarTarjetaViatico = async (viatico: Viatico) => {
     const id = String(viatico.id);
     const isCompleted = isCompletedViatico(viatico);
+    if (!isCompleted && !canDeleteActivePortalRequests) {
+      showToast('Solo un gerente puede eliminar solicitudes activas.', 'info');
+      return;
+    }
     const shouldContinue = await openConfirmDialog({
       title: isCompleted ? 'Ocultar tarjeta de viatico' : 'Eliminar viatico',
       message: isCompleted
@@ -1846,6 +1852,10 @@ export default function UsuarioView() {
   const handleEliminarTarjetaVehiculo = async (assignment: VehicleAssignment) => {
     const id = String(assignment.id);
     const isCompleted = isCompletedVehiculo(assignment);
+    if (!isCompleted && !canDeleteActivePortalRequests) {
+      showToast('Solo un gerente puede eliminar solicitudes activas.', 'info');
+      return;
+    }
     const shouldContinue = await openConfirmDialog({
       title: isCompleted ? 'Ocultar tarjeta de vehiculo' : 'Eliminar solicitud de vehiculo',
       message: isCompleted
@@ -1891,6 +1901,10 @@ export default function UsuarioView() {
   const handleEliminarTarjetaViaje = async (solicitud: SolicitudViaje) => {
     const id = String(solicitud.id);
     const isCompleted = isCompletedViaje(solicitud);
+    if (!isCompleted && !canDeleteActivePortalRequests) {
+      showToast('Solo un gerente puede eliminar solicitudes activas.', 'info');
+      return;
+    }
     const shouldContinue = await openConfirmDialog({
       title: isCompleted ? 'Ocultar tarjeta de viaje' : 'Eliminar solicitud de viaje',
       message: isCompleted
@@ -2288,16 +2302,18 @@ export default function UsuarioView() {
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${estadoInfo.color}`}>
                             {estadoInfo.label}
                           </span>
-                          <button
-                            type="button"
-                            disabled={deletingViatico}
-                            onClick={() => {
-                              void handleEliminarTarjetaViatico(viatico);
-                            }}
-                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingViatico ? 'Eliminando...' : (isCompletedViatico(viatico) ? 'Ocultar' : 'Eliminar')}
-                          </button>
+                          {(isCompletedViatico(viatico) || canDeleteActivePortalRequests) && (
+                            <button
+                              type="button"
+                              disabled={deletingViatico}
+                              onClick={() => {
+                                void handleEliminarTarjetaViatico(viatico);
+                              }}
+                              className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {deletingViatico ? 'Eliminando...' : (isCompletedViatico(viatico) ? 'Ocultar' : 'Eliminar')}
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -2465,16 +2481,18 @@ export default function UsuarioView() {
                               Completado
                             </span>
                           )}
-                          <button
-                            type="button"
-                            disabled={deletingVehiculo}
-                            onClick={() => {
-                              void handleEliminarTarjetaVehiculo(assignment);
-                            }}
-                            className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {deletingVehiculo ? 'Eliminando...' : (isCompletedVehiculo(assignment) ? 'Ocultar' : 'Eliminar')}
-                          </button>
+                          {(isCompletedVehiculo(assignment) || canDeleteActivePortalRequests) && (
+                            <button
+                              type="button"
+                              disabled={deletingVehiculo}
+                              onClick={() => {
+                                void handleEliminarTarjetaVehiculo(assignment);
+                              }}
+                              className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {deletingVehiculo ? 'Eliminando...' : (isCompletedVehiculo(assignment) ? 'Ocultar' : 'Eliminar')}
+                            </button>
+                          )}
                           </div>
                         </div>
 
@@ -2600,16 +2618,18 @@ export default function UsuarioView() {
                                solicitud.status === 'rechazado' ? 'Rechazado' :
                                solicitud.status === 'cancelado' ? 'Cancelado' : 'Completado'}
                             </span>
-                            <button
-                              type="button"
-                              disabled={deletingViaje}
-                              onClick={() => {
-                                void handleEliminarTarjetaViaje(solicitud);
-                              }}
-                              className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {deletingViaje ? 'Eliminando...' : (isCompletedViaje(solicitud) ? 'Ocultar' : 'Eliminar')}
-                            </button>
+                            {(isCompletedViaje(solicitud) || canDeleteActivePortalRequests) && (
+                              <button
+                                type="button"
+                                disabled={deletingViaje}
+                                onClick={() => {
+                                  void handleEliminarTarjetaViaje(solicitud);
+                                }}
+                                className="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {deletingViaje ? 'Eliminando...' : (isCompletedViaje(solicitud) ? 'Ocultar' : 'Eliminar')}
+                              </button>
+                            )}
                           </div>
                         </div>
 
