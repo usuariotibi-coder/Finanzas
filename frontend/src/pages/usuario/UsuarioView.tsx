@@ -1299,8 +1299,8 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
-            <path strokeLinecap="round" strokeWidth="1.8" d="M12 7.5v5l3 2" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 4.5h6l3 3V18a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 18V6a1.5 1.5 0 0 1 1-1.5Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 4.5V8h3M9.5 11h5M9.5 14h5" />
           </svg>
         </span>
       );
@@ -1310,13 +1310,18 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
-              d="M12 21s-5-4.35-5-9a5 5 0 1 1 10 0c0 4.65-5 9-5 9Z"
-            />
-            <circle cx="12" cy="12" r="1.6" strokeWidth="1.8" />
+            <circle cx="8.5" cy="12" r="2.25" strokeWidth="1.8" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10.75 12H19m-3 0v-2.25m0 2.25v2.25m-8.5-4.5V7.5" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'activo') {
+      return (
+        <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 15h10l1.5-4.5H5.5L7 15Zm0 0-.75 2.25M17 15l.75 2.25M8.5 17.25h.01M15.5 17.25h.01M6.5 10.5l1.25-3h8.5l1.25 3" />
           </svg>
         </span>
       );
@@ -1326,7 +1331,7 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6.5 15.5h11M8.5 12.5 11 15l4.5-4.5" />
           </svg>
         </span>
       );
@@ -1343,14 +1348,10 @@ export default function UsuarioView() {
     }
 
     return (
-      <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
+      <span className={`${baseClassName} border-slate-200 bg-slate-50 text-slate-700`} aria-hidden="true">
         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="1.8"
-            d="M7 15h10l1.5-4.5H5.5L7 15Zm0 0-.75 2.25M17 15l.75 2.25M8.5 17.25h.01M15.5 17.25h.01M6.5 10.5l1.25-3h8.5l1.25 3"
-          />
+          <circle cx="12" cy="12" r="8.5" strokeWidth="1.8" />
+          <path strokeLinecap="round" strokeWidth="1.8" d="M12 8.5v4l2.5 1.5" />
         </svg>
       </span>
     );
@@ -1363,18 +1364,40 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
-            <path strokeLinecap="round" strokeWidth="1.8" d="M12 7.5v5l3 2" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 4.5h6l3 3V18a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 18V6a1.5 1.5 0 0 1 1-1.5Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 4.5V8h3M9.5 13h5M12 10v3l1.5 1" />
           </svg>
         </span>
       );
     }
 
-    if (status === 'confirmado' || status === 'completado') {
+    if (status === 'en_proceso') {
+      return (
+        <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M4.5 8.5h8l2.5 3h4.5M9.5 15.5h-5m11 0H12m4.5 0 3-3m-3 3 3 3" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'confirmado') {
       return (
         <span className={`${baseClassName} border-emerald-200 bg-emerald-50 text-emerald-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 9.5h12M7.5 6.5h9A1.5 1.5 0 0 1 18 8v8a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 16V8A1.5 1.5 0 0 1 7.5 6.5Z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m7 12 3 3 7-7" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'completado') {
+      return (
+        <span className={`${baseClassName} border-violet-200 bg-violet-50 text-violet-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18h12M8.5 12.5 11 15l4.5-4.5" />
+            <path strokeLinecap="round" strokeWidth="1.8" d="M6 6.5h12" />
           </svg>
         </span>
       );
@@ -1407,12 +1430,23 @@ export default function UsuarioView() {
   const renderViaticoStatusIcon = (status: Viatico['status']) => {
     const baseClassName = 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border';
 
-    if (status === 'pendiente' || status === 'aprobado') {
+    if (status === 'pendiente') {
       return (
         <span className={`${baseClassName} border-amber-200 bg-amber-50 text-amber-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
-            <path strokeLinecap="round" strokeWidth="1.8" d="M12 7.5v5l3 2" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v10A1.5 1.5 0 0 1 16 18.5H8A1.5 1.5 0 0 1 6.5 17V7A1.5 1.5 0 0 1 8 5.5Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 10.5h6M9 13.5h4.5" />
+          </svg>
+        </span>
+      );
+    }
+
+    if (status === 'aprobado') {
+      return (
+        <span className={`${baseClassName} border-blue-200 bg-blue-50 text-blue-700`} aria-hidden="true">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8.5" strokeWidth="1.8" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="m8.5 12 2.5 2.5 4.5-5" />
           </svg>
         </span>
       );
@@ -1422,7 +1456,7 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-sky-200 bg-sky-50 text-sky-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 3v18m-4-4 4 4 4-4M8 7l4-4 4 4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 8.5h12m-10 4h8m-9.5 4h11A1.5 1.5 0 0 0 19 15V9A1.5 1.5 0 0 0 17.5 7.5h-11A1.5 1.5 0 0 0 5 9v6a1.5 1.5 0 0 0 1.5 1.5Z" />
           </svg>
         </span>
       );
@@ -1442,8 +1476,8 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-indigo-200 bg-indigo-50 text-indigo-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 12.5 10 16l8-8" />
-            <path strokeLinecap="round" strokeWidth="1.8" d="M4 19.5h16" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18V7.5h8.5L18 11v7H6Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="m9 13 2 2 4-4" />
           </svg>
         </span>
       );
@@ -1453,8 +1487,8 @@ export default function UsuarioView() {
       return (
         <span className={`${baseClassName} border-orange-200 bg-orange-50 text-orange-700`} aria-hidden="true">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M16 8a4 4 0 1 0-8 0c0 1.5.8 2.7 2 3.4V14a2 2 0 0 0 4 0v-2.6A3.98 3.98 0 0 0 16 8Z" />
-            <path strokeLinecap="round" strokeWidth="1.8" d="M9.5 18.5h5" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 5.5h8a1.5 1.5 0 0 1 1.5 1.5v10A1.5 1.5 0 0 1 16 18.5H8A1.5 1.5 0 0 1 6.5 17V7A1.5 1.5 0 0 1 8 5.5Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 10.5h6M9 13.5h3M13.5 14.5 15 16l2.5-2.5" />
           </svg>
         </span>
       );
@@ -1521,28 +1555,6 @@ export default function UsuarioView() {
       rechazado: { texto: 'Proceso cerrado: Rechazado', avance: 100, barra: 'bg-rose-500' },
     };
     return procesos[status] ?? procesos.pendiente;
-  };
-
-  const renderProcessBadge = (texto: string, barra: string) => {
-    const stepLabel = texto.match(/^\d+\/\d+/)?.[0] ?? 'Cerrado';
-    const paletteByBar: Record<string, string> = {
-      'bg-amber-500': 'border-amber-200 bg-amber-50 text-amber-700',
-      'bg-blue-500': 'border-blue-200 bg-blue-50 text-blue-700',
-      'bg-sky-500': 'border-sky-200 bg-sky-50 text-sky-700',
-      'bg-indigo-500': 'border-indigo-200 bg-indigo-50 text-indigo-700',
-      'bg-violet-500': 'border-violet-200 bg-violet-50 text-violet-700',
-      'bg-orange-500': 'border-orange-200 bg-orange-50 text-orange-700',
-      'bg-emerald-600': 'border-emerald-200 bg-emerald-50 text-emerald-700',
-      'bg-rose-500': 'border-rose-200 bg-rose-50 text-rose-700',
-    };
-
-    return (
-      <span
-        className={`inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold ${paletteByBar[barra] ?? 'border-slate-200 bg-slate-50 text-slate-700'}`}
-      >
-        {stepLabel}
-      </span>
-    );
   };
 
   const resetGastoDraft = () => {
@@ -2518,7 +2530,7 @@ export default function UsuarioView() {
                 const estadoInfo = getEstadoInfo(viatico.status);
                 const procesoViatico = getProcesoViatico(viatico);
                 const accionBoton = getAccionBoton(viatico);
-                const viaticoStatusBadge = renderProcessBadge(procesoViatico.texto, procesoViatico.barra);
+                const viaticoStatusIcon = renderViaticoStatusIcon(viatico.status);
                 const viaticoActionIcon = renderViaticoActionIcon(accionBoton.icon);
                 const deletingViatico = deletingCardKey === `viatico:${viatico.id}`;
                 const extensionPendiente = getPendingViaticoExtension(viatico.comentarios);
@@ -2534,7 +2546,7 @@ export default function UsuarioView() {
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                         <div className="min-w-0">
                           <h3 className="text-sm sm:text-base font-semibold text-gray-900 flex items-center gap-1.5 leading-tight">
-                            {viaticoStatusBadge}
+                            {viaticoStatusIcon}
                             <span className="truncate">{proyectoDisplay.jobLabel}</span>
                           </h3>
                           {viatico.destino && normalizeText(viatico.destino) !== normalizeText(proyectoDisplay.jobLabel) && (
@@ -2684,7 +2696,7 @@ export default function UsuarioView() {
                   const vehicle = vehicles.find(v => v.id === assignment.vehicleId);
                   const proyectoDisplay = resolveProyectoDisplay(assignment.proyectoId, assignment.proyectoNombre);
                   const procesoVehiculo = getProcesoVehiculo(assignment.status);
-                  const vehiculoStatusBadge = renderProcessBadge(procesoVehiculo.texto, procesoVehiculo.barra);
+                  const vehiculoStatusIcon = renderVehiculoStatusIcon(assignment.status);
                   const deletingVehiculo = deletingCardKey === `vehiculo:${assignment.id}`;
 
                   return (
@@ -2693,7 +2705,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                           <p className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            {vehiculoStatusBadge}
+                            {vehiculoStatusIcon}
                             {proyectoDisplay.jobLabel}
                           </p>
                           <h3 className="mt-0.5 text-xs text-gray-600">
@@ -2832,7 +2844,7 @@ export default function UsuarioView() {
                   const confirmacionesHotel = solicitud.confirmaciones?.hotel ?? [];
                   const tieneConfirmaciones = confirmacionesAvion.length > 0 || confirmacionesCamion.length > 0 || confirmacionesHotel.length > 0;
                   const procesoViaje = getProcesoViaje(solicitud.status);
-                  const viajeStatusBadge = renderProcessBadge(procesoViaje.texto, procesoViaje.barra);
+                  const viajeStatusIcon = renderViajeStatusIcon(solicitud.status);
                   const deletingViaje = deletingCardKey === `viaje:${solicitud.id}`;
 
                   return (
@@ -2841,7 +2853,7 @@ export default function UsuarioView() {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
                           <div className="min-w-0">
                             <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 truncate">
-                              {viajeStatusBadge} {proyectoDisplay.jobLabel}
+                              {viajeStatusIcon} {proyectoDisplay.jobLabel}
                             </h3>
                             <p className="mt-0.5 text-xs text-gray-600">{solicitud.destino}</p>
                           </div>
