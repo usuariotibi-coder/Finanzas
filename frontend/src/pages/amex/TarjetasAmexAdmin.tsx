@@ -190,6 +190,8 @@ export default function TarjetasAmexAdmin() {
     const accountNumber = form.accountNumber.trim();
     const expirationDate = form.expirationDate.trim();
     const selectedUser = users.find((user) => String(user.id) === form.userId) || null;
+    const cardHolder = selectedUser?.full_name || (form.comodin ? 'Tarjeta comodin' : '');
+    const department = selectedUser?.department || (form.comodin ? 'Comodin' : '');
 
     if (!cardNumber || !employeeNumber || !accountNumber || !expirationDate) {
       setError('Completa numero de tarjeta, numero de empleado, cuenta y vigencia.');
@@ -204,10 +206,10 @@ export default function TarjetasAmexAdmin() {
     setSubmitting(true);
     try {
       const payload = {
-        userId: form.comodin ? '' : form.userId,
+        userId: selectedUser ? form.userId : '',
         cardNumber,
-        cardHolder: form.comodin ? 'Tarjeta comodin' : selectedUser?.full_name || '',
-        department: form.comodin ? 'Comodin' : selectedUser?.department || '',
+        cardHolder,
+        department,
         employeeNumber,
         accountNumber,
         expirationDate,
@@ -343,10 +345,9 @@ export default function TarjetasAmexAdmin() {
               <select
                 value={form.userId}
                 onChange={(event) => setForm((prev) => ({ ...prev, userId: event.target.value }))}
-                disabled={form.comodin}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm"
               >
-                <option value="">{form.comodin ? 'Tarjeta comodin' : 'Selecciona un usuario sin tarjeta'}</option>
+                <option value="">{form.comodin ? 'Opcional para tarjeta comodin' : 'Selecciona un usuario sin tarjeta'}</option>
                 {usersWithoutCard.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.full_name}
@@ -403,7 +404,6 @@ export default function TarjetasAmexAdmin() {
                     setForm((prev) => ({
                       ...prev,
                       comodin: event.target.checked,
-                      userId: event.target.checked ? '' : prev.userId,
                     }))
                   }
                 />
