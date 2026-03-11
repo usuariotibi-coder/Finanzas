@@ -53,6 +53,14 @@ class AdminUserListView(APIView):
         return Response(UserSerializer(users, many=True).data)
 
 
+class AssignableUserListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        users = request.user.get_assignable_request_users()
+        return Response(UserSerializer(users, many=True).data)
+
+
 class AdminUserDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 

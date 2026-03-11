@@ -29,6 +29,22 @@ class ViaticoCreateTests(APITestCase):
             position='Administrador',
             password='SecurePass123',
         )
+        self.gerente_user = User.objects.create_user(
+            email='gerente.viaticos@na.scio-automation.com',
+            full_name='Gerente Viaticos',
+            department='manufactura',
+            category='gerente',
+            position='Gerente',
+            password='SecurePass123!',
+        )
+        self.operador_user = User.objects.create_user(
+            email='operador.viaticos@na.scio-automation.com',
+            full_name='Operador Viaticos',
+            department='ensamble',
+            category='operador',
+            position='Operador',
+            password='SecurePass123!',
+        )
         self.project = Proyecto.objects.create(
             codigo='PRJ-QA-001',
             nombre='Proyecto QA',
@@ -54,25 +70,49 @@ class ViaticoCreateTests(APITestCase):
             'status': Viatico.Status.PENDIENTE,
         }
 
-    def test_staff_create_without_user_is_assigned_to_request_user(self):
+    def test_staff_operador_cannot_create_viatico(self):
         self.client.force_authenticate(user=self.staff_user)
         response = self.client.post('/api/viaticos/', self.build_payload(), format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], self.staff_user.id)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_staff_cannot_spoof_user(self):
+    def test_staff_operador_cannot_spoof_user(self):
         self.client.force_authenticate(user=self.staff_user)
         payload = self.build_payload()
         payload['user'] = self.admin_user.id
         response = self.client.post('/api/viaticos/', payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_staff_gerente_create_without_user_is_assigned_to_request_user(self):
+        self.client.force_authenticate(user=self.gerente_user)
+        response = self.client.post('/api/viaticos/', self.build_payload(), format='json')
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['user'], self.staff_user.id)
+        self.assertEqual(response.data['user'], self.gerente_user.id)
 
     def test_admin_create_without_user_defaults_to_request_user(self):
         self.client.force_authenticate(user=self.admin_user)
         response = self.client.post('/api/viaticos/', self.build_payload(), format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['user'], self.admin_user.id)
+
+    def test_staff_gerente_can_create_for_operator(self):
+        self.client.force_authenticate(user=self.gerente_user)
+        payload = self.build_payload()
+        payload['user'] = self.operador_user.id
+
+        response = self.client.post('/api/viaticos/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user'], self.operador_user.id)
+
+    def test_staff_gerente_cannot_assign_viatico_to_finance_user(self):
+        self.client.force_authenticate(user=self.gerente_user)
+        payload = self.build_payload()
+        payload['user'] = self.admin_user.id
+
+        response = self.client.post('/api/viaticos/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class ProyectoGastadoSyncTests(APITestCase):

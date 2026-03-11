@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje, Proyecto } from '../../types';
+import type { AuthUser, Viatico, DestinoPais, VehicleAssignment, VehicleConditionChecklist, Vehicle, SolicitudViaje, Proyecto } from '../../types';
 import { getProyectos } from '../../components/common/ProyectoSelector';
 import ProyectoSelector from '../../components/common/ProyectoSelector';
 import GSActivitySelector from '../../components/common/GSActivitySelector';
@@ -22,7 +22,7 @@ import {
   updateFlotillaAsignacion,
   updateViatico,
 } from '../../utils/backendSync';
-import { API_ROOT } from '../../utils/api';
+import { API_ROOT, api } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 import { clearAppStorage } from '../../utils/storage';
 import { getViaticoGastadoKpi } from '../../utils/viaticoMetrics';
@@ -529,6 +529,7 @@ export default function UsuarioView() {
   // Estado para nuevo viático
   const [showModalNuevoViatico, setShowModalNuevoViatico] = useLocalStorageState('usuario:showModalNuevoViatico', false);
   const [formNuevoViatico, setFormNuevoViatico] = useLocalStorageState('usuario:formNuevoViatico', {
+    asignadoUserId: '',
     proyectoId: '',
     gsActivityId: null as number | null,
     motivo: '',
@@ -542,6 +543,9 @@ export default function UsuarioView() {
     comidas: 0,
     cenas: 0,
   });
+  const [assignableUsers, setAssignableUsers] = useState<AuthUser[]>([]);
+  const [assignableUsersLoading, setAssignableUsersLoading] = useState(false);
+  const [assignableUsersError, setAssignableUsersError] = useState('');
 
   // Estado para documentos
   const [gastos, setGastos] = useLocalStorageState<GastoDocumento[]>('usuario:gastos', []);
@@ -587,6 +591,79 @@ export default function UsuarioView() {
   const solicitarVehiculoSubmitLockRef = useRef(false);
 
   useEffect(() => () => destinoVehiculoAbortRef.current?.abort(), []);
+
+  useEffect(() => {
+    if (!user || !canCreatePortalRequests) {
+      setAssignableUsers([]);
+      setAssignableUsersError('');
+      setAssignableUsersLoading(false);
+      return;
+    }
+
+    let active = true;
+
+    const loadAssignableUsers = async () => {
+      setAssignableUsersLoading(true);
+      try {
+        const data = (await api.assignableUsers()) as AuthUser[];
+        if (!active) {
+          return;
+        }
+        setAssignableUsers(data);
+        setAssignableUsersError('');
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        setAssignableUsers([]);
+        setAssignableUsersError(error instanceof Error ? error.message : 'No se pudo cargar usuarios.');
+      } finally {
+        if (active) {
+          setAssignableUsersLoading(false);
+        }
+      }
+    };
+
+    void loadAssignableUsers();
+
+    return () => {
+      active = false;
+    };
+  }, [user, canCreatePortalRequests]);
+
+  useEffect(() => {
+    const currentUserId = user ? String(user.id) : '';
+    if (!currentUserId) {
+      return;
+    }
+
+    setFormNuevoViatico((prev) => {
+      if (prev.asignadoUserId) {
+        return prev;
+      }
+      return {
+        ...prev,
+        asignadoUserId: currentUserId,
+      };
+    });
+  }, [user, setFormNuevoViatico]);
+
+  useEffect(() => {
+    if (assignableUsers.length === 0) {
+      return;
+    }
+
+    setFormNuevoViatico((prev) => {
+      const selectedUserExists = assignableUsers.some((item) => String(item.id) === prev.asignadoUserId);
+      if (selectedUserExists) {
+        return prev;
+      }
+      return {
+        ...prev,
+        asignadoUserId: String(assignableUsers[0].id),
+      };
+    });
+  }, [assignableUsers, setFormNuevoViatico]);
 
   const saveVehicleAssignments = (assignments: VehicleAssignment[]) => {
     const normalizedAssignments = dedupeAssignmentsById(assignments);
@@ -761,8 +838,12 @@ export default function UsuarioView() {
   };
   const proyectoRequeridoViatico = actividadSeleccionada?.proyectoRequerido ?? true;
   const isOtroMotivo = formNuevoViatico.gsActivityId === GS_ACTIVITY_OTHER_ID;
+  const usuarioAsignadoSeleccionado = assignableUsers.find(
+    (item) => String(item.id) === formNuevoViatico.asignadoUserId
+  );
   const isFormValid = Boolean(
-    (!proyectoRequeridoViatico || formNuevoViatico.proyectoId) &&
+    formNuevoViatico.asignadoUserId &&
+      (!proyectoRequeridoViatico || formNuevoViatico.proyectoId) &&
       formNuevoViatico.gsActivityId !== null &&
       formNuevoViatico.motivo.trim() &&
       formNuevoViatico.origen.trim() &&
@@ -777,6 +858,7 @@ export default function UsuarioView() {
   const kmInicialAsignado = assignmentSeleccionadoRecord?.kmInicial ?? 0;
   const nuevoViaticoErrors = showNuevoViaticoErrors
     ? {
+      asignadoUserId: !formNuevoViatico.asignadoUserId ? 'Selecciona el usuario asignado.' : '',
       proyectoId: proyectoRequeridoViatico && !formNuevoViatico.proyectoId ? 'Selecciona un proyecto.' : '',
       gsActivityId: formNuevoViatico.gsActivityId === null ? 'Selecciona el tipo de actividad.' : '',
       motivo: !formNuevoViatico.motivo.trim() ? 'Ingresa el motivo.' : '',
@@ -1306,9 +1388,11 @@ export default function UsuarioView() {
     const currentUserId = user ? String(user.id) : '';
     const snapshotFormNuevoViatico = { ...formNuevoViatico };
     const snapshotTotalAlimentos = totalAlimentos;
+    const assignedUserId = snapshotFormNuevoViatico.asignadoUserId || currentUserId;
 
     setShowModalNuevoViatico(false);
     setFormNuevoViatico({
+      asignadoUserId: currentUserId,
       proyectoId: '',
       gsActivityId: null,
       motivo: '',
@@ -1326,7 +1410,7 @@ export default function UsuarioView() {
 
     try {
       const nuevoViatico = await createViatico({
-        userId: currentUserId || undefined,
+        userId: assignedUserId || undefined,
         proyectoId: snapshotFormNuevoViatico.proyectoId || undefined,
         gsActivityId: snapshotFormNuevoViatico.gsActivityId || undefined,
         motivo: snapshotFormNuevoViatico.motivo,
@@ -1340,7 +1424,15 @@ export default function UsuarioView() {
         status: 'pendiente',
       });
 
-      setViaticos((prev) => [...prev, nuevoViatico]);
+      if ((nuevoViatico.userId || '') === currentUserId) {
+        setViaticos((prev) => [...prev, nuevoViatico]);
+      } else {
+        const assignedName =
+          usuarioAsignadoSeleccionado?.full_name ||
+          nuevoViatico.userName ||
+          'el usuario seleccionado';
+        showToast(`Viatico enviado para ${assignedName}.`, 'success');
+      }
       void syncCoreAppData({ userId: currentUserId || undefined }).catch(() => {});
     } catch (error) {
       setFormNuevoViatico(snapshotFormNuevoViatico);
@@ -2870,6 +2962,45 @@ export default function UsuarioView() {
 
             <div className="grid flex-1 auto-rows-max grid-cols-1 gap-2.5 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 py-2.5 sm:px-4 sm:py-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
               <div className="grid grid-cols-1 gap-2.5 rounded-xl border border-slate-200 bg-white/90 p-2.5 shadow-sm md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Asignado a <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formNuevoViatico.asignadoUserId}
+                    onChange={(e) => setFormNuevoViatico({ ...formNuevoViatico, asignadoUserId: e.target.value })}
+                    disabled={assignableUsersLoading}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 ${
+                      nuevoViaticoErrors.asignadoUserId
+                        ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-rose-200'
+                        : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'
+                    } ${assignableUsersLoading ? 'cursor-wait bg-slate-100 text-slate-500' : ''}`}
+                  >
+                    {assignableUsersLoading && (
+                      <option value={formNuevoViatico.asignadoUserId || ''}>Cargando usuarios...</option>
+                    )}
+                    {!formNuevoViatico.asignadoUserId && (
+                      <option value="">Selecciona un usuario</option>
+                    )}
+                    {assignableUsers.map((assignableUser) => (
+                      <option key={assignableUser.id} value={String(assignableUser.id)}>
+                        {assignableUser.full_name} - {assignableUser.position}
+                      </option>
+                    ))}
+                  </select>
+                  {assignableUsersError && (
+                    <p className="mt-1 text-xs text-rose-600">{assignableUsersError}</p>
+                  )}
+                  {!assignableUsersError && nuevoViaticoErrors.asignadoUserId && (
+                    <p className="mt-1 text-xs text-rose-600">{nuevoViaticoErrors.asignadoUserId}</p>
+                  )}
+                  {!assignableUsersError && usuarioAsignadoSeleccionado && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      El viatico se registrara con seguimiento para {usuarioAsignadoSeleccionado.full_name}.
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   {/* Proyecto - OBLIGATORIO */}
                   <ProyectoSelector

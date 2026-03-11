@@ -280,3 +280,50 @@ class AdminUserManagementTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('password', response.data)
+
+
+class AssignableUserListTests(APITestCase):
+    def setUp(self):
+        self.gerente_user = User.objects.create_user(
+            email='gerente@na.scio-automation.com',
+            full_name='Gerente Staff',
+            department='manufactura',
+            category='gerente',
+            position='Gerente',
+            password='SecurePass123!',
+        )
+        self.operador_user = User.objects.create_user(
+            email='operador@na.scio-automation.com',
+            full_name='Operador Staff',
+            department='ensamble',
+            category='operador',
+            position='Operador',
+            password='SecurePass123!',
+        )
+        self.pm_user = User.objects.create_user(
+            email='pm.assignable@na.scio-automation.com',
+            full_name='PM Assignable',
+            department='operaciones',
+            position='Project Manager',
+            password='SecurePass123!',
+        )
+
+    def test_staff_gerente_can_list_staff_users_for_assignment(self):
+        self.client.force_authenticate(user=self.gerente_user)
+
+        response = self.client.get('/api/auth/assignable-users/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        returned_ids = {item['id'] for item in response.data}
+        self.assertIn(self.gerente_user.id, returned_ids)
+        self.assertIn(self.operador_user.id, returned_ids)
+        self.assertNotIn(self.pm_user.id, returned_ids)
+
+    def test_staff_operador_only_receives_self_as_assignable_user(self):
+        self.client.force_authenticate(user=self.operador_user)
+
+        response = self.client.get('/api/auth/assignable-users/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['id'], self.operador_user.id)

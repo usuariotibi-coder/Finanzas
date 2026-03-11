@@ -83,5 +83,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     def can_create_self_service_requests(self) -> bool:
         return not (self.role == Role.STAFF and self.category == Category.OPERADOR)
 
+    def can_assign_self_service_requests_for_others(self) -> bool:
+        return self.role in (Role.ADMIN, Role.FINANCE, Role.PM) or (
+            self.role == Role.STAFF and self.category == Category.GERENTE
+        )
+
+    def get_assignable_request_users(self):
+        queryset = type(self).objects.filter(is_active=True).order_by('full_name', 'email')
+        if self.role in (Role.ADMIN, Role.FINANCE, Role.PM):
+            return queryset
+        if self.role == Role.STAFF and self.category == Category.GERENTE:
+            return queryset.filter(role=Role.STAFF)
+        return queryset.filter(pk=self.pk)
+
     def __str__(self) -> str:
         return f'{self.full_name} ({self.email})'

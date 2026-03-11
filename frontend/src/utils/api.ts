@@ -164,6 +164,7 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   adminUsers: () => apiFetch('/auth/admin/users/'),
+  assignableUsers: () => apiFetch('/auth/assignable-users/'),
   adminUpdateUser: (
     userId: number,
     payload: Partial<{
