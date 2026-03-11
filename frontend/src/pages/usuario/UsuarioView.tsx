@@ -1265,16 +1265,16 @@ export default function UsuarioView() {
     if (viatico.status === 'dispersado' || viatico.status === 'viaje_finalizado') {
       const facturasCompletas = (viatico.montoGastado || 0) >= (viatico.montoDispersado || 0) * 0.9;
       return facturasCompletas
-        ? { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: 'OK', accion: 'ver' }
-        : { label: 'Pendiente por subir facturas', color: 'bg-yellow-100 text-yellow-700', icon: 'DOC', accion: 'subir' };
+        ? { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: 'OK', accion: 'none' }
+        : { label: 'Subir facturas', color: 'bg-yellow-100 text-yellow-700', icon: 'DOC', accion: 'subir' };
     }
     if (viatico.status === 'aprobado') {
       return { label: 'Esperando dispersión', color: 'bg-blue-100 text-blue-700', icon: '⏳', accion: 'none' };
     }
     if (viatico.status === 'completado') {
-      return { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: 'OK', accion: 'ver' };
+      return { label: 'Documentos completos', color: 'bg-green-100 text-green-700', icon: 'OK', accion: 'none' };
     }
-    return { label: 'Ver detalles', color: 'bg-gray-100 text-gray-700', icon: 'i', accion: 'ver' };
+    return { label: 'Ver detalles', color: 'bg-gray-100 text-gray-700', icon: 'i', accion: 'none' };
   };
 
   const getVehiculoStatusIcon = (status: VehicleAssignment['status']) => {
@@ -1620,7 +1620,7 @@ export default function UsuarioView() {
   };
 
   const handleAccionClick = (viatico: Viatico, accion: string) => {
-    if (accion === 'subir' || accion === 'ver') {
+    if (accion === 'subir') {
       setViaticoSeleccionado(viatico.id);
       setGastos([]);
       setGastoFiles({});
