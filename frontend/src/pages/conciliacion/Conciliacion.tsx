@@ -120,9 +120,10 @@ type FacturaMatchResult = {
 
 const AMOUNT_MATCH_EPSILON = 0.01;
 const MAX_TIP_PERCENTAGE = 0.3;
-const MERCHANT_FALLBACK_MIN_SCORE = 0.45;
-const MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 45;
-const MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = 1.0;
+const TIP_MATCH_MIN_MERCHANT_SCORE = 0.3;
+const MERCHANT_FALLBACK_MIN_SCORE = 0.75;
+const MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 10;
+const MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = 0.2;
 const MERCHANT_STOPWORDS = new Set([
   'sa',
   'cv',
@@ -344,6 +345,11 @@ const getFacturaMatchTuple = (match: FacturaMatchResult) => [
   Number(match.propinaDetectada.toFixed(2)),
 ] as const;
 
+const hasTipMatchContext = (merchantScore: number, pdfDateScore: number) => (
+  merchantScore >= TIP_MATCH_MIN_MERCHANT_SCORE
+  || (merchantScore >= 0.2 && pdfDateScore >= 0.85)
+);
+
 const getFacturaMatchCandidate = (
   factura: Factura,
   row: StatementRow
@@ -421,7 +427,14 @@ const getFacturaMatchCandidate = (
     return null;
   }
 
-  const bestAmountCandidate = amountCandidates.sort((left, right) => {
+  const contextualAmountCandidates = amountCandidates.filter((candidate) => (
+    candidate.matchType === 'exacto' || hasTipMatchContext(merchantScore, pdfDateScore)
+  ));
+  if (contextualAmountCandidates.length === 0) {
+    return null;
+  }
+
+  const bestAmountCandidate = contextualAmountCandidates.sort((left, right) => {
     if (left.matchType !== right.matchType) {
       return left.matchType === 'exacto' ? -1 : 1;
     }
@@ -2223,7 +2236,9 @@ function DetalleFacturaModal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 grid grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-2">
+        <div className={`min-h-0 flex-1 overflow-y-auto p-4 ${readOnly ? 'space-y-4' : 'grid grid-cols-1 gap-4 xl:grid-cols-2'}`}>
+          {!readOnly ? (
+            <>
           {/* Información General */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Información General</h3>
@@ -2322,6 +2337,8 @@ function DetalleFacturaModal({
               </table>
             </div>
           </div>
+            </>
+          ) : null}
 
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Archivos de Factura</h3>

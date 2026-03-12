@@ -183,7 +183,41 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(consumo.factura_id, factura.id)
         self.assertTrue(consumo.matched)
 
-    def test_reconcile_factura_allows_fallback_match_by_merchant_when_amount_is_off(self):
+    def test_reconcile_factura_does_not_accept_propina_match_without_merchant_context(self):
+        consumo = Consumo.objects.create(
+            user=self.user,
+            fecha='2026-02-15',
+            comercio='HEB QRO EL REFUGIO MARQUES QR M EX',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Supermercado',
+            monto=Decimal('526.20'),
+            categoria='Alimentos',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='FAAG4199',
+            uuid='46D978D7-AD38-5F5B-A373-808FFD6A0A2B',
+            rfc='EAM010110EM5',
+            razon_social='EVENTOS Y ALIMENTOS DE MEXICO',
+            fecha='2026-02-26',
+            subtotal=Decimal('419.00'),
+            iva=Decimal('0.00'),
+            total=Decimal('419.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+        )
+
+        matched_consumo = reconcile_factura_with_consumos(factura)
+        consumo.refresh_from_db()
+
+        self.assertIsNone(matched_consumo)
+        self.assertIsNone(consumo.factura_id)
+        self.assertFalse(consumo.matched)
+
+    def test_reconcile_factura_allows_strict_fallback_match_by_merchant_when_amount_is_close(self):
         consumo = Consumo.objects.create(
             user=self.user,
             fecha='2026-02-08',
@@ -191,7 +225,7 @@ class ConciliacionMatchingTests(TestCase):
             pais_comercio='Mexico',
             tipo_movimiento='Compra',
             concepto='Farmacia',
-            monto=Decimal('366.50'),
+            monto=Decimal('170.00'),
             categoria='Salud',
             matched=False,
             autorizado=False,
@@ -202,7 +236,7 @@ class ConciliacionMatchingTests(TestCase):
             uuid='F0154552-FF7A-48DC-AC3A-F802D96C96A5',
             rfc='FGU830930PD3',
             razon_social='FARMACIA GUADALAJARA',
-            fecha='2026-02-26',
+            fecha='2026-02-12',
             subtotal=Decimal('206.26'),
             iva=Decimal('1.74'),
             total=Decimal('208.00'),
@@ -210,7 +244,7 @@ class ConciliacionMatchingTests(TestCase):
             metodo_pago='PUE',
             validacion_cfdi={
                 'pdfDetectedTotal': 206.26,
-                'pdfDateHints': ['2026-02-26'],
+                'pdfDateHints': ['2026-02-12'],
             },
         )
 

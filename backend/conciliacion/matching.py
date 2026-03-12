@@ -13,9 +13,10 @@ from .models import Consumo, Factura
 
 AMOUNT_MATCH_EPSILON = Decimal("0.01")
 MAX_TIP_RATIO = Decimal("0.30")
-MERCHANT_FALLBACK_MIN_SCORE = 0.45
-MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 45
-MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = Decimal("1.00")
+TIP_MATCH_MIN_MERCHANT_SCORE = 0.30
+MERCHANT_FALLBACK_MIN_SCORE = 0.75
+MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 10
+MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = Decimal("0.20")
 MERCHANT_STOPWORDS = {
     "sa",
     "de",
@@ -285,6 +286,12 @@ def _get_max_date_distance(has_exact_amount: bool, merchant_score: float, pdf_da
     return 9999
 
 
+def _has_tip_context(merchant_score: float, pdf_date_score: float) -> bool:
+    return merchant_score >= TIP_MATCH_MIN_MERCHANT_SCORE or (
+        merchant_score >= 0.2 and pdf_date_score >= 0.85
+    )
+
+
 def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchDiagnostic:
     date_distance = diff_days(factura.fecha, consumo.fecha)
     merchant_score = get_merchant_score(factura, consumo)
@@ -301,10 +308,13 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
             f"comercio/de fecha debiles (merchant={merchant_score:.2f}, pdf_date={pdf_date_score:.2f})"
         )
 
-    accepted_amounts = [
-        item for item in amount_diagnostics
-        if item.accepted and item.match_type in ("exacto", "propina")
-    ]
+    accepted_amounts = []
+    for item in amount_diagnostics:
+        if not item.accepted or item.match_type not in ("exacto", "propina"):
+            continue
+        if item.match_type == "propina" and not _has_tip_context(merchant_score, pdf_date_score):
+            continue
+        accepted_amounts.append(item)
     accepted = len(accepted_amounts) > 0
     match_result: ConsumoMatchResult | None = None
     if accepted:
