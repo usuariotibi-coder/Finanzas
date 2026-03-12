@@ -2002,6 +2002,10 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
     return `${baseStyles}${isActive ? ' ring-2 ring-offset-1 ring-slate-300' : ''}`;
   };
 
+  const pdfViewerUrl = (pdfPreviewBlobUrl || pdfPreviewUrl)
+    ? `${pdfPreviewBlobUrl || pdfPreviewUrl}#view=FitH&zoom=page-width&pagemode=none`
+    : '';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-7xl w-full max-h-[calc(100dvh-1.5rem)] overflow-hidden">
@@ -2201,7 +2205,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
           </div>
 
           {previewTipo && (previewTipo === 'PDF' ? (pdfPreviewBlobUrl || pdfPreviewUrl) : xmlPreviewUrl) ? (
-            <div>
+            <div className="xl:col-span-2">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Vista Previa</h3>
@@ -2225,8 +2229,8 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
                   ) : (
                     <iframe
                       title={`Vista previa PDF ${factura.folio || factura.id}`}
-                      src={pdfPreviewBlobUrl || pdfPreviewUrl}
-                      className="h-[42vh] min-h-[320px] w-full bg-white"
+                      src={pdfViewerUrl}
+                      className="h-[58vh] min-h-[480px] w-full bg-white"
                     />
                   )}
                 </div>
