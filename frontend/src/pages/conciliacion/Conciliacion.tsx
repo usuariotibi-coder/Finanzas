@@ -423,6 +423,7 @@ export default function Conciliacion() {
   const [uploadSaving, setUploadSaving] = useState(false);
   const [showUploadErrors, setShowUploadErrors] = useState(false);
   const [statementImporting, setStatementImporting] = useState(false);
+  const [reprocessingConciliacion, setReprocessingConciliacion] = useState(false);
   const [statementImportMessage, setStatementImportMessage] = useState('');
   const [statementImportError, setStatementImportError] = useState('');
   const [selectedMes, setSelectedMes] = useLocalStorageState('conciliacion:selectedMes', 'todos');
@@ -600,6 +601,114 @@ export default function Conciliacion() {
       }
     }
     return null;
+  };
+
+  const buildStatementRowFromConsumo = (consumo: Consumo): StatementRow => ({
+    cardNumber: consumo.cardNumber || '',
+    employeeNumber: consumo.employeeNumber || '',
+    employeeName: consumo.userName || '',
+    fecha: consumo.fecha,
+    comercio: consumo.comercio,
+    paisComercio: consumo.paisComercio || '',
+    tipoMovimiento: consumo.tipoMovimiento || '',
+    monto: consumo.monto,
+    montoUsd: 0,
+    concepto: consumo.concepto || consumo.categoria || '',
+  });
+
+  const syncFacturaMatchFlags = async (currentFacturas: Factura[], currentConsumos: Consumo[]) => {
+    const matchedFacturaIds = new Set(
+      currentConsumos
+        .filter((consumo) => consumo.matched && consumo.facturaId)
+        .map((consumo) => String(consumo.facturaId))
+    );
+
+    let nextFacturas = [...currentFacturas];
+    for (const factura of currentFacturas) {
+      const shouldBeMatched = matchedFacturaIds.has(String(factura.id));
+      if (Boolean(factura.matchConsumo) === shouldBeMatched) {
+        continue;
+      }
+
+      const updatedFactura = await updateFactura(factura.id, { matchConsumo: shouldBeMatched });
+      nextFacturas = nextFacturas.map((item) => (
+        item.id === updatedFactura.id ? { ...item, ...updatedFactura } : item
+      ));
+    }
+
+    return nextFacturas;
+  };
+
+  const handleReprocesarConciliacion = async () => {
+    if (consumosFiltrados.length === 0) {
+      setStatementImportError('No hay consumos visibles para reprocesar con los filtros actuales.');
+      setStatementImportMessage('');
+      return;
+    }
+
+    if (!window.confirm(`Reprocesar ${consumosFiltrados.length} consumos visibles con la logica actual de XML + PDF?`)) {
+      return;
+    }
+
+    setReprocessingConciliacion(true);
+    setStatementImportError('');
+    setStatementImportMessage('');
+
+    try {
+      let nextConsumos = [...consumos];
+      let nextFacturas = [...facturas];
+      let reprocesados = 0;
+      let matchedCount = 0;
+      let tipMatchedCount = 0;
+      let clearedCount = 0;
+
+      for (const consumo of consumosFiltrados) {
+        const row = buildStatementRowFromConsumo(consumo);
+        const previousFacturaId = String(consumo.facturaId || '');
+        const facturaMatch = findMatchingFactura(nextFacturas, row, consumo.userId);
+        const matchedFactura = facturaMatch?.factura;
+        const nextFacturaId = matchedFactura ? String(matchedFactura.id) : undefined;
+        const nextMatched = Boolean(facturaMatch);
+
+        const updatedConsumo = await updateConsumo(consumo.id, {
+          facturaId: nextFacturaId,
+          matched: nextMatched,
+          propinaDetectada: facturaMatch?.propinaDetectada,
+          propinaPorcentaje: facturaMatch?.propinaPorcentaje,
+        });
+
+        nextConsumos = nextConsumos.map((item) => (
+          item.id === updatedConsumo.id ? { ...item, ...updatedConsumo } : item
+        ));
+
+        reprocesados += 1;
+        if (nextMatched) {
+          matchedCount += 1;
+          if (facturaMatch?.matchType === 'propina') {
+            tipMatchedCount += 1;
+          }
+        } else if (previousFacturaId) {
+          clearedCount += 1;
+        }
+      }
+
+      nextFacturas = await syncFacturaMatchFlags(nextFacturas, nextConsumos);
+      setConsumos(nextConsumos);
+      setFacturas(nextFacturas);
+      setStatementImportMessage(
+        [
+          `Reproceso completado: ${reprocesados} consumos evaluados, ${matchedCount} relacionados y ${clearedCount} relaciones previas limpiadas.`,
+          tipMatchedCount > 0 ? `${tipMatchedCount} coincidencias quedaron conciliadas con tolerancia de propina.` : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+      );
+      void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
+    } catch (error) {
+      setStatementImportError(error instanceof Error ? error.message : 'No se pudo reprocesar la conciliacion.');
+    } finally {
+      setReprocessingConciliacion(false);
+    }
   };
 
   const handleEstadoCuentaFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -890,6 +999,14 @@ export default function Conciliacion() {
                   className="px-3 py-1.5 text-[11px] rounded-lg bg-slate-900 font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {statementImporting ? 'Importando estado...' : 'Subir Estado de Cuenta'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleReprocesarConciliacion()}
+                  disabled={reprocessingConciliacion}
+                  className="px-3 py-1.5 text-[11px] rounded-lg border border-slate-300 bg-white font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {reprocessingConciliacion ? 'Reprocesando...' : 'Reprocesar conciliacion'}
                 </button>
                 <select
                   value={selectedMes}
