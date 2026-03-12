@@ -7,6 +7,7 @@ from accounts.models import Department, User
 from conciliacion.matching import reconcile_factura_with_consumos
 from conciliacion.models import Consumo, Factura
 from conciliacion.pdf_parser import extract_pdf_structured_hints
+from viaticos.models import Viatico
 
 
 class ConciliacionMatchingTests(TestCase):
@@ -82,6 +83,51 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(hints.get('pdfDetectedUuid'), '071DC4F2-2EAE-522C-9A1B-1234567890AB')
         self.assertEqual(hints.get('pdfDetectedTotal'), 414.0)
         self.assertEqual(hints.get('pdfDateHints'), ['2026-02-16'])
+
+    def test_reconcile_factura_prefers_same_viatico_with_exact_amount_even_if_date_is_farther(self):
+        viatico = Viatico.objects.create(
+            user=self.user,
+            motivo='Servicio en campo',
+            origen='Monterrey',
+            destino='Leon',
+            fecha_inicio='2026-03-01',
+            fecha_fin='2026-03-20',
+            monto_solicitado=Decimal('1000.00'),
+        )
+        consumo = Consumo.objects.create(
+            user=self.user,
+            viatico=viatico,
+            fecha='2026-03-18',
+            comercio='HOTEL CITY EXPRESS PLUS',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Hospedaje',
+            monto=Decimal('1850.00'),
+            categoria='Hospedaje',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            viatico=viatico,
+            folio='FAC-HOTEL',
+            uuid='UUID-HOTEL',
+            rfc='XAXX010101000',
+            razon_social='SERVICIOS HOTELEROS BAJIO',
+            fecha='2026-03-01',
+            subtotal=Decimal('1850.00'),
+            iva=Decimal('0.00'),
+            total=Decimal('1850.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+        )
+
+        matched_consumo = reconcile_factura_with_consumos(factura)
+        consumo.refresh_from_db()
+
+        self.assertIsNotNone(matched_consumo)
+        self.assertEqual(consumo.factura_id, factura.id)
+        self.assertTrue(consumo.matched)
 
 
 class FacturaViewSetTests(TestCase):
