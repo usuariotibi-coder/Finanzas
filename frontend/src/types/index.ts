@@ -142,6 +142,8 @@ export interface ValidacionCFDI {
   conceptosValidos: boolean;
   articulosPersonales: string[];
   propinaExcedida: boolean;
+  pdfPreviewText?: string;
+  pdfDateHints?: string[];
   propinaDetalle?: {
     monto: number;
     porcentaje: number;

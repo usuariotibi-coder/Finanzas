@@ -110,6 +110,7 @@ type FacturaMatchResult = {
   matchType: 'exacto' | 'propina';
   dateDistance: number;
   merchantScore: number;
+  pdfDateScore: number;
 };
 
 const AMOUNT_MATCH_EPSILON = 0.01;
@@ -237,6 +238,7 @@ const getMerchantSimilarity = (left: string, right: string) => {
 const getFacturaMerchantTexts = (factura: Factura) => {
   const values = [
     factura.razonSocial,
+    factura.validacionCFDI?.pdfPreviewText || '',
     ...factura.conceptos.map((concepto) => concepto.descripcion),
   ];
   return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
@@ -259,8 +261,34 @@ const getFacturaMerchantScore = (factura: Factura, row: StatementRow) => {
   return bestScore;
 };
 
+const getFacturaPdfDateScore = (factura: Factura, fechaEstadoCuenta: string) => {
+  const dateHints = Array.isArray(factura.validacionCFDI?.pdfDateHints)
+    ? factura.validacionCFDI?.pdfDateHints ?? []
+    : [];
+  if (!fechaEstadoCuenta || dateHints.length === 0) {
+    return 0;
+  }
+
+  if (dateHints.includes(fechaEstadoCuenta)) {
+    return 1;
+  }
+
+  const bestDistance = Math.min(...dateHints.map((hint) => diffDays(hint, fechaEstadoCuenta)));
+  if (!Number.isFinite(bestDistance)) {
+    return 0;
+  }
+  if (bestDistance <= 1) {
+    return 0.85;
+  }
+  if (bestDistance <= 3) {
+    return 0.65;
+  }
+  return 0;
+};
+
 const getFacturaMatchTuple = (match: FacturaMatchResult) => [
   match.matchType === 'exacto' ? 0 : 1,
+  100 - Math.round(match.pdfDateScore * 100),
   100 - Math.round(match.merchantScore * 100),
   match.dateDistance,
   Number(match.propinaPorcentaje.toFixed(2)),
@@ -272,12 +300,20 @@ const getFacturaMatchCandidate = (
   row: StatementRow
 ): FacturaMatchResult | null => {
   const dateDistance = diffDays(factura.fecha, row.fecha);
-  if (dateDistance > 3) {
+  const merchantScore = getFacturaMerchantScore(factura, row);
+  const pdfDateScore = getFacturaPdfDateScore(factura, row.fecha);
+  const maxAllowedDateDistance = pdfDateScore >= 0.85
+    ? 15
+    : pdfDateScore >= 0.65 || merchantScore >= 0.6
+      ? 10
+      : merchantScore >= 0.35
+        ? 7
+        : 3;
+  if (dateDistance > maxAllowedDateDistance) {
     return null;
   }
 
   const difference = roundMoney(row.monto - factura.total);
-  const merchantScore = getFacturaMerchantScore(factura, row);
   if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
     return {
       factura,
@@ -286,6 +322,7 @@ const getFacturaMatchCandidate = (
       matchType: 'exacto',
       dateDistance,
       merchantScore,
+      pdfDateScore,
     };
   }
 
@@ -305,6 +342,7 @@ const getFacturaMatchCandidate = (
     matchType: 'propina',
     dateDistance,
     merchantScore,
+    pdfDateScore,
   };
 };
 

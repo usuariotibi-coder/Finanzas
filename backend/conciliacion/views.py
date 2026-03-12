@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from accounts.models import Role
 from accounts.permissions import IsAdminOrPMOrFinanceOrReadOnly
 from .cfdi_parser import parse_cfdi_xml
+from .pdf_parser import extract_pdf_hints
 from .models import AlertaConciliacion, Conciliacion, Consumo, Factura
 from .serializers import (
     AlertaConciliacionSerializer,
@@ -30,7 +31,9 @@ class FacturaViewSet(viewsets.ModelViewSet):
         request_user = self.request.user
         payload_user = serializer.validated_data.get('user')
         archivo_xml = serializer.validated_data.get('archivo_xml')
+        archivo_pdf = serializer.validated_data.get('archivo_pdf')
         cfdi_data = parse_cfdi_xml(archivo_xml) if archivo_xml else None
+        pdf_hints = extract_pdf_hints(archivo_pdf) if archivo_pdf else {}
 
         extra_fields = {}
         if cfdi_data:
@@ -56,6 +59,10 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 extra_fields['metodo_pago'] = cfdi_data.metodo_pago
             if cfdi_data.conceptos:
                 extra_fields['conceptos'] = cfdi_data.conceptos
+        if pdf_hints:
+            validacion_cfdi = dict(serializer.validated_data.get('validacion_cfdi') or {})
+            validacion_cfdi.update(pdf_hints)
+            extra_fields['validacion_cfdi'] = validacion_cfdi
 
         if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             serializer.save(user=payload_user or request_user, **extra_fields)
