@@ -551,6 +551,22 @@ export default function Conciliacion() {
   const facturasFiltradas = facturas.filter((factura) => filtraPorMes(factura.fecha) && filtraPorUsuario(factura.userId));
   const consumosFiltrados = consumos.filter((consumo) => filtraPorMes(consumo.fecha) && filtraPorUsuario(consumo.userId));
   const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha) && filtraPorUsuario(ticket.userId));
+  const matchedFacturaIdsDesdeConsumos = useMemo(
+    () => new Set(
+      consumosFiltrados
+        .filter((consumo) => consumo.matched && consumo.facturaId)
+        .map((consumo) => String(consumo.facturaId))
+    ),
+    [consumosFiltrados]
+  );
+  const matchedFacturaIdsDesdeAmex = useMemo(
+    () => new Set(
+      ticketsAMEXFiltrados
+        .filter((ticket) => ticket.matched && ticket.facturaId)
+        .map((ticket) => String(ticket.facturaId))
+    ),
+    [ticketsAMEXFiltrados]
+  );
 
   const facturasValidadas = facturasFiltradas.filter(f => f.status === 'validada').length;
   const facturasPendientes = facturasFiltradas.filter(f => f.status === 'pendiente').length;
@@ -1208,6 +1224,20 @@ export default function Conciliacion() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {facturasFiltradas.map((factura) => (
+                  (() => {
+                    const hasConsumoMatch = matchedFacturaIdsDesdeConsumos.has(String(factura.id));
+                    const hasAmexMatch = matchedFacturaIdsDesdeAmex.has(String(factura.id));
+                    const matchLabel = hasConsumoMatch && hasAmexMatch
+                      ? 'Matched Efectifintech + AMEX'
+                      : hasConsumoMatch
+                        ? 'Matched Efectifintech'
+                        : hasAmexMatch
+                          ? 'Matched AMEX'
+                          : 'Sin match';
+                    const matchClassName = hasConsumoMatch || hasAmexMatch
+                      ? 'inline-flex min-w-[92px] justify-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium'
+                      : 'inline-flex min-w-[92px] justify-center px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium';
+                    return (
                   <tr key={factura.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="text-sm font-medium text-gray-900">{factura.folio}</p>
@@ -1224,11 +1254,7 @@ export default function Conciliacion() {
                       <p className="text-sm font-semibold text-gray-900">${factura.total.toLocaleString()}</p>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {factura.matchConsumo ? (
-                        <span className="inline-flex min-w-[92px] justify-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Matched</span>
-                      ) : (
-                        <span className="inline-flex min-w-[92px] justify-center px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">Sin match</span>
-                      )}
+                      <span className={matchClassName}>{matchLabel}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -1273,6 +1299,8 @@ export default function Conciliacion() {
                       </button>
                     </td>
                   </tr>
+                    );
+                  })()
                 ))}
               </tbody>
             </table>
@@ -1316,6 +1344,7 @@ export default function Conciliacion() {
                   const facturaRelacionada = consumo.facturaId
                     ? facturasById.get(String(consumo.facturaId))
                     : undefined;
+                  const consumoMatchConfirmado = Boolean(consumo.matched && consumo.facturaId && facturaRelacionada);
                   const consumoPdfPath = facturaRelacionada?.archivoPDF;
                   const consumoXmlPath = facturaRelacionada?.archivoXML;
                   const consumoPdfLabel = facturaRelacionada?.archivoPDF || consumo.facturaPdfName;
@@ -1350,7 +1379,7 @@ export default function Conciliacion() {
                       <p className="text-sm font-semibold text-gray-900">${consumo.monto.toLocaleString()}</p>
                     </td>
                     <td className="px-6 py-4 align-top">
-                      {consumo.matched ? (
+                      {consumoMatchConfirmado ? (
                         <div>
                           <span className="inline-flex min-w-[92px] justify-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
                             {consumo.propinaDetectada && consumo.propinaDetectada > AMOUNT_MATCH_EPSILON ? 'Match con propina' : 'Matched'}
@@ -1470,6 +1499,7 @@ export default function Conciliacion() {
                   const facturaRelacionada = ticket.facturaId
                     ? facturasById.get(String(ticket.facturaId))
                     : undefined;
+                  const ticketMatchConfirmado = Boolean(ticket.matched && ticket.facturaId && facturaRelacionada);
                   const ticketPdfPath = facturaRelacionada?.archivoPDF;
                   const ticketXmlPath = facturaRelacionada?.archivoXML;
                   const ticketPdfLabel = facturaRelacionada?.archivoPDF || ticket.facturaPdfName;
@@ -1506,7 +1536,7 @@ export default function Conciliacion() {
                       )}
                     </td>
                     <td className="px-6 py-4 align-top">
-                      {ticket.matched ? (
+                      {ticketMatchConfirmado ? (
                         <div>
                           <span className="inline-flex min-w-[92px] justify-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Matched</span>
                           <p className="text-xs text-gray-500 mt-1">Factura: {ticket.facturaId}</p>
