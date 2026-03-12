@@ -2008,7 +2008,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-7xl w-full max-h-[calc(100dvh-1.5rem)] overflow-hidden">
+      <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-7xl w-full max-h-[calc(100dvh-1.5rem)] overflow-hidden">
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Detalle de Factura - {factura.folio}</h2>
@@ -2020,7 +2020,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-2">
+        <div className="min-h-0 flex-1 grid grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-2">
           {/* Información General */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Información General</h3>
