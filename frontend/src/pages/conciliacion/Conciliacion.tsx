@@ -502,8 +502,10 @@ export default function Conciliacion() {
   const [ticketsAMEX, setTicketsAMEX] = useLocalStorageState<TicketAMEX[]>('conciliacion:amex', []);
   const [selectedFacturaId, setSelectedFacturaId] = useLocalStorageState<string | null>('conciliacion:selectedFacturaId', null);
   const [selectedAlertaIndex, setSelectedAlertaIndex] = useLocalStorageState<number | null>('conciliacion:selectedAlertaIndex', null);
+  const [selectedMatchConsumoId, setSelectedMatchConsumoId] = useState<string | null>(null);
   const [showDetalleModal, setShowDetalleModal] = useLocalStorageState('conciliacion:showDetalleModal', false);
   const [showAlertaModal, setShowAlertaModal] = useLocalStorageState('conciliacion:showAlertaModal', false);
+  const [showMatchModal, setShowMatchModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useLocalStorageState('conciliacion:showUploadModal', false);
   const [uploadTarget, setUploadTarget] = useLocalStorageState<{ type: 'consumo' | 'amex'; id: string } | null>(
     'conciliacion:uploadTarget',
@@ -523,6 +525,7 @@ export default function Conciliacion() {
   const [selectedUsuario, setSelectedUsuario] = useLocalStorageState('conciliacion:selectedUsuario', 'todos');
   const [vistaActiva, setVistaActiva] = useLocalStorageState<'facturas' | 'consumos' | 'amex'>('conciliacion:vistaActiva', 'facturas');
   const [alertas, setAlertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
+  const [detalleReadOnly, setDetalleReadOnly] = useState(false);
   const facturasById = useMemo(
     () => new Map(facturas.map((factura) => [String(factura.id), factura])),
     [facturas]
@@ -630,6 +633,9 @@ export default function Conciliacion() {
   const facturasPendientes = facturasFiltradas.filter(f => f.status === 'pendiente').length;
   const totalFacturas = facturasFiltradas.length;
   const selectedFactura = selectedFacturaId ? facturas.find((item) => item.id === selectedFacturaId) ?? null : null;
+  const selectedMatchConsumo = selectedMatchConsumoId
+    ? consumos.find((item) => item.id === selectedMatchConsumoId) ?? null
+    : null;
   const selectedAlerta = selectedAlertaIndex !== null ? alertas[selectedAlertaIndex] ?? null : null;
 
   const consumosSinMatch = consumosFiltrados.filter((consumo) => !hasConsumoMatchConfirmado(
@@ -648,8 +654,20 @@ export default function Conciliacion() {
     : {};
 
   const handleVerDetalles = (facturaId: string) => {
+    setDetalleReadOnly(false);
     setSelectedFacturaId(facturaId);
     setShowDetalleModal(true);
+  };
+
+  const handleVerFacturaReadOnly = (facturaId: string) => {
+    setDetalleReadOnly(true);
+    setSelectedFacturaId(facturaId);
+    setShowDetalleModal(true);
+  };
+
+  const handleVerMatchConsumo = (consumoId: string) => {
+    setSelectedMatchConsumoId(consumoId);
+    setShowMatchModal(true);
   };
 
   const openUploadModal = (type: 'consumo' | 'amex', id: string) => {
@@ -1536,25 +1554,27 @@ export default function Conciliacion() {
                         {facturaRelacionada ? (
                           <button
                             type="button"
-                            onClick={() => handleVerDetalles(facturaRelacionada.id)}
+                            onClick={() => handleVerMatchConsumo(consumo.id)}
                             className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0Z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12Z" />
                             </svg>
-                            {consumoMatchConfirmado ? 'Ver factura match' : 'Ver factura'}
+                            {consumoMatchConfirmado ? 'Ver match' : 'Ver factura'}
                           </button>
                         ) : null}
-                        <button
-                          onClick={() => openUploadModal('consumo', consumo.id)}
-                          className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          {consumo.facturaId ? 'Actualizar factura' : 'Subir factura'}
-                        </button>
+                        {!facturaRelacionada ? (
+                          <button
+                            onClick={() => openUploadModal('consumo', consumo.id)}
+                            className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Subir factura
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -1724,9 +1744,21 @@ export default function Conciliacion() {
         <DetalleFacturaModal
           factura={selectedFactura}
           consumos={consumos}
+          readOnly={detalleReadOnly}
+          onRequestUpdate={selectedMatchConsumo && selectedFactura.id === selectedMatchConsumo.facturaId
+            ? () => {
+              setShowDetalleModal(false);
+              setSelectedFacturaId(null);
+              setDetalleReadOnly(false);
+              setSelectedMatchConsumoId(null);
+              openUploadModal('consumo', selectedMatchConsumo.id);
+            }
+            : undefined}
           onClose={() => {
             setShowDetalleModal(false);
             setSelectedFacturaId(null);
+            setDetalleReadOnly(false);
+            setSelectedMatchConsumoId(null);
           }}
           onUpdateStatus={async (facturaId, status) => {
             try {
@@ -1775,6 +1807,21 @@ export default function Conciliacion() {
             } catch (error) {
               window.alert(error instanceof Error ? error.message : 'No se pudo eliminar la factura.');
             }
+          }}
+        />
+      )}
+
+      {showMatchModal && selectedMatchConsumo && (
+        <MatchFacturaModal
+          consumo={selectedMatchConsumo}
+          factura={selectedMatchConsumo.facturaId ? facturasById.get(String(selectedMatchConsumo.facturaId)) ?? null : null}
+          onClose={() => {
+            setShowMatchModal(false);
+            setSelectedMatchConsumoId(null);
+          }}
+          onViewFactura={(facturaId) => {
+            setShowMatchModal(false);
+            handleVerFacturaReadOnly(facturaId);
           }}
         />
       )}
@@ -1987,9 +2034,18 @@ function StatusBadge({ status }: { status: string }) {
 interface DetalleFacturaModalProps {
   factura: Factura;
   consumos: Consumo[];
+  readOnly?: boolean;
   onClose: () => void;
+  onRequestUpdate?: () => void;
   onUpdateStatus: (facturaId: string, status: FacturaStatus) => Promise<void> | void;
   onDelete: (facturaId: string) => Promise<void> | void;
+}
+
+interface MatchFacturaModalProps {
+  consumo: Consumo;
+  factura: Factura | null;
+  onClose: () => void;
+  onViewFactura: (facturaId: string) => void;
 }
 
 interface SubirFacturaModalProps {
@@ -2011,7 +2067,15 @@ interface SubirFacturaModalProps {
   onSave: () => Promise<void> | void;
 }
 
-function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDelete }: DetalleFacturaModalProps) {
+function DetalleFacturaModal({
+  factura,
+  consumos,
+  readOnly = false,
+  onClose,
+  onRequestUpdate,
+  onUpdateStatus,
+  onDelete,
+}: DetalleFacturaModalProps) {
   useEscapeKey(onClose);
 
   const [statusLocal, setStatusLocal] = useState(factura.status);
@@ -2145,7 +2209,12 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
       <div className="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-7xl w-full max-h-[calc(100dvh-1.5rem)] overflow-hidden">
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Detalle de Factura - {factura.folio}</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Detalle de Factura - {factura.folio}</h2>
+              {readOnly ? (
+                <p className="mt-1 text-xs text-slate-500">Vista limitada para revisar la factura relacionada.</p>
+              ) : null}
+            </div>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2388,37 +2457,48 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
 
         <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
           <div className="flex flex-wrap items-center gap-2">
-            {deleteConfirmOpen ? (
-              <>
-                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">
-                  Esta accion elimina la factura y limpia su match.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmOpen(false)}
-                  disabled={deleting}
-                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={deleting}
-                  className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {deleting ? 'Eliminando...' : 'Eliminar factura'}
-                </button>
-              </>
-            ) : (
+            {readOnly && onRequestUpdate ? (
               <button
                 type="button"
-                onClick={() => setDeleteConfirmOpen(true)}
-                className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
+                onClick={onRequestUpdate}
+                className="rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
               >
-                Eliminar factura
+                Actualizar factura
               </button>
-            )}
+            ) : null}
+            {!readOnly ? (
+              deleteConfirmOpen ? (
+                <>
+                  <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">
+                    Esta accion elimina la factura y limpia su match.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    disabled={deleting}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete()}
+                    disabled={deleting}
+                    className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {deleting ? 'Eliminando...' : 'Eliminar factura'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
+                >
+                  Eliminar factura
+                </button>
+              )
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
@@ -2427,28 +2507,146 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
             >
               Cerrar
             </button>
-            <button
-              onClick={() => handleStatusChange('pendiente')}
-              disabled={deleting}
-              className={getStatusButtonStyles('pendiente', 'px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70')}
-            >
-              Pendiente
-            </button>
-            <button
-              onClick={() => handleStatusChange('rechazada')}
-              disabled={deleting}
-              className={getStatusButtonStyles('rechazada', 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70')}
-            >
-              Rechazar Factura
-            </button>
-            <button
-              onClick={() => handleStatusChange('validada')}
-              disabled={deleting}
-              className={getStatusButtonStyles('validada', 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70')}
-            >
-              Aprobar Factura
+            {!readOnly ? (
+              <>
+                <button
+                  onClick={() => handleStatusChange('pendiente')}
+                  disabled={deleting}
+                  className={getStatusButtonStyles('pendiente', 'px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70')}
+                >
+                  Pendiente
+                </button>
+                <button
+                  onClick={() => handleStatusChange('rechazada')}
+                  disabled={deleting}
+                  className={getStatusButtonStyles('rechazada', 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70')}
+                >
+                  Rechazar Factura
+                </button>
+                <button
+                  onClick={() => handleStatusChange('validada')}
+                  disabled={deleting}
+                  className={getStatusButtonStyles('validada', 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70')}
+                >
+                  Aprobar Factura
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MatchFacturaModal({ consumo, factura, onClose, onViewFactura }: MatchFacturaModalProps) {
+  useEscapeKey(onClose);
+
+  const facturaStatusLabel = factura
+    ? {
+      pendiente: 'Pendiente',
+      validada: 'Validada',
+      rechazada: 'Rechazada',
+      conciliada: 'Conciliada',
+    }[factura.status]
+    : 'Sin factura';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-200 bg-white px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Ver Match de Factura</h2>
+              <p className="mt-1 text-sm text-slate-500">Resumen del consumo y la factura relacionada.</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
+        </div>
+
+        <div className="grid gap-4 p-5 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">Efectifintech</p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <p className="text-xs text-slate-500">Comercio</p>
+                <p className="text-sm font-semibold text-slate-900">{consumo.comercio}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-slate-500">Fecha</p>
+                  <p className="text-sm text-slate-900">{consumo.fecha}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500">Monto</p>
+                  <p className="text-sm font-semibold text-slate-900">${consumo.monto.toLocaleString()}</p>
+                </div>
+              </div>
+              {consumo.userName ? (
+                <div>
+                  <p className="text-xs text-slate-500">Usuario</p>
+                  <p className="text-sm text-slate-900">{consumo.userName}</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-700">Factura</p>
+            {factura ? (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <p className="text-xs text-emerald-700/70">Emisor</p>
+                  <p className="text-sm font-semibold text-slate-900">{factura.razonSocial}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-emerald-700/70">Fecha</p>
+                    <p className="text-sm text-slate-900">{factura.fecha}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-emerald-700/70">Total</p>
+                    <p className="text-sm font-semibold text-slate-900">${factura.total.toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-emerald-700/70">Folio</p>
+                    <p className="text-sm text-slate-900">{factura.folio}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-emerald-700/70">Estado</p>
+                    <p className="text-sm text-slate-900">{facturaStatusLabel}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-slate-600">No hay factura relacionada para este consumo.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+          >
+            Cerrar
+          </button>
+          {factura ? (
+            <button
+              type="button"
+              onClick={() => onViewFactura(factura.id)}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Ver factura
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
