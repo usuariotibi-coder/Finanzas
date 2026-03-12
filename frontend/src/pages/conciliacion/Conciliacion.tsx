@@ -238,25 +238,27 @@ const getMerchantSimilarity = (left: string, right: string) => {
 const getFacturaMerchantTexts = (factura: Factura) => {
   const values = [
     factura.razonSocial,
-    factura.validacionCFDI?.pdfDetectedRazonSocial || '',
-    factura.validacionCFDI?.pdfPreviewText || '',
     ...factura.conceptos.map((concepto) => concepto.descripcion),
   ];
   return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
 };
 
-const getFacturaTotalCandidates = (factura: Factura) => {
-  const values = [factura.total];
-  const pdfTotal = Number(factura.validacionCFDI?.pdfDetectedTotal);
-  if (Number.isFinite(pdfTotal) && pdfTotal > 0 && !values.some((value) => Math.abs(value - pdfTotal) <= AMOUNT_MATCH_EPSILON)) {
-    values.push(pdfTotal);
-  }
-  return values;
+const getFacturaPdfMerchantTexts = (factura: Factura) => {
+  const values = [
+    factura.validacionCFDI?.pdfDetectedRazonSocial || '',
+    factura.validacionCFDI?.pdfPreviewText || '',
+  ];
+  return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
 };
 
-const getFacturaMerchantScore = (factura: Factura, row: StatementRow) => {
-  const rowTexts = [row.comercio, `${row.comercio} ${row.concepto}`.trim()].filter(Boolean);
-  const facturaTexts = getFacturaMerchantTexts(factura);
+const getFacturaXmlTotalCandidate = (factura: Factura) => factura.total;
+
+const getFacturaPdfTotalCandidate = (factura: Factura) => {
+  const pdfTotal = Number(factura.validacionCFDI?.pdfDetectedTotal);
+  return Number.isFinite(pdfTotal) && pdfTotal > 0 ? pdfTotal : undefined;
+};
+
+const getBestMerchantScore = (rowTexts: string[], facturaTexts: string[]) => {
   let bestScore = 0;
 
   for (const rowText of rowTexts) {
@@ -269,6 +271,16 @@ const getFacturaMerchantScore = (factura: Factura, row: StatementRow) => {
   }
 
   return bestScore;
+};
+
+const getFacturaMerchantScore = (factura: Factura, row: StatementRow) => {
+  const rowTexts = [row.comercio, `${row.comercio} ${row.concepto}`.trim()].filter(Boolean);
+  const xmlScore = getBestMerchantScore(rowTexts, getFacturaMerchantTexts(factura));
+  if (xmlScore >= 0.35) {
+    return xmlScore;
+  }
+  const pdfScore = getBestMerchantScore(rowTexts, getFacturaPdfMerchantTexts(factura));
+  return Math.max(xmlScore, pdfScore);
 };
 
 const getFacturaPdfDateScore = (factura: Factura, fechaEstadoCuenta: string) => {
@@ -312,8 +324,15 @@ const getFacturaMatchCandidate = (
   const dateDistance = diffDays(factura.fecha, row.fecha);
   const merchantScore = getFacturaMerchantScore(factura, row);
   const pdfDateScore = getFacturaPdfDateScore(factura, row.fecha);
-  const amountCandidates = getFacturaTotalCandidates(factura)
-    .map((candidateTotal) => {
+  const xmlTotal = getFacturaXmlTotalCandidate(factura);
+  const amountCandidates: Array<{
+    candidateTotal: number;
+    difference: number;
+    matchType: 'exacto' | 'propina';
+    tipRatio: number;
+  }> = [];
+
+  const buildAmountCandidate = (candidateTotal: number) => {
       const difference = roundMoney(row.monto - candidateTotal);
       if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
         return {
@@ -336,39 +355,31 @@ const getFacturaMatchCandidate = (
         matchType: 'propina' as const,
         tipRatio,
       };
-    })
-    .filter((candidate): candidate is {
-      candidateTotal: number;
-      difference: number;
-      matchType: 'exacto' | 'propina';
-      tipRatio: number;
-    } => Boolean(candidate))
-    .sort((left, right) => {
-      if (left.matchType !== right.matchType) {
-        return left.matchType === 'exacto' ? -1 : 1;
-      }
-      return left.difference - right.difference;
-    });
+  };
 
-  const hasExactAmount = amountCandidates.some((candidate) => candidate.matchType === 'exacto');
-  const maxAllowedDateDistance = hasExactAmount && merchantScore >= 0.55
-    ? 30
-    : pdfDateScore >= 0.85
-      ? 15
-      : pdfDateScore >= 0.65 || merchantScore >= 0.6
-        ? 10
-        : merchantScore >= 0.35
-          ? 7
-          : 3;
-  if (dateDistance > maxAllowedDateDistance) {
-    return null;
+  const xmlCandidate = buildAmountCandidate(xmlTotal);
+  if (xmlCandidate) {
+    amountCandidates.push(xmlCandidate);
+  } else {
+    const pdfTotal = getFacturaPdfTotalCandidate(factura);
+    if (typeof pdfTotal === 'number' && Math.abs(pdfTotal - xmlTotal) > AMOUNT_MATCH_EPSILON) {
+      const pdfCandidate = buildAmountCandidate(pdfTotal);
+      if (pdfCandidate) {
+        amountCandidates.push(pdfCandidate);
+      }
+    }
   }
 
   if (amountCandidates.length === 0) {
     return null;
   }
 
-  const bestAmountCandidate = amountCandidates[0];
+  const bestAmountCandidate = amountCandidates.sort((left, right) => {
+    if (left.matchType !== right.matchType) {
+      return left.matchType === 'exacto' ? -1 : 1;
+    }
+    return left.difference - right.difference;
+  })[0];
   return {
     factura,
     propinaDetectada: bestAmountCandidate.difference,

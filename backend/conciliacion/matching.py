@@ -127,11 +127,8 @@ def get_pdf_date_score(factura: Factura, consumo: Consumo) -> float:
 
 
 def get_factura_merchant_texts(factura: Factura) -> list[str]:
-    validacion = factura.validacion_cfdi or {}
     values = [
         factura.razon_social,
-        validacion.get("pdfDetectedRazonSocial", ""),
-        validacion.get("pdfPreviewText", ""),
     ]
     for concepto in factura.conceptos or []:
         if isinstance(concepto, dict):
@@ -139,23 +136,31 @@ def get_factura_merchant_texts(factura: Factura) -> list[str]:
     return list({value.strip() for value in values if str(value).strip()})
 
 
-def get_factura_total_candidates(factura: Factura) -> list[Decimal]:
+def get_factura_pdf_merchant_texts(factura: Factura) -> list[str]:
     validacion = factura.validacion_cfdi or {}
-    candidates = [Decimal(factura.total)]
+    values = [
+        validacion.get("pdfDetectedRazonSocial", ""),
+        validacion.get("pdfPreviewText", ""),
+    ]
+    return list({value.strip() for value in values if str(value).strip()})
+
+
+def get_xml_total_candidate(factura: Factura) -> Decimal:
+    return Decimal(factura.total)
+
+
+def get_pdf_total_candidate(factura: Factura) -> Decimal | None:
+    validacion = factura.validacion_cfdi or {}
     pdf_total = validacion.get("pdfDetectedTotal")
-    if pdf_total not in (None, ""):
-        try:
-            decimal_total = Decimal(str(pdf_total))
-            if decimal_total not in candidates:
-                candidates.append(decimal_total)
-        except Exception:
-            pass
-    return candidates
+    if pdf_total in (None, ""):
+        return None
+    try:
+        return Decimal(str(pdf_total))
+    except Exception:
+        return None
 
 
-def get_merchant_score(factura: Factura, consumo: Consumo) -> float:
-    row_texts = [consumo.comercio, f"{consumo.comercio} {consumo.concepto}".strip()]
-    factura_texts = get_factura_merchant_texts(factura)
+def _get_best_merchant_score(row_texts: list[str], factura_texts: list[str]) -> float:
     best_score = 0.0
     for row_text in row_texts:
         for factura_text in factura_texts:
@@ -163,6 +168,15 @@ def get_merchant_score(factura: Factura, consumo: Consumo) -> float:
             if best_score >= 0.999:
                 return best_score
     return best_score
+
+
+def get_merchant_score(factura: Factura, consumo: Consumo) -> float:
+    row_texts = [consumo.comercio, f"{consumo.comercio} {consumo.concepto}".strip()]
+    xml_score = _get_best_merchant_score(row_texts, get_factura_merchant_texts(factura))
+    if xml_score >= 0.35:
+        return xml_score
+    pdf_score = _get_best_merchant_score(row_texts, get_factura_pdf_merchant_texts(factura))
+    return max(xml_score, pdf_score)
 
 
 @dataclass
@@ -201,9 +215,16 @@ class ConsumoMatchDiagnostic:
 
 def _build_amount_diagnostics(factura: Factura, consumo: Consumo) -> list[AmountMatchDiagnostic]:
     diagnostics: list[AmountMatchDiagnostic] = []
-    xml_total = Decimal(factura.total)
-    for candidate_total in get_factura_total_candidates(factura):
-        source = "pdf_total" if candidate_total != xml_total else "xml_total"
+    xml_total = get_xml_total_candidate(factura)
+    amount_sources: list[tuple[str, Decimal]] = [("xml_total", xml_total)]
+    xml_difference = (Decimal(consumo.monto) - xml_total).quantize(Decimal("0.01"))
+    xml_exact = abs(xml_difference) <= AMOUNT_MATCH_EPSILON
+    xml_tip = xml_difference >= 0 and xml_total > 0 and (xml_difference / xml_total) <= MAX_TIP_RATIO
+    pdf_total = get_pdf_total_candidate(factura)
+    if not (xml_exact or xml_tip) and pdf_total is not None and pdf_total != xml_total:
+        amount_sources.append(("pdf_total", pdf_total))
+
+    for source, candidate_total in amount_sources:
         difference = (Decimal(consumo.monto) - candidate_total).quantize(Decimal("0.01"))
         if abs(difference) <= AMOUNT_MATCH_EPSILON:
             diagnostics.append(
@@ -245,15 +266,7 @@ def _build_amount_diagnostics(factura: Factura, consumo: Consumo) -> list[Amount
 
 
 def _get_max_date_distance(has_exact_amount: bool, merchant_score: float, pdf_date_score: float) -> int:
-    if has_exact_amount and merchant_score >= 0.55:
-        return 30
-    if pdf_date_score >= 0.85:
-        return 15
-    if pdf_date_score >= 0.65 or merchant_score >= 0.6:
-        return 10
-    if merchant_score >= 0.35:
-        return 7
-    return 3
+    return 9999
 
 
 def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchDiagnostic:
@@ -265,10 +278,6 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
     max_date_distance = _get_max_date_distance(has_exact_amount, merchant_score, pdf_date_score)
     rejection_reasons: list[str] = []
 
-    if date_distance > max_date_distance:
-        rejection_reasons.append(
-            f"fecha fuera de rango ({date_distance}d > {max_date_distance}d permitidos)"
-        )
     if not any(item.accepted for item in amount_diagnostics):
         rejection_reasons.append("monto no coincide con total XML/PDF dentro de tolerancia")
     if merchant_score < 0.35 and pdf_date_score < 0.65:
@@ -280,7 +289,7 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
         item for item in amount_diagnostics
         if item.accepted and item.match_type in ("exacto", "propina")
     ]
-    accepted = date_distance <= max_date_distance and len(accepted_amounts) > 0
+    accepted = len(accepted_amounts) > 0
     match_result: ConsumoMatchResult | None = None
     if accepted:
         rejection_reasons = []

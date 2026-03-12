@@ -60,8 +60,8 @@ class ConciliacionMatchingTests(TestCase):
         self.assertIsNotNone(matched_consumo)
         self.assertEqual(consumo.factura_id, factura.id)
         self.assertTrue(consumo.matched)
-        self.assertEqual(consumo.propina_detectada, Decimal('0.00'))
-        self.assertEqual(consumo.propina_porcentaje, Decimal('0.00'))
+        self.assertEqual(consumo.propina_detectada, Decimal('30.00'))
+        self.assertEqual(consumo.propina_porcentaje, Decimal('30.00'))
         self.assertTrue(factura.match_consumo)
 
     def test_extract_pdf_structured_hints_detects_key_fields(self):
@@ -146,7 +146,41 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(len(diagnostics), 1)
         self.assertEqual(diagnostics[0].consumo.id, consumo.id)
         self.assertTrue(diagnostics[0].accepted)
-        self.assertEqual(diagnostics[0].match_result.match_type, 'exacto')
+        self.assertEqual(diagnostics[0].match_result.match_type, 'propina')
+
+    def test_reconcile_factura_does_not_block_match_by_invoice_date_distance(self):
+        consumo = Consumo.objects.create(
+            user=self.user,
+            fecha='2026-03-25',
+            comercio='CADENA COMERCIAL OXXO',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Snack',
+            monto=Decimal('119.01'),
+            categoria='Alimentos',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='FAC-FECHA',
+            uuid='UUID-FECHA',
+            rfc='XAXX010101000',
+            razon_social='CADENA COMERCIAL OXXO',
+            fecha='2026-02-16',
+            subtotal=Decimal('119.01'),
+            iva=Decimal('0.00'),
+            total=Decimal('119.01'),
+            forma_pago='01',
+            metodo_pago='PUE',
+        )
+
+        matched_consumo = reconcile_factura_with_consumos(factura)
+        consumo.refresh_from_db()
+
+        self.assertIsNotNone(matched_consumo)
+        self.assertEqual(consumo.factura_id, factura.id)
+        self.assertTrue(consumo.matched)
 
 class FacturaViewSetTests(TestCase):
     def setUp(self):
