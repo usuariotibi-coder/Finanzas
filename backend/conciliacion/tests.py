@@ -4,9 +4,11 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import Department, User
-from conciliacion.matching import reconcile_factura_with_consumos
+from conciliacion.matching import diagnose_factura_candidates, reconcile_factura_with_consumos
 from conciliacion.models import Consumo, Factura
 from conciliacion.pdf_parser import extract_pdf_structured_hints
+
+
 class ConciliacionMatchingTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -80,6 +82,45 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(hints.get('pdfDetectedUuid'), '071DC4F2-2EAE-522C-9A1B-1234567890AB')
         self.assertEqual(hints.get('pdfDetectedTotal'), 414.0)
         self.assertEqual(hints.get('pdfDateHints'), ['2026-02-16'])
+
+    def test_diagnose_factura_candidates_reports_match_reasons(self):
+        consumo = Consumo.objects.create(
+            user=self.user,
+            fecha='2026-03-10',
+            comercio='Tacos Don Pepe Centro',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Alimentos',
+            monto=Decimal('130.00'),
+            categoria='Alimentos',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='FAC-DIAG',
+            uuid='UUID-DIAG',
+            rfc='XAXX010101000',
+            razon_social='Servicios Alimenticios del Norte',
+            fecha='2026-03-02',
+            subtotal=Decimal('100.00'),
+            iva=Decimal('0.00'),
+            total=Decimal('100.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+            validacion_cfdi={
+                'pdfDetectedTotal': 130.0,
+                'pdfDetectedRazonSocial': 'Tacos Don Pepe Centro',
+                'pdfDateHints': ['2026-03-10'],
+            },
+        )
+
+        diagnostics = diagnose_factura_candidates(factura, limit=3)
+
+        self.assertEqual(len(diagnostics), 1)
+        self.assertEqual(diagnostics[0].consumo.id, consumo.id)
+        self.assertTrue(diagnostics[0].accepted)
+        self.assertEqual(diagnostics[0].match_result.match_type, 'exacto')
 
 class FacturaViewSetTests(TestCase):
     def setUp(self):

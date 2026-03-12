@@ -176,52 +176,155 @@ class ConsumoMatchResult:
     pdf_date_score: float
 
 
-def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchResult | None:
+@dataclass
+class AmountMatchDiagnostic:
+    source: str
+    candidate_total: Decimal
+    accepted: bool
+    match_type: str
+    difference: Decimal
+    tip_percentage: Decimal
+
+
+@dataclass
+class ConsumoMatchDiagnostic:
+    consumo: Consumo
+    date_distance: int
+    merchant_score: float
+    pdf_date_score: float
+    max_date_distance: int
+    amount_diagnostics: list[AmountMatchDiagnostic]
+    accepted: bool
+    rejection_reasons: list[str]
+    match_result: ConsumoMatchResult | None
+
+
+def _build_amount_diagnostics(factura: Factura, consumo: Consumo) -> list[AmountMatchDiagnostic]:
+    diagnostics: list[AmountMatchDiagnostic] = []
+    xml_total = Decimal(factura.total)
+    for candidate_total in get_factura_total_candidates(factura):
+        source = "pdf_total" if candidate_total != xml_total else "xml_total"
+        difference = (Decimal(consumo.monto) - candidate_total).quantize(Decimal("0.01"))
+        if abs(difference) <= AMOUNT_MATCH_EPSILON:
+            diagnostics.append(
+                AmountMatchDiagnostic(
+                    source=source,
+                    candidate_total=candidate_total,
+                    accepted=True,
+                    match_type="exacto",
+                    difference=Decimal("0.00"),
+                    tip_percentage=Decimal("0.00"),
+                )
+            )
+            continue
+        if difference < 0 or candidate_total <= 0:
+            diagnostics.append(
+                AmountMatchDiagnostic(
+                    source=source,
+                    candidate_total=candidate_total,
+                    accepted=False,
+                    match_type="descartado",
+                    difference=difference,
+                    tip_percentage=Decimal("0.00"),
+                )
+            )
+            continue
+
+        tip_ratio = difference / candidate_total
+        diagnostics.append(
+            AmountMatchDiagnostic(
+                source=source,
+                candidate_total=candidate_total,
+                accepted=tip_ratio <= MAX_TIP_RATIO,
+                match_type="propina" if tip_ratio <= MAX_TIP_RATIO else "descartado",
+                difference=difference,
+                tip_percentage=(tip_ratio * Decimal("100")).quantize(Decimal("0.01")),
+            )
+        )
+    return diagnostics
+
+
+def _get_max_date_distance(has_exact_amount: bool, merchant_score: float, pdf_date_score: float) -> int:
+    if has_exact_amount and merchant_score >= 0.55:
+        return 30
+    if pdf_date_score >= 0.85:
+        return 15
+    if pdf_date_score >= 0.65 or merchant_score >= 0.6:
+        return 10
+    if merchant_score >= 0.35:
+        return 7
+    return 3
+
+
+def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchDiagnostic:
     date_distance = diff_days(factura.fecha, consumo.fecha)
     merchant_score = get_merchant_score(factura, consumo)
     pdf_date_score = get_pdf_date_score(factura, consumo)
-
-    exact_amount_candidates = []
-    tip_amount_candidates = []
-    for candidate_total in get_factura_total_candidates(factura):
-        difference = Decimal(consumo.monto) - candidate_total
-        if abs(difference) <= AMOUNT_MATCH_EPSILON:
-            exact_amount_candidates.append(candidate_total)
-            continue
-        if difference < 0 or candidate_total <= 0:
-            continue
-        tip_ratio = difference / candidate_total
-        if tip_ratio > MAX_TIP_RATIO:
-            continue
-        tip_amount_candidates.append((difference.quantize(Decimal("0.01")), candidate_total))
-
-    has_exact_amount = len(exact_amount_candidates) > 0
-
-    if has_exact_amount and merchant_score >= 0.55:
-        max_date_distance = 30
-    elif pdf_date_score >= 0.85:
-        max_date_distance = 15
-    elif pdf_date_score >= 0.65 or merchant_score >= 0.6:
-        max_date_distance = 10
-    elif merchant_score >= 0.35:
-        max_date_distance = 7
-    else:
-        max_date_distance = 3
+    amount_diagnostics = _build_amount_diagnostics(factura, consumo)
+    has_exact_amount = any(item.accepted and item.match_type == "exacto" for item in amount_diagnostics)
+    max_date_distance = _get_max_date_distance(has_exact_amount, merchant_score, pdf_date_score)
+    rejection_reasons: list[str] = []
 
     if date_distance > max_date_distance:
+        rejection_reasons.append(
+            f"fecha fuera de rango ({date_distance}d > {max_date_distance}d permitidos)"
+        )
+    if not any(item.accepted for item in amount_diagnostics):
+        rejection_reasons.append("monto no coincide con total XML/PDF dentro de tolerancia")
+    if merchant_score < 0.35 and pdf_date_score < 0.65:
+        rejection_reasons.append(
+            f"comercio/de fecha debiles (merchant={merchant_score:.2f}, pdf_date={pdf_date_score:.2f})"
+        )
+
+    accepted_amounts = [
+        item for item in amount_diagnostics
+        if item.accepted and item.match_type in ("exacto", "propina")
+    ]
+    accepted = date_distance <= max_date_distance and len(accepted_amounts) > 0
+    match_result: ConsumoMatchResult | None = None
+    if accepted:
+        rejection_reasons = []
+        best_amount = sorted(
+            accepted_amounts,
+            key=lambda item: (0 if item.match_type == "exacto" else 1, item.difference)
+        )[0]
+        match_result = ConsumoMatchResult(
+            consumo=consumo,
+            propina_detectada=Decimal("0.00") if best_amount.match_type == "exacto" else best_amount.difference,
+            propina_porcentaje=best_amount.tip_percentage,
+            match_type=best_amount.match_type,
+            date_distance=date_distance,
+            merchant_score=merchant_score,
+            pdf_date_score=pdf_date_score,
+        )
+
+    return ConsumoMatchDiagnostic(
+        consumo=consumo,
+        date_distance=date_distance,
+        merchant_score=merchant_score,
+        pdf_date_score=pdf_date_score,
+        max_date_distance=max_date_distance,
+        amount_diagnostics=amount_diagnostics,
+        accepted=accepted,
+        rejection_reasons=rejection_reasons,
+        match_result=match_result,
+    )
+
+
+def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchResult | None:
+    diagnostic = diagnose_consumo_candidate(factura, consumo)
+    if not diagnostic.accepted:
         return None
 
-    amount_matches: list[tuple[Decimal, str, Decimal]] = []
-    for candidate_total in exact_amount_candidates:
-        amount_matches.append((Decimal("0.00"), "exacto", candidate_total))
-    for difference, candidate_total in tip_amount_candidates:
-        amount_matches.append((difference, "propina", candidate_total))
-
-    if not amount_matches:
-        return None
-
+    amount_matches = [
+        item for item in diagnostic.amount_diagnostics
+        if item.accepted and item.match_type in ("exacto", "propina")
+    ]
     difference, match_type, matched_total = sorted(
-        amount_matches,
+        [
+            (item.difference, item.match_type, item.candidate_total)
+            for item in amount_matches
+        ],
         key=lambda item: (0 if item[1] == "exacto" else 1, item[0])
     )[0]
 
@@ -231,9 +334,9 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
             propina_detectada=Decimal("0.00"),
             propina_porcentaje=Decimal("0.00"),
             match_type="exacto",
-            date_distance=date_distance,
-            merchant_score=merchant_score,
-            pdf_date_score=pdf_date_score,
+            date_distance=diagnostic.date_distance,
+            merchant_score=diagnostic.merchant_score,
+            pdf_date_score=diagnostic.pdf_date_score,
         )
 
     tip_ratio = difference / matched_total if matched_total > 0 else Decimal("0")
@@ -243,9 +346,9 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
         propina_detectada=difference,
         propina_porcentaje=(tip_ratio * Decimal("100")).quantize(Decimal("0.01")),
         match_type="propina",
-        date_distance=date_distance,
-        merchant_score=merchant_score,
-        pdf_date_score=pdf_date_score,
+        date_distance=diagnostic.date_distance,
+        merchant_score=diagnostic.merchant_score,
+        pdf_date_score=diagnostic.pdf_date_score,
     )
 
 
@@ -287,6 +390,23 @@ def find_matching_consumo_for_factura(factura: Factura) -> ConsumoMatchResult | 
     if len(candidates) > 1 and get_match_tuple(candidates[0]) != get_match_tuple(candidates[1]):
         return candidates[0]
     return None
+
+
+def diagnose_factura_candidates(factura: Factura, limit: int = 5) -> list[ConsumoMatchDiagnostic]:
+    diagnostics = [
+        diagnose_consumo_candidate(factura, consumo)
+        for consumo in get_candidate_consumos(factura)
+    ]
+    diagnostics.sort(
+        key=lambda item: (
+            0 if item.accepted else 1,
+            0 if item.match_result and item.match_result.match_type == "exacto" else 1,
+            100 - round(item.pdf_date_score * 100),
+            100 - round(item.merchant_score * 100),
+            item.date_distance,
+        )
+    )
+    return diagnostics[:limit]
 
 
 def reconcile_factura_with_consumos(factura: Factura) -> Consumo | None:
