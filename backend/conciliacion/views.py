@@ -62,9 +62,15 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
 
 class ConsumoViewSet(viewsets.ModelViewSet):
-    queryset = Consumo.objects.select_related('user', 'viatico', 'factura').order_by('-created_at')
     serializer_class = ConsumoSerializer
     permission_classes = [IsAdminOrPMOrFinanceOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Consumo.objects.select_related('user', 'viatico', 'factura').order_by('-created_at')
+        if user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
+            return queryset
+        return queryset.filter(user=user)
 
 
 class ConciliacionViewSet(viewsets.ModelViewSet):

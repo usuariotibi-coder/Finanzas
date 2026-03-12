@@ -244,6 +244,8 @@ const readStatementRows = async (file: File): Promise<StatementRow[]> => {
 
 export default function Conciliacion() {
   const { user } = useAuth();
+  const restrictToCurrentUser = user?.role === 'staff';
+  const currentUserId = user ? String(user.id) : '';
   const statementInputRef = useRef<HTMLInputElement | null>(null);
   const [facturas, setFacturas] = useLocalStorageState<Factura[]>('conciliacion:facturas', []);
   const [consumos, setConsumos] = useLocalStorageState<Consumo[]>('conciliacion:consumos', []);
@@ -295,8 +297,10 @@ export default function Conciliacion() {
     const parts = value.split('-');
     return parts.length >= 2 ? parts[1] : '';
   };
+  const effectiveSelectedUsuario = restrictToCurrentUser && currentUserId ? currentUserId : selectedUsuario;
   const filtraPorMes = (fecha: string) => selectedMes === 'todos' || getMesKey(fecha) === selectedMes;
-  const filtraPorUsuario = (userId?: string | null) => selectedUsuario === 'todos' || String(userId || '') === selectedUsuario;
+  const filtraPorUsuario = (userId?: string | null) =>
+    effectiveSelectedUsuario === 'todos' || String(userId || '') === effectiveSelectedUsuario;
   const mesesDisponibles = Array.from(
     new Set(
       [...facturas, ...consumos, ...ticketsAMEX]
@@ -730,18 +734,24 @@ export default function Conciliacion() {
                     </option>
                   ))}
                 </select>
-                <select
-                  value={selectedUsuario}
-                  onChange={(e) => setSelectedUsuario(e.target.value)}
-                  className="min-w-[170px] px-2.5 py-1.5 text-[11px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="todos">Todos los usuarios</option>
-                  {usuariosDisponibles.map((usuarioOption) => (
-                    <option key={usuarioOption.id} value={usuarioOption.id}>
-                      {usuarioOption.label}
-                    </option>
-                  ))}
-                </select>
+                {restrictToCurrentUser ? (
+                  <div className="min-w-[170px] px-2.5 py-1.5 text-[11px] border border-gray-200 rounded-lg bg-gray-50 text-gray-700">
+                    Usuario: {user?.full_name || 'Actual'}
+                  </div>
+                ) : (
+                  <select
+                    value={selectedUsuario}
+                    onChange={(e) => setSelectedUsuario(e.target.value)}
+                    className="min-w-[170px] px-2.5 py-1.5 text-[11px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <option value="todos">Todos los usuarios</option>
+                    {usuariosDisponibles.map((usuarioOption) => (
+                      <option key={usuarioOption.id} value={usuarioOption.id}>
+                        {usuarioOption.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
 
