@@ -108,7 +108,7 @@ type FacturaMatchResult = {
   factura: Factura;
   propinaDetectada: number;
   propinaPorcentaje: number;
-  matchType: 'exacto' | 'propina';
+  matchType: 'exacto' | 'propina' | 'comercio';
   dateDistance: number;
   merchantScore: number;
   pdfDateScore: number;
@@ -116,6 +116,9 @@ type FacturaMatchResult = {
 
 const AMOUNT_MATCH_EPSILON = 0.01;
 const MAX_TIP_PERCENTAGE = 0.3;
+const MERCHANT_FALLBACK_MIN_SCORE = 0.45;
+const MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 45;
+const MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = 1.0;
 const MERCHANT_STOPWORDS = new Set([
   'sa',
   'cv',
@@ -227,12 +230,31 @@ const getMerchantSimilarity = (left: string, right: string) => {
   }
 
   const sharedCount = leftTokens.filter((token) => rightTokens.includes(token)).length;
-  if (sharedCount === 0) {
+  let effectiveSharedCount = sharedCount;
+  if (effectiveSharedCount === 0) {
+    const usedRight = new Set<string>();
+    for (const leftToken of leftTokens) {
+      for (const rightToken of rightTokens) {
+        if (usedRight.has(rightToken)) {
+          continue;
+        }
+        if (leftToken.length < 4 || rightToken.length < 4) {
+          continue;
+        }
+        if (leftToken.startsWith(rightToken) || rightToken.startsWith(leftToken)) {
+          effectiveSharedCount += 1;
+          usedRight.add(rightToken);
+          break;
+        }
+      }
+    }
+  }
+  if (effectiveSharedCount === 0) {
     return 0;
   }
 
-  const overlap = sharedCount / Math.min(leftTokens.length, rightTokens.length);
-  const coverage = sharedCount / Math.max(leftTokens.length, rightTokens.length);
+  const overlap = effectiveSharedCount / Math.min(leftTokens.length, rightTokens.length);
+  const coverage = effectiveSharedCount / Math.max(leftTokens.length, rightTokens.length);
   return Number(((overlap * 0.7) + (coverage * 0.3)).toFixed(4));
 };
 
@@ -310,7 +332,7 @@ const getFacturaPdfDateScore = (factura: Factura, fechaEstadoCuenta: string) => 
 };
 
 const getFacturaMatchTuple = (match: FacturaMatchResult) => [
-  match.matchType === 'exacto' ? 0 : 1,
+  match.matchType === 'exacto' ? 0 : match.matchType === 'propina' ? 1 : 2,
   100 - Math.round(match.pdfDateScore * 100),
   100 - Math.round(match.merchantScore * 100),
   match.dateDistance,
@@ -372,6 +394,26 @@ const getFacturaMatchCandidate = (
   }
 
   if (amountCandidates.length === 0) {
+    const pdfTotal = getFacturaPdfTotalCandidate(factura);
+    const fallbackTotal = typeof pdfTotal === 'number' ? pdfTotal : xmlTotal;
+    const fallbackDifference = Math.abs(roundMoney(row.monto - fallbackTotal));
+    const fallbackRatio = fallbackTotal > 0 ? (fallbackDifference / fallbackTotal) : Number.POSITIVE_INFINITY;
+    const fallbackDateOk = pdfDateScore >= 0.65 || dateDistance <= MERCHANT_FALLBACK_MAX_DATE_DISTANCE;
+    if (
+      merchantScore >= MERCHANT_FALLBACK_MIN_SCORE
+      && fallbackDateOk
+      && fallbackRatio <= MERCHANT_FALLBACK_MAX_AMOUNT_RATIO
+    ) {
+      return {
+        factura,
+        propinaDetectada: 0,
+        propinaPorcentaje: 0,
+        matchType: 'comercio',
+        dateDistance,
+        merchantScore,
+        pdfDateScore,
+      };
+    }
     return null;
   }
 

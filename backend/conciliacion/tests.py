@@ -183,6 +183,46 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(consumo.factura_id, factura.id)
         self.assertTrue(consumo.matched)
 
+    def test_reconcile_factura_allows_fallback_match_by_merchant_when_amount_is_off(self):
+        consumo = Consumo.objects.create(
+            user=self.user,
+            fecha='2026-02-08',
+            comercio='FARM GUAD SUC 594 TAMOROS TAM M EX',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Farmacia',
+            monto=Decimal('366.50'),
+            categoria='Salud',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='AWW30431',
+            uuid='F0154552-FF7A-48DC-AC3A-F802D96C96A5',
+            rfc='FGU830930PD3',
+            razon_social='FARMACIA GUADALAJARA',
+            fecha='2026-02-26',
+            subtotal=Decimal('206.26'),
+            iva=Decimal('1.74'),
+            total=Decimal('208.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+            validacion_cfdi={
+                'pdfDetectedTotal': 206.26,
+                'pdfDateHints': ['2026-02-26'],
+            },
+        )
+
+        matched_consumo = reconcile_factura_with_consumos(factura)
+        consumo.refresh_from_db()
+
+        self.assertIsNotNone(matched_consumo)
+        self.assertEqual(consumo.factura_id, factura.id)
+        self.assertTrue(consumo.matched)
+        self.assertEqual(consumo.propina_detectada, Decimal('0.00'))
+        self.assertEqual(consumo.propina_porcentaje, Decimal('0.00'))
+
 class FacturaViewSetTests(TestCase):
     def setUp(self):
         self.client = APIClient()

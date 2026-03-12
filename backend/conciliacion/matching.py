@@ -13,6 +13,9 @@ from .models import Consumo, Factura
 
 AMOUNT_MATCH_EPSILON = Decimal("0.01")
 MAX_TIP_RATIO = Decimal("0.30")
+MERCHANT_FALLBACK_MIN_SCORE = 0.45
+MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 45
+MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = Decimal("1.00")
 MERCHANT_STOPWORDS = {
     "sa",
     "de",
@@ -77,6 +80,19 @@ def get_merchant_similarity(left: str, right: str) -> float:
         return 0.0
 
     shared = len([token for token in left_tokens if token in right_tokens])
+    if shared == 0:
+        # Soft matching for abbreviated merchants: "farm guad" ~= "farmacia guadalajara"
+        used_right: set[str] = set()
+        for left_token in left_tokens:
+            for right_token in right_tokens:
+                if right_token in used_right:
+                    continue
+                if len(left_token) < 4 or len(right_token) < 4:
+                    continue
+                if left_token.startswith(right_token) or right_token.startswith(left_token):
+                    shared += 1
+                    used_right.add(right_token)
+                    break
     if shared == 0:
         return 0.0
 
@@ -306,6 +322,33 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
             merchant_score=merchant_score,
             pdf_date_score=pdf_date_score,
         )
+    else:
+        xml_total = get_xml_total_candidate(factura)
+        pdf_total = get_pdf_total_candidate(factura)
+        fallback_total = pdf_total if pdf_total is not None and pdf_total > 0 else xml_total
+        fallback_diff = abs((Decimal(consumo.monto) - fallback_total).quantize(Decimal("0.01")))
+        fallback_ratio = (
+            (fallback_diff / fallback_total).quantize(Decimal("0.0001"))
+            if fallback_total > 0
+            else Decimal("9999")
+        )
+        fallback_date_ok = pdf_date_score >= 0.65 or date_distance <= MERCHANT_FALLBACK_MAX_DATE_DISTANCE
+        if (
+            merchant_score >= MERCHANT_FALLBACK_MIN_SCORE
+            and fallback_date_ok
+            and fallback_ratio <= MERCHANT_FALLBACK_MAX_AMOUNT_RATIO
+        ):
+            accepted = True
+            rejection_reasons = []
+            match_result = ConsumoMatchResult(
+                consumo=consumo,
+                propina_detectada=Decimal("0.00"),
+                propina_porcentaje=Decimal("0.00"),
+                match_type="comercio",
+                date_distance=date_distance,
+                merchant_score=merchant_score,
+                pdf_date_score=pdf_date_score,
+            )
 
     return ConsumoMatchDiagnostic(
         consumo=consumo,
@@ -322,48 +365,15 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
 
 def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchResult | None:
     diagnostic = diagnose_consumo_candidate(factura, consumo)
-    if not diagnostic.accepted:
+    if not diagnostic.accepted or not diagnostic.match_result:
         return None
 
-    amount_matches = [
-        item for item in diagnostic.amount_diagnostics
-        if item.accepted and item.match_type in ("exacto", "propina")
-    ]
-    difference, match_type, matched_total = sorted(
-        [
-            (item.difference, item.match_type, item.candidate_total)
-            for item in amount_matches
-        ],
-        key=lambda item: (0 if item[1] == "exacto" else 1, item[0])
-    )[0]
-
-    if match_type == "exacto":
-        return ConsumoMatchResult(
-            consumo=consumo,
-            propina_detectada=Decimal("0.00"),
-            propina_porcentaje=Decimal("0.00"),
-            match_type="exacto",
-            date_distance=diagnostic.date_distance,
-            merchant_score=diagnostic.merchant_score,
-            pdf_date_score=diagnostic.pdf_date_score,
-        )
-
-    tip_ratio = difference / matched_total if matched_total > 0 else Decimal("0")
-
-    return ConsumoMatchResult(
-        consumo=consumo,
-        propina_detectada=difference,
-        propina_porcentaje=(tip_ratio * Decimal("100")).quantize(Decimal("0.01")),
-        match_type="propina",
-        date_distance=diagnostic.date_distance,
-        merchant_score=diagnostic.merchant_score,
-        pdf_date_score=diagnostic.pdf_date_score,
-    )
+    return diagnostic.match_result
 
 
 def get_match_tuple(match: ConsumoMatchResult) -> tuple[Any, ...]:
     return (
-        0 if match.match_type == "exacto" else 1,
+        0 if match.match_type == "exacto" else 1 if match.match_type == "propina" else 2,
         100 - round(match.pdf_date_score * 100),
         100 - round(match.merchant_score * 100),
         match.date_distance,
