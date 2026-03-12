@@ -7,6 +7,7 @@ import type { Factura, AlertaConciliacion, Consumo, TarjetaAMEX, TicketAMEX, Fac
 import {
   createConsumo,
   createFactura,
+  deleteFactura,
   fetchAmexTarjetas,
   syncCoreAppData,
   updateAmexTicket,
@@ -1604,6 +1605,43 @@ export default function Conciliacion() {
               window.alert(error instanceof Error ? error.message : 'No se pudo actualizar el estado de la factura.');
             }
           }}
+          onDelete={async (facturaId) => {
+            try {
+              await deleteFactura(facturaId);
+              setFacturas((prev) => prev.filter((item) => item.id !== facturaId));
+              setConsumos((prev) => prev.map((item) => (
+                item.facturaId === facturaId
+                  ? {
+                    ...item,
+                    facturaId: undefined,
+                    facturaPdfName: undefined,
+                    facturaXmlName: undefined,
+                    facturaNotas: undefined,
+                    matched: false,
+                    propinaDetectada: undefined,
+                    propinaPorcentaje: undefined,
+                  }
+                  : item
+              )));
+              setTicketsAMEX((prev) => prev.map((item) => (
+                item.facturaId === facturaId
+                  ? {
+                    ...item,
+                    facturaId: undefined,
+                    facturaPdfName: undefined,
+                    facturaXmlName: undefined,
+                    facturaNotas: undefined,
+                    matched: false,
+                  }
+                  : item
+              )));
+              setShowDetalleModal(false);
+              setSelectedFacturaId(null);
+              void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
+            } catch (error) {
+              window.alert(error instanceof Error ? error.message : 'No se pudo eliminar la factura.');
+            }
+          }}
         />
       )}
 
@@ -1817,6 +1855,7 @@ interface DetalleFacturaModalProps {
   consumos: Consumo[];
   onClose: () => void;
   onUpdateStatus: (facturaId: string, status: FacturaStatus) => Promise<void> | void;
+  onDelete: (facturaId: string) => Promise<void> | void;
 }
 
 interface SubirFacturaModalProps {
@@ -1838,7 +1877,7 @@ interface SubirFacturaModalProps {
   onSave: () => Promise<void> | void;
 }
 
-function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: DetalleFacturaModalProps) {
+function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDelete }: DetalleFacturaModalProps) {
   useEscapeKey(onClose);
 
   const [statusLocal, setStatusLocal] = useState(factura.status);
@@ -1853,6 +1892,8 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
   const [previewTipo, setPreviewTipo] = useState<'PDF' | 'XML' | null>(pdfPreviewUrl ? 'PDF' : xmlPreviewUrl ? 'XML' : null);
   const [xmlPreviewContent, setXmlPreviewContent] = useState('');
   const [xmlPreviewError, setXmlPreviewError] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (previewTipo !== 'XML' || !xmlPreviewUrl) {
@@ -1899,14 +1940,24 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
     onClose();
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(factura.id);
+    } finally {
+      setDeleting(false);
+      setDeleteConfirmOpen(false);
+    }
+  };
+
   const getStatusButtonStyles = (status: FacturaStatus, baseStyles: string) => {
     const isActive = statusLocal === status;
     return `${baseStyles}${isActive ? ' ring-2 ring-offset-1 ring-slate-300' : ''}`;
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-2 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-5xl w-full max-h-[calc(100dvh-1rem)] overflow-y-auto sm:max-h-[calc(100dvh-2rem)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-3 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-7xl w-full max-h-[calc(100dvh-1.5rem)] overflow-hidden">
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">Detalle de Factura - {factura.folio}</h2>
@@ -1918,7 +1969,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="grid grid-cols-1 gap-4 overflow-y-auto p-4 xl:grid-cols-2">
           {/* Información General */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Información General</h3>
@@ -1992,7 +2043,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
           {/* Conceptos */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Conceptos</h3>
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="max-h-48 overflow-auto border border-gray-200 rounded-lg">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
@@ -2125,7 +2176,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                   <iframe
                     title={`Vista previa PDF ${factura.folio || factura.id}`}
                     src={pdfPreviewUrl}
-                    className="h-[70vh] w-full bg-white"
+                    className="h-[42vh] min-h-[320px] w-full bg-white"
                   />
                 </div>
               ) : (
@@ -2133,7 +2184,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                   {xmlPreviewError ? (
                     <div className="px-4 py-6 text-sm text-rose-300">{xmlPreviewError}</div>
                   ) : xmlPreviewContent ? (
-                    <pre className="max-h-[70vh] overflow-auto px-4 py-4 text-xs leading-5 text-emerald-100">
+                    <pre className="max-h-[42vh] min-h-[320px] overflow-auto px-4 py-4 text-xs leading-5 text-emerald-100">
                       {xmlPreviewContent}
                     </pre>
                   ) : (
@@ -2146,31 +2197,69 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
 
         </div>
 
-        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
-            Cerrar
-          </button>
-          <button
-            onClick={() => handleStatusChange('pendiente')}
-            className={getStatusButtonStyles('pendiente', 'px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600')}
-          >
-            Pendiente
-          </button>
-          <button
-            onClick={() => handleStatusChange('rechazada')}
-            className={getStatusButtonStyles('rechazada', 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700')}
-          >
-            Rechazar Factura
-          </button>
-          <button
-            onClick={() => handleStatusChange('validada')}
-            className={getStatusButtonStyles('validada', 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700')}
-          >
-            Aprobar Factura
-          </button>
+        <div className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-2.5 backdrop-blur">
+          <div className="flex flex-wrap items-center gap-2">
+            {deleteConfirmOpen ? (
+              <>
+                <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">
+                  Esta accion elimina la factura y limpia su match.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  disabled={deleting}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={deleting}
+                  className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {deleting ? 'Eliminando...' : 'Eliminar factura'}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="rounded-lg border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
+              >
+                Eliminar factura
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              Cerrar
+            </button>
+            <button
+              onClick={() => handleStatusChange('pendiente')}
+              disabled={deleting}
+              className={getStatusButtonStyles('pendiente', 'px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-70')}
+            >
+              Pendiente
+            </button>
+            <button
+              onClick={() => handleStatusChange('rechazada')}
+              disabled={deleting}
+              className={getStatusButtonStyles('rechazada', 'px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70')}
+            >
+              Rechazar Factura
+            </button>
+            <button
+              onClick={() => handleStatusChange('validada')}
+              disabled={deleting}
+              className={getStatusButtonStyles('validada', 'px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70')}
+            >
+              Aprobar Factura
+            </button>
+          </div>
         </div>
       </div>
     </div>

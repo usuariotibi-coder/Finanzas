@@ -4,6 +4,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import Department, User
+from amex.models import TicketAMEX
 from conciliacion.matching import diagnose_factura_candidates, reconcile_factura_with_consumos
 from conciliacion.models import Consumo, Factura
 from conciliacion.pdf_parser import extract_pdf_structured_hints
@@ -232,3 +233,67 @@ class FacturaViewSetTests(TestCase):
         self.assertEqual(consumo.factura_id, factura.id)
         self.assertTrue(consumo.matched)
         self.assertTrue(factura.match_consumo)
+
+    def test_delete_factura_cleans_related_matches(self):
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='FAC-DELETE',
+            uuid='UUID-DELETE',
+            rfc='XAXX010101000',
+            razon_social='Office Depot Monterrey',
+            fecha='2026-03-12',
+            subtotal=Decimal('414.00'),
+            iva=Decimal('0.00'),
+            total=Decimal('414.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+            match_consumo=True,
+        )
+        consumo = Consumo.objects.create(
+            user=self.user,
+            factura=factura,
+            fecha='2026-03-12',
+            comercio='Office Depot Monterrey',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Papeleria',
+            monto=Decimal('414.00'),
+            categoria='Papeleria',
+            matched=True,
+            autorizado=False,
+            factura_pdf_name='ticket.pdf',
+            factura_xml_name='ticket.xml',
+        )
+        ticket = TicketAMEX.objects.create(
+            user=self.user,
+            factura=factura,
+            card_number='1001',
+            card_holder='Aldo Arteaga',
+            fecha='2026-03-12',
+            comercio='Office Depot Monterrey',
+            monto=Decimal('414.00'),
+            categoria='Papeleria',
+            cuenta_contable='5450',
+            pais_comercio='Mexico',
+            matched=True,
+            autorizado=False,
+            factura_pdf_name='ticket.pdf',
+            factura_xml_name='ticket.xml',
+            factura_notas='nota',
+        )
+
+        response = self.client.delete(f'/api/conciliacion/facturas/{factura.id}/')
+
+        self.assertEqual(response.status_code, 204, response.data)
+        self.assertFalse(Factura.objects.filter(id=factura.id).exists())
+        consumo.refresh_from_db()
+        ticket.refresh_from_db()
+        self.assertIsNone(consumo.factura_id)
+        self.assertFalse(consumo.matched)
+        self.assertEqual(consumo.factura_pdf_name, '')
+        self.assertEqual(consumo.factura_xml_name, '')
+        self.assertIsNone(ticket.factura_id)
+        self.assertFalse(ticket.matched)
+        self.assertEqual(ticket.factura_pdf_name, '')
+        self.assertEqual(ticket.factura_xml_name, '')
+        self.assertEqual(ticket.factura_notas, '')

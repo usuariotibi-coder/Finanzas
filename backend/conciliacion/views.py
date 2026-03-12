@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
+from amex.models import TicketAMEX
 from accounts.models import Role
 from accounts.permissions import IsAdminOrPMOrFinanceOrReadOnly
 from .cfdi_parser import parse_cfdi_xml
@@ -108,6 +109,29 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
         factura = serializer.save(**extra_fields)
         reconcile_factura_with_consumos(factura)
+
+    def perform_destroy(self, instance):
+        Consumo.objects.filter(factura=instance).update(
+            factura=None,
+            matched=False,
+            propina_detectada=None,
+            propina_porcentaje=None,
+            factura_pdf_name='',
+            factura_xml_name='',
+            factura_notas='',
+        )
+        TicketAMEX.objects.filter(factura=instance).update(
+            factura=None,
+            matched=False,
+            factura_pdf_name='',
+            factura_xml_name='',
+            factura_notas='',
+        )
+        if instance.archivo_xml:
+            instance.archivo_xml.delete(save=False)
+        if instance.archivo_pdf:
+            instance.archivo_pdf.delete(save=False)
+        instance.delete()
 
 
 class ConsumoViewSet(viewsets.ModelViewSet):

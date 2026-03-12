@@ -1308,6 +1308,10 @@ export const updateFactura = async (id: string, payload: Partial<Factura>): Prom
   return mapFacturaFromApi(data);
 };
 
+export const deleteFactura = async (id: string): Promise<void> => {
+  await apiFetch(`/conciliacion/facturas/${id}/`, { method: 'DELETE' });
+};
+
 export const updateConsumo = async (id: string, payload: Partial<Consumo>): Promise<Consumo> => {
   const data = (await apiFetch(`/conciliacion/consumos/${id}/`, {
     method: 'PATCH',
