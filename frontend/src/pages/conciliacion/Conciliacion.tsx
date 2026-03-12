@@ -1890,10 +1890,57 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
   const xmlPreviewUrl = xmlPath ? buildFacturaAssetUrl('XML', xmlPath) : '';
   const pdfDetectedData = factura.validacionCFDI;
   const [previewTipo, setPreviewTipo] = useState<'PDF' | 'XML' | null>(pdfPreviewUrl ? 'PDF' : xmlPreviewUrl ? 'XML' : null);
+  const [pdfPreviewBlobUrl, setPdfPreviewBlobUrl] = useState('');
+  const [pdfPreviewError, setPdfPreviewError] = useState('');
   const [xmlPreviewContent, setXmlPreviewContent] = useState('');
   const [xmlPreviewError, setXmlPreviewError] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (previewTipo !== 'PDF' || !pdfPreviewUrl) {
+      setPdfPreviewBlobUrl((current) => {
+        if (current) {
+          URL.revokeObjectURL(current);
+        }
+        return '';
+      });
+      setPdfPreviewError('');
+      return;
+    }
+
+    let cancelled = false;
+    setPdfPreviewError('');
+
+    void fetch(pdfPreviewUrl, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el PDF.');
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        if (cancelled) {
+          return;
+        }
+        const nextBlobUrl = URL.createObjectURL(blob);
+        setPdfPreviewBlobUrl((current) => {
+          if (current) {
+            URL.revokeObjectURL(current);
+          }
+          return nextBlobUrl;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPdfPreviewError('No se pudo cargar la previsualizacion del PDF.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewTipo, pdfPreviewUrl]);
 
   useEffect(() => {
     if (previewTipo !== 'XML' || !xmlPreviewUrl) {
@@ -2153,7 +2200,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
             </div>
           </div>
 
-          {previewTipo && (previewTipo === 'PDF' ? pdfPreviewUrl : xmlPreviewUrl) ? (
+          {previewTipo && (previewTipo === 'PDF' ? (pdfPreviewBlobUrl || pdfPreviewUrl) : xmlPreviewUrl) ? (
             <div>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
@@ -2173,11 +2220,15 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus, onDel
 
               {previewTipo === 'PDF' ? (
                 <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                  <iframe
-                    title={`Vista previa PDF ${factura.folio || factura.id}`}
-                    src={pdfPreviewUrl}
-                    className="h-[42vh] min-h-[320px] w-full bg-white"
-                  />
+                  {pdfPreviewError ? (
+                    <div className="px-4 py-6 text-sm text-rose-500">{pdfPreviewError}</div>
+                  ) : (
+                    <iframe
+                      title={`Vista previa PDF ${factura.folio || factura.id}`}
+                      src={pdfPreviewBlobUrl || pdfPreviewUrl}
+                      className="h-[42vh] min-h-[320px] w-full bg-white"
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
