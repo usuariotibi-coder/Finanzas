@@ -61,11 +61,14 @@ DJANGO_SECURE_COOKIES=true
 DJANGO_COOKIE_SAMESITE=None
 CORS_ALLOWED_ORIGINS=https://TU_DOMINIO_FRONTEND
 CSRF_TRUSTED_ORIGINS=https://TU_DOMINIO_FRONTEND
+DJANGO_MEDIA_ROOT=/app/backend/media
 ```
 
 Notas:
 - `DATABASE_URL` lo crea Railway cuando agregas Postgres.
 - Si usas dominio personalizado, agregalo en `DJANGO_ALLOWED_HOSTS`.
+- Para conservar PDFs/XML y otros archivos subidos, agrega un Volume en Railway y montalo en la misma ruta que uses en `DJANGO_MEDIA_ROOT`.
+- Si prefieres no definir `DJANGO_MEDIA_ROOT`, el backend tambien puede tomar `RAILWAY_VOLUME_MOUNT_PATH` como `MEDIA_ROOT`.
 
 4) Railway ejecuta el start command definido en `railway.toml` o `Procfile`:
 

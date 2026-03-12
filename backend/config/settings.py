@@ -157,7 +157,9 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+media_root_env = os.environ.get('DJANGO_MEDIA_ROOT') or os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+MEDIA_ROOT = Path(media_root_env) if media_root_env else (BASE_DIR / 'media')
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 AUTH_USER_MODEL = 'accounts.User'
 
