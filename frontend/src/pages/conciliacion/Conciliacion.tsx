@@ -111,8 +111,6 @@ type FacturaMatchResult = {
   dateDistance: number;
   merchantScore: number;
   pdfDateScore: number;
-  sameViatico: boolean;
-  amountBasis: 'xml_total' | 'pdf_total';
 };
 
 const AMOUNT_MATCH_EPSILON = 0.01;
@@ -299,9 +297,7 @@ const getFacturaPdfDateScore = (factura: Factura, fechaEstadoCuenta: string) => 
 };
 
 const getFacturaMatchTuple = (match: FacturaMatchResult) => [
-  match.sameViatico ? 0 : 1,
   match.matchType === 'exacto' ? 0 : 1,
-  match.amountBasis === 'pdf_total' ? 0 : 1,
   100 - Math.round(match.pdfDateScore * 100),
   100 - Math.round(match.merchantScore * 100),
   match.dateDistance,
@@ -311,13 +307,11 @@ const getFacturaMatchTuple = (match: FacturaMatchResult) => [
 
 const getFacturaMatchCandidate = (
   factura: Factura,
-  row: StatementRow,
-  consumo?: Consumo
+  row: StatementRow
 ): FacturaMatchResult | null => {
   const dateDistance = diffDays(factura.fecha, row.fecha);
   const merchantScore = getFacturaMerchantScore(factura, row);
   const pdfDateScore = getFacturaPdfDateScore(factura, row.fecha);
-  const sameViatico = Boolean(consumo?.viaticoId && factura.viaticoId && String(consumo.viaticoId) === String(factura.viaticoId));
   const amountCandidates = getFacturaTotalCandidates(factura)
     .map((candidateTotal) => {
       const difference = roundMoney(row.monto - candidateTotal);
@@ -327,7 +321,6 @@ const getFacturaMatchCandidate = (
           difference: 0,
           matchType: 'exacto' as const,
           tipRatio: 0,
-          amountBasis: Math.abs(candidateTotal - factura.total) <= AMOUNT_MATCH_EPSILON ? 'xml_total' as const : 'pdf_total' as const,
         };
       }
       if (difference < 0 || candidateTotal <= 0) {
@@ -342,7 +335,6 @@ const getFacturaMatchCandidate = (
         difference,
         matchType: 'propina' as const,
         tipRatio,
-        amountBasis: Math.abs(candidateTotal - factura.total) <= AMOUNT_MATCH_EPSILON ? 'xml_total' as const : 'pdf_total' as const,
       };
     })
     .filter((candidate): candidate is {
@@ -350,32 +342,24 @@ const getFacturaMatchCandidate = (
       difference: number;
       matchType: 'exacto' | 'propina';
       tipRatio: number;
-      amountBasis: 'xml_total' | 'pdf_total';
     } => Boolean(candidate))
     .sort((left, right) => {
       if (left.matchType !== right.matchType) {
         return left.matchType === 'exacto' ? -1 : 1;
       }
-      if (left.amountBasis !== right.amountBasis) {
-        return left.amountBasis === 'pdf_total' ? -1 : 1;
-      }
       return left.difference - right.difference;
     });
 
   const hasExactAmount = amountCandidates.some((candidate) => candidate.matchType === 'exacto');
-  const maxAllowedDateDistance = sameViatico && hasExactAmount
-    ? 45
-    : sameViatico && (merchantScore >= 0.35 || pdfDateScore >= 0.65)
-      ? 30
-      : hasExactAmount && merchantScore >= 0.55
-        ? 30
-        : pdfDateScore >= 0.85
-          ? 15
-          : pdfDateScore >= 0.65 || merchantScore >= 0.6
-            ? 10
-            : merchantScore >= 0.35
-              ? 7
-              : 3;
+  const maxAllowedDateDistance = hasExactAmount && merchantScore >= 0.55
+    ? 30
+    : pdfDateScore >= 0.85
+      ? 15
+      : pdfDateScore >= 0.65 || merchantScore >= 0.6
+        ? 10
+        : merchantScore >= 0.35
+          ? 7
+          : 3;
   if (dateDistance > maxAllowedDateDistance) {
     return null;
   }
@@ -393,8 +377,6 @@ const getFacturaMatchCandidate = (
     dateDistance,
     merchantScore,
     pdfDateScore,
-    sameViatico,
-    amountBasis: bestAmountCandidate.amountBasis,
   };
 };
 
@@ -635,10 +617,10 @@ export default function Conciliacion() {
     };
   };
 
-  const findMatchingFactura = (availableFacturas: Factura[], row: StatementRow, userId?: string, consumo?: Consumo) => {
+  const findMatchingFactura = (availableFacturas: Factura[], row: StatementRow, userId?: string) => {
     const candidates = availableFacturas
       .filter((factura) => !userId || factura.userId === userId)
-      .map((factura) => getFacturaMatchCandidate(factura, row, consumo))
+      .map((factura) => getFacturaMatchCandidate(factura, row))
       .filter((match): match is FacturaMatchResult => Boolean(match))
       .sort(compareFacturaMatches);
 
@@ -715,7 +697,7 @@ export default function Conciliacion() {
       for (const consumo of consumosFiltrados) {
         const row = buildStatementRowFromConsumo(consumo);
         const previousFacturaId = String(consumo.facturaId || '');
-        const facturaMatch = findMatchingFactura(nextFacturas, row, consumo.userId, consumo);
+        const facturaMatch = findMatchingFactura(nextFacturas, row, consumo.userId);
         const matchedFactura = facturaMatch?.factura;
         const nextFacturaId = matchedFactura ? String(matchedFactura.id) : undefined;
         const nextMatched = Boolean(facturaMatch);
@@ -805,7 +787,7 @@ export default function Conciliacion() {
           normalizeMerchant(item.comercio) === normalizeMerchant(row.comercio) &&
           Math.abs(item.monto - row.monto) < 0.01
         );
-        const facturaMatch = findMatchingFactura(nextFacturas, row, relation.card.userId, existingConsumo);
+        const facturaMatch = findMatchingFactura(nextFacturas, row, relation.card.userId);
         const matchedFactura = facturaMatch?.factura;
 
         const facturaId = matchedFactura?.id || existingConsumo?.facturaId;
@@ -965,7 +947,7 @@ export default function Conciliacion() {
           monto: targetConsumo.monto,
           montoUsd: 0,
           concepto: targetConsumo.concepto || targetConsumo.categoria || '',
-        }, targetConsumo);
+        });
         const consumoActualizado = await updateConsumo(targetConsumo.id, {
           facturaId,
           facturaPdfName: snapshotPdfFile.name,

@@ -174,39 +174,30 @@ class ConsumoMatchResult:
     date_distance: int
     merchant_score: float
     pdf_date_score: float
-    same_viatico: bool
-    amount_basis: str
 
 
 def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMatchResult | None:
     date_distance = diff_days(factura.fecha, consumo.fecha)
     merchant_score = get_merchant_score(factura, consumo)
     pdf_date_score = get_pdf_date_score(factura, consumo)
-    same_viatico = bool(factura.viatico_id and factura.viatico_id == consumo.viatico_id)
 
     exact_amount_candidates = []
     tip_amount_candidates = []
     for candidate_total in get_factura_total_candidates(factura):
         difference = Decimal(consumo.monto) - candidate_total
         if abs(difference) <= AMOUNT_MATCH_EPSILON:
-            basis = "pdf_total" if candidate_total != Decimal(factura.total) else "xml_total"
-            exact_amount_candidates.append((candidate_total, basis))
+            exact_amount_candidates.append(candidate_total)
             continue
         if difference < 0 or candidate_total <= 0:
             continue
         tip_ratio = difference / candidate_total
         if tip_ratio > MAX_TIP_RATIO:
             continue
-        basis = "pdf_total" if candidate_total != Decimal(factura.total) else "xml_total"
-        tip_amount_candidates.append((difference.quantize(Decimal("0.01")), candidate_total, basis))
+        tip_amount_candidates.append((difference.quantize(Decimal("0.01")), candidate_total))
 
     has_exact_amount = len(exact_amount_candidates) > 0
 
-    if same_viatico and has_exact_amount:
-        max_date_distance = 45
-    elif same_viatico and (merchant_score >= 0.35 or pdf_date_score >= 0.65):
-        max_date_distance = 30
-    elif has_exact_amount and merchant_score >= 0.55:
+    if has_exact_amount and merchant_score >= 0.55:
         max_date_distance = 30
     elif pdf_date_score >= 0.85:
         max_date_distance = 15
@@ -220,22 +211,18 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
     if date_distance > max_date_distance:
         return None
 
-    amount_matches: list[tuple[Decimal, str, Decimal, str]] = []
-    for candidate_total, basis in exact_amount_candidates:
-        amount_matches.append((Decimal("0.00"), "exacto", candidate_total, basis))
-    for difference, candidate_total, basis in tip_amount_candidates:
-        amount_matches.append((difference, "propina", candidate_total, basis))
+    amount_matches: list[tuple[Decimal, str, Decimal]] = []
+    for candidate_total in exact_amount_candidates:
+        amount_matches.append((Decimal("0.00"), "exacto", candidate_total))
+    for difference, candidate_total in tip_amount_candidates:
+        amount_matches.append((difference, "propina", candidate_total))
 
     if not amount_matches:
         return None
 
-    difference, match_type, matched_total, amount_basis = sorted(
+    difference, match_type, matched_total = sorted(
         amount_matches,
-        key=lambda item: (
-            0 if item[1] == "exacto" else 1,
-            0 if item[3] == "pdf_total" else 1,
-            item[0],
-        )
+        key=lambda item: (0 if item[1] == "exacto" else 1, item[0])
     )[0]
 
     if match_type == "exacto":
@@ -247,8 +234,6 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
             date_distance=date_distance,
             merchant_score=merchant_score,
             pdf_date_score=pdf_date_score,
-            same_viatico=same_viatico,
-            amount_basis=amount_basis,
         )
 
     tip_ratio = difference / matched_total if matched_total > 0 else Decimal("0")
@@ -261,16 +246,12 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
         date_distance=date_distance,
         merchant_score=merchant_score,
         pdf_date_score=pdf_date_score,
-        same_viatico=same_viatico,
-        amount_basis=amount_basis,
     )
 
 
 def get_match_tuple(match: ConsumoMatchResult) -> tuple[Any, ...]:
     return (
-        0 if match.same_viatico else 1,
         0 if match.match_type == "exacto" else 1,
-        0 if match.amount_basis == "pdf_total" else 1,
         100 - round(match.pdf_date_score * 100),
         100 - round(match.merchant_score * 100),
         match.date_distance,
