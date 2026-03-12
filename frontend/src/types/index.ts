@@ -163,6 +163,8 @@ export interface Consumo {
   tipoMovimiento?: string;
   concepto?: string;
   monto: number;
+  propinaDetectada?: number;
+  propinaPorcentaje?: number;
   categoria: string;
   facturaId?: string;
   facturaPdfName?: string;

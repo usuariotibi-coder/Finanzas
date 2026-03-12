@@ -87,6 +87,17 @@ type StatementRow = {
   concepto: string;
 };
 
+type FacturaMatchResult = {
+  factura: Factura;
+  propinaDetectada: number;
+  propinaPorcentaje: number;
+  matchType: 'exacto' | 'propina';
+  dateDistance: number;
+};
+
+const AMOUNT_MATCH_EPSILON = 0.01;
+const MAX_TIP_PERCENTAGE = 0.3;
+
 const normalizeText = (value: string) =>
   value
     .normalize('NFD')
@@ -127,6 +138,65 @@ const diffDays = (left: string, right: string) => {
   const rightDate = new Date(`${right}T00:00:00`);
   if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) return Number.MAX_SAFE_INTEGER;
   return Math.abs(Math.round((leftDate.getTime() - rightDate.getTime()) / 86400000));
+};
+
+const roundMoney = (value: number) => Number(value.toFixed(2));
+
+const getFacturaMatchTuple = (match: FacturaMatchResult) => [
+  match.matchType === 'exacto' ? 0 : 1,
+  match.dateDistance,
+  Number(match.propinaPorcentaje.toFixed(2)),
+  Number(match.propinaDetectada.toFixed(2)),
+] as const;
+
+const getFacturaMatchCandidate = (
+  factura: Factura,
+  montoEstadoCuenta: number,
+  fechaEstadoCuenta: string
+): FacturaMatchResult | null => {
+  const dateDistance = diffDays(factura.fecha, fechaEstadoCuenta);
+  if (dateDistance > 3) {
+    return null;
+  }
+
+  const difference = roundMoney(montoEstadoCuenta - factura.total);
+  if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
+    return {
+      factura,
+      propinaDetectada: 0,
+      propinaPorcentaje: 0,
+      matchType: 'exacto',
+      dateDistance,
+    };
+  }
+
+  if (difference < 0 || factura.total <= 0) {
+    return null;
+  }
+
+  const tipRatio = difference / factura.total;
+  if (tipRatio > MAX_TIP_PERCENTAGE + 1e-6) {
+    return null;
+  }
+
+  return {
+    factura,
+    propinaDetectada: difference,
+    propinaPorcentaje: Number((tipRatio * 100).toFixed(2)),
+    matchType: 'propina',
+    dateDistance,
+  };
+};
+
+const compareFacturaMatches = (left: FacturaMatchResult, right: FacturaMatchResult) => {
+  const leftTuple = getFacturaMatchTuple(left);
+  const rightTuple = getFacturaMatchTuple(right);
+  for (let index = 0; index < leftTuple.length; index += 1) {
+    if (leftTuple[index] !== rightTuple[index]) {
+      return leftTuple[index] - rightTuple[index];
+    }
+  }
+  return 0;
 };
 
 const readStatementRows = async (file: File): Promise<StatementRow[]> => {
@@ -351,21 +421,20 @@ export default function Conciliacion() {
 
   const findMatchingFactura = (availableFacturas: Factura[], row: StatementRow, userId?: string) => {
     const candidates = availableFacturas
-      .filter((factura) =>
-        (!userId || factura.userId === userId) &&
-        Math.abs(factura.total - row.monto) < 0.01 &&
-        diffDays(factura.fecha, row.fecha) <= 3
-      )
-      .sort((left, right) => diffDays(left.fecha, row.fecha) - diffDays(right.fecha, row.fecha));
+      .filter((factura) => !userId || factura.userId === userId)
+      .map((factura) => getFacturaMatchCandidate(factura, row.monto, row.fecha))
+      .filter((match): match is FacturaMatchResult => Boolean(match))
+      .sort(compareFacturaMatches);
 
     if (candidates.length === 1) {
       return candidates[0];
     }
     if (candidates.length > 1) {
-      const bestDistance = diffDays(candidates[0].fecha, row.fecha);
-      const nextDistance = diffDays(candidates[1].fecha, row.fecha);
-      if (bestDistance < nextDistance) {
-        return candidates[0];
+      const [bestCandidate, nextCandidate] = candidates;
+      const bestTuple = getFacturaMatchTuple(bestCandidate).join('|');
+      const nextTuple = getFacturaMatchTuple(nextCandidate).join('|');
+      if (bestTuple !== nextTuple) {
+        return bestCandidate;
       }
     }
     return null;
@@ -393,6 +462,7 @@ export default function Conciliacion() {
       let createdCount = 0;
       let updatedCount = 0;
       let matchedCount = 0;
+      let tipMatchedCount = 0;
       let skippedCount = 0;
       const warnings: string[] = [];
 
@@ -407,7 +477,8 @@ export default function Conciliacion() {
           warnings.push(relation.warning);
         }
 
-        const matchedFactura = findMatchingFactura(nextFacturas, row, relation.card.userId);
+        const facturaMatch = findMatchingFactura(nextFacturas, row, relation.card.userId);
+        const matchedFactura = facturaMatch?.factura;
         const existingConsumo = nextConsumos.find((item) =>
           normalizeCardNumber(item.cardNumber || '') === row.cardNumber &&
           normalizeEmployeeNumber(item.employeeNumber || '') === row.employeeNumber &&
@@ -417,7 +488,7 @@ export default function Conciliacion() {
         );
 
         const facturaId = matchedFactura?.id || existingConsumo?.facturaId;
-        const matched = Boolean(matchedFactura || existingConsumo?.matched);
+        const matched = Boolean(facturaMatch || existingConsumo?.matched);
         const payload: Partial<Consumo> = {
           userId: relation.card.userId,
           viaticoId: existingConsumo?.viaticoId,
@@ -429,6 +500,16 @@ export default function Conciliacion() {
           tipoMovimiento: row.tipoMovimiento,
           concepto: row.concepto,
           monto: row.monto,
+          propinaDetectada: facturaMatch
+            ? facturaMatch.propinaDetectada
+            : existingConsumo?.matched
+              ? existingConsumo.propinaDetectada
+              : undefined,
+          propinaPorcentaje: facturaMatch
+            ? facturaMatch.propinaPorcentaje
+            : existingConsumo?.matched
+              ? existingConsumo.propinaPorcentaje
+              : undefined,
           categoria: row.concepto || row.tipoMovimiento || 'Estado de cuenta',
           facturaId,
           facturaPdfName: existingConsumo?.facturaPdfName,
@@ -455,6 +536,9 @@ export default function Conciliacion() {
 
         if (matchedFactura) {
           matchedCount += 1;
+          if (facturaMatch?.matchType === 'propina') {
+            tipMatchedCount += 1;
+          }
           if (!matchedFactura.matchConsumo) {
             const updatedFactura = await updateFactura(matchedFactura.id, { matchConsumo: true });
             nextFacturas = nextFacturas.map((item) => (
@@ -469,6 +553,7 @@ export default function Conciliacion() {
       setStatementImportMessage(
         [
           `Estado de cuenta procesado: ${createdCount} nuevos, ${updatedCount} actualizados, ${matchedCount} relacionados con XML/factura y ${skippedCount} omitidos.`,
+          tipMatchedCount > 0 ? `${tipMatchedCount} coincidencias se conciliaron usando tolerancia de propina de hasta 30%.` : '',
           warnings.length > 0 ? `Observaciones: ${warnings.slice(0, 3).join(' ')}` : '',
         ]
           .filter(Boolean)
@@ -548,14 +633,23 @@ export default function Conciliacion() {
       const notas = snapshotNotas.trim() || undefined;
 
       if (targetConsumo) {
+        const uploadedFacturaMatch = getFacturaMatchCandidate(facturaCreada, targetConsumo.monto, targetConsumo.fecha);
         const consumoActualizado = await updateConsumo(targetConsumo.id, {
           facturaId,
           facturaPdfName: snapshotPdfFile.name,
           facturaXmlName: snapshotXmlFile.name,
           facturaNotas: notas,
-          matched: false,
+          matched: Boolean(uploadedFacturaMatch),
+          propinaDetectada: uploadedFacturaMatch?.propinaDetectada,
+          propinaPorcentaje: uploadedFacturaMatch?.propinaPorcentaje,
         });
         setConsumos((prev) => prev.map((item) => (item.id === consumoActualizado.id ? consumoActualizado : item)));
+        if (uploadedFacturaMatch && !facturaCreada.matchConsumo) {
+          const facturaActualizada = await updateFactura(facturaId, { matchConsumo: true });
+          upsertFactura(facturaActualizada);
+        } else {
+          upsertFactura(facturaCreada);
+        }
       } else if (targetTicket) {
         const ticketActualizado = await updateAmexTicket(targetTicket.id, {
           facturaId,
@@ -565,9 +659,8 @@ export default function Conciliacion() {
           matched: false,
         });
         setTicketsAMEX((prev) => prev.map((item) => (item.id === ticketActualizado.id ? ticketActualizado : item)));
+        upsertFactura(facturaCreada);
       }
-
-      upsertFactura(facturaCreada);
       void syncCoreAppData({ userId: user ? String(user.id) : undefined }).catch(() => {});
     } catch (error) {
       setUploadTarget(snapshotTarget);
@@ -909,8 +1002,15 @@ export default function Conciliacion() {
                     <td className="px-6 py-4 align-top">
                       {consumo.matched ? (
                         <div>
-                          <span className="inline-flex min-w-[92px] justify-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">Matched</span>
+                          <span className="inline-flex min-w-[92px] justify-center px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                            {consumo.propinaDetectada && consumo.propinaDetectada > AMOUNT_MATCH_EPSILON ? 'Match con propina' : 'Matched'}
+                          </span>
                           <p className="text-xs text-gray-500 mt-1">Factura: {consumo.facturaId}</p>
+                          {consumo.propinaDetectada && consumo.propinaDetectada > AMOUNT_MATCH_EPSILON ? (
+                            <p className="text-[11px] text-amber-700 mt-1">
+                              Propina detectada: ${consumo.propinaDetectada.toLocaleString()} ({(consumo.propinaPorcentaje || 0).toFixed(2)}%)
+                            </p>
+                          ) : null}
                         </div>
                       ) : consumo.facturaId ? (
                         <div>

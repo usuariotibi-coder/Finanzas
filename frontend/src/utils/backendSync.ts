@@ -277,6 +277,8 @@ const mapConsumoFromApi = (raw: RawRecord): Consumo => ({
   tipoMovimiento: toNullableString(raw.tipo_movimiento ?? raw.tipoMovimiento),
   concepto: toNullableString(raw.concepto),
   monto: parseNumber(raw.monto),
+  propinaDetectada: toNullableNumber(raw.propina_detectada ?? raw.propinaDetectada),
+  propinaPorcentaje: toNullableNumber(raw.propina_porcentaje ?? raw.propinaPorcentaje),
   categoria: parseString(raw.categoria),
   facturaId: toNullableString(raw.factura ? toStringId(raw.factura) : undefined),
   facturaPdfName: toNullableString(raw.factura_pdf_name),
@@ -926,6 +928,8 @@ const toConsumoPayload = (value: Partial<Consumo>) => {
   if ('tipoMovimiento' in value) payload.tipo_movimiento = parseString(value.tipoMovimiento);
   if ('concepto' in value) payload.concepto = parseString(value.concepto);
   if ('monto' in value) payload.monto = parseNumber(value.monto);
+  if ('propinaDetectada' in value) payload.propina_detectada = toNullableNumber(value.propinaDetectada) ?? null;
+  if ('propinaPorcentaje' in value) payload.propina_porcentaje = toNullableNumber(value.propinaPorcentaje) ?? null;
   if ('categoria' in value) payload.categoria = parseString(value.categoria);
   if ('facturaPdfName' in value) payload.factura_pdf_name = parseString(value.facturaPdfName);
   if ('facturaXmlName' in value) payload.factura_xml_name = parseString(value.facturaXmlName);

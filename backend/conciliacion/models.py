@@ -48,6 +48,8 @@ class Consumo(models.Model):
     tipo_movimiento = models.CharField(max_length=120, blank=True)
     concepto = models.CharField(max_length=120, blank=True)
     monto = models.DecimalField(max_digits=12, decimal_places=2)
+    propina_detectada = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    propina_porcentaje = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     categoria = models.CharField(max_length=120)
     factura_pdf_name = models.CharField(max_length=200, blank=True)
     factura_xml_name = models.CharField(max_length=200, blank=True)
