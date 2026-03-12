@@ -424,6 +424,7 @@ export default function Conciliacion() {
   const [showUploadErrors, setShowUploadErrors] = useState(false);
   const [statementImporting, setStatementImporting] = useState(false);
   const [reprocessingConciliacion, setReprocessingConciliacion] = useState(false);
+  const [showReprocessModal, setShowReprocessModal] = useState(false);
   const [statementImportMessage, setStatementImportMessage] = useState('');
   const [statementImportError, setStatementImportError] = useState('');
   const [selectedMes, setSelectedMes] = useLocalStorageState('conciliacion:selectedMes', 'todos');
@@ -646,11 +647,8 @@ export default function Conciliacion() {
       return;
     }
 
-    if (!window.confirm(`Reprocesar ${consumosFiltrados.length} consumos visibles con la logica actual de XML + PDF?`)) {
-      return;
-    }
-
     setReprocessingConciliacion(true);
+    setShowReprocessModal(false);
     setStatementImportError('');
     setStatementImportMessage('');
 
@@ -970,6 +968,7 @@ export default function Conciliacion() {
   };
 
   useEscapeKey(() => closeUploadModal(), showUploadModal);
+  useEscapeKey(() => setShowReprocessModal(false), showReprocessModal);
 
   return (
     <div className="space-y-6">
@@ -1002,7 +1001,14 @@ export default function Conciliacion() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleReprocesarConciliacion()}
+                  onClick={() => {
+                    if (consumosFiltrados.length === 0) {
+                      setStatementImportError('No hay consumos visibles para reprocesar con los filtros actuales.');
+                      setStatementImportMessage('');
+                      return;
+                    }
+                    setShowReprocessModal(true);
+                  }}
                   disabled={reprocessingConciliacion}
                   className="px-3 py-1.5 text-[11px] rounded-lg border border-slate-300 bg-white font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
                 >
@@ -1585,6 +1591,15 @@ export default function Conciliacion() {
           onSave={handleGuardarFactura}
         />
       )}
+
+      {showReprocessModal && (
+        <ConfirmReprocessModal
+          visibleCount={consumosFiltrados.length}
+          isProcessing={reprocessingConciliacion}
+          onClose={() => setShowReprocessModal(false)}
+          onConfirm={() => void handleReprocesarConciliacion()}
+        />
+      )}
     </div>
   );
 }
@@ -1594,6 +1609,65 @@ interface MetricCardProps {
   value: number;
   color: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'indigo';
   icon: string;
+}
+
+interface ConfirmReprocessModalProps {
+  visibleCount: number;
+  isProcessing: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function ConfirmReprocessModal({ visibleCount, isProcessing, onClose, onConfirm }: ConfirmReprocessModalProps) {
+  useEscapeKey(onClose, !isProcessing);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        aria-label="Cerrar confirmacion"
+        className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+        onClick={isProcessing ? undefined : onClose}
+      />
+      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-100 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-5 text-white">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-300">Conciliacion</p>
+          <h3 className="mt-2 text-xl font-semibold">Confirmar reproceso</h3>
+          <p className="mt-2 text-sm text-slate-300">
+            Se volveran a evaluar los consumos visibles con la logica actual de XML, PDF y tolerancia de propina.
+          </p>
+        </div>
+
+        <div className="space-y-4 px-6 py-5">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <span className="font-semibold">{visibleCount}</span> consumos visibles se van a recalcular con los filtros actuales.
+          </div>
+          <p className="text-sm leading-6 text-slate-600">
+            Si una coincidencia mejora, se actualizara automaticamente. Si ya no cumple con la logica actual, se limpiara la relacion anterior.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isProcessing}
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isProcessing ? 'Reprocesando...' : 'Reprocesar ahora'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function MetricCard({ label, value, color, icon }: MetricCardProps) {
