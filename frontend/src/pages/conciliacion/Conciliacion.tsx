@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { read, utils as XLSXUtils } from 'xlsx';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
@@ -1573,9 +1573,46 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
   const xmlPath = factura.archivoXML;
   const pdfName = factura.archivoPDF ?? consumoMatch?.facturaPdfName;
   const xmlName = factura.archivoXML ?? consumoMatch?.facturaXmlName;
-  const handleAbrirArchivo = (tipo: 'PDF' | 'XML', path?: string) => {
-    openFacturaAsset(tipo, path);
-  };
+  const pdfPreviewUrl = pdfPath ? buildFacturaAssetUrl('PDF', pdfPath) : '';
+  const xmlPreviewUrl = xmlPath ? buildFacturaAssetUrl('XML', xmlPath) : '';
+  const [previewTipo, setPreviewTipo] = useState<'PDF' | 'XML' | null>(pdfPreviewUrl ? 'PDF' : xmlPreviewUrl ? 'XML' : null);
+  const [xmlPreviewContent, setXmlPreviewContent] = useState('');
+  const [xmlPreviewError, setXmlPreviewError] = useState('');
+
+  useEffect(() => {
+    if (previewTipo !== 'XML' || !xmlPreviewUrl) {
+      setXmlPreviewContent('');
+      setXmlPreviewError('');
+      return;
+    }
+
+    let cancelled = false;
+    setXmlPreviewContent('');
+    setXmlPreviewError('');
+
+    void fetch(xmlPreviewUrl, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el XML.');
+        }
+        return response.text();
+      })
+      .then((content) => {
+        if (!cancelled) {
+          setXmlPreviewContent(content);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setXmlPreviewError('No se pudo cargar la previsualizacion del XML.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewTipo, xmlPreviewUrl]);
+
   const handleDescargarArchivo = (tipo: 'PDF' | 'XML', path?: string) => {
     const defaultName = `${factura.folio || factura.id}.${tipo.toLowerCase()}`;
     downloadFacturaAsset(tipo, path, defaultName);
@@ -1679,11 +1716,13 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleAbrirArchivo('PDF', pdfPath)}
+                    onClick={() => setPreviewTipo('PDF')}
                     disabled={!pdfPath}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
                       pdfPath
-                        ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                        ? previewTipo === 'PDF'
+                          ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                          : 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -1716,11 +1755,13 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleAbrirArchivo('XML', xmlPath)}
+                    onClick={() => setPreviewTipo('XML')}
                     disabled={!xmlPath}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
                       xmlPath
-                        ? 'border-teal-200 text-teal-700 hover:bg-teal-50'
+                        ? previewTipo === 'XML'
+                          ? 'border-teal-300 bg-teal-50 text-teal-700'
+                          : 'border-teal-200 text-teal-700 hover:bg-teal-50'
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                   >
@@ -1749,6 +1790,48 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
               </div>
             </div>
           </div>
+
+          {previewTipo && (previewTipo === 'PDF' ? pdfPreviewUrl : xmlPreviewUrl) ? (
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Vista Previa</h3>
+                  <p className="text-xs text-slate-500">
+                    {previewTipo === 'PDF' ? (pdfName || 'PDF') : (xmlName || 'XML')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openFacturaAsset(previewTipo, previewTipo === 'PDF' ? pdfPath : xmlPath)}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                >
+                  Abrir aparte
+                </button>
+              </div>
+
+              {previewTipo === 'PDF' ? (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                  <iframe
+                    title={`Vista previa PDF ${factura.folio || factura.id}`}
+                    src={pdfPreviewUrl}
+                    className="h-[70vh] w-full bg-white"
+                  />
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
+                  {xmlPreviewError ? (
+                    <div className="px-4 py-6 text-sm text-rose-300">{xmlPreviewError}</div>
+                  ) : xmlPreviewContent ? (
+                    <pre className="max-h-[70vh] overflow-auto px-4 py-4 text-xs leading-5 text-emerald-100">
+                      {xmlPreviewContent}
+                    </pre>
+                  ) : (
+                    <div className="px-4 py-6 text-sm text-slate-300">Cargando XML...</div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : null}
 
         </div>
 
