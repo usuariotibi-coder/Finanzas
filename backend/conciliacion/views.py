@@ -54,6 +54,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 extra_fields['forma_pago'] = cfdi_data.forma_pago
             if cfdi_data.metodo_pago:
                 extra_fields['metodo_pago'] = cfdi_data.metodo_pago
+            if cfdi_data.conceptos:
+                extra_fields['conceptos'] = cfdi_data.conceptos
 
         if request_user.role in (Role.ADMIN, Role.FINANCE, Role.PM):
             serializer.save(user=payload_user or request_user, **extra_fields)

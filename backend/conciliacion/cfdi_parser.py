@@ -51,6 +51,22 @@ def _find_first_node(root: ET.Element, tag_name: str) -> ET.Element | None:
     return None
 
 
+def _find_all_nodes(root: ET.Element, tag_name: str) -> list[ET.Element]:
+    wanted = tag_name.lower()
+    matches: list[ET.Element] = []
+    for element in root.iter():
+        tag = str(element.tag).split("}")[-1].lower()
+        if tag == wanted:
+            matches.append(element)
+    return matches
+
+
+def _decimal_to_float(value: Decimal | None, default: float = 0.0) -> float:
+    if value is None:
+        return default
+    return float(value)
+
+
 @dataclass
 class CFDIParsedData:
     subtotal: Decimal | None = None
@@ -63,6 +79,7 @@ class CFDIParsedData:
     razon_social: str | None = None
     forma_pago: str | None = None
     metodo_pago: str | None = None
+    conceptos: list[dict[str, Any]] | None = None
 
 
 def parse_cfdi_xml(file_obj: Any) -> CFDIParsedData:
@@ -120,6 +137,23 @@ def parse_cfdi_xml(file_obj: Any) -> CFDIParsedData:
     serie = (_find_attr_case_insensitive(comprobante, "Serie") or "").strip()
     folio_value = (_find_attr_case_insensitive(comprobante, "Folio") or "").strip()
     folio = f"{serie}{folio_value}".strip() or None
+    conceptos: list[dict[str, Any]] = []
+    for concepto in _find_all_nodes(comprobante, "Concepto"):
+        descripcion = (_find_attr_case_insensitive(concepto, "Descripcion") or "").strip()
+        if not descripcion:
+            continue
+        conceptos.append(
+            {
+                "claveProdServ": (_find_attr_case_insensitive(concepto, "ClaveProdServ") or "").strip(),
+                "descripcion": descripcion,
+                "cantidad": _decimal_to_float(_to_decimal(_find_attr_case_insensitive(concepto, "Cantidad")), 0.0),
+                "valorUnitario": _decimal_to_float(
+                    _to_decimal(_find_attr_case_insensitive(concepto, "ValorUnitario")),
+                    0.0,
+                ),
+                "importe": _decimal_to_float(_to_decimal(_find_attr_case_insensitive(concepto, "Importe")), 0.0),
+            }
+        )
 
     return CFDIParsedData(
         subtotal=subtotal,
@@ -132,4 +166,5 @@ def parse_cfdi_xml(file_obj: Any) -> CFDIParsedData:
         razon_social=(_find_attr_case_insensitive(emisor, "Nombre") or "").strip() or None,
         forma_pago=(_find_attr_case_insensitive(comprobante, "FormaPago") or "").strip() or None,
         metodo_pago=(_find_attr_case_insensitive(comprobante, "MetodoPago") or "").strip() or None,
+        conceptos=conceptos,
     )

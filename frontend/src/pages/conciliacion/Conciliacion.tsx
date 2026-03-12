@@ -93,10 +93,36 @@ type FacturaMatchResult = {
   propinaPorcentaje: number;
   matchType: 'exacto' | 'propina';
   dateDistance: number;
+  merchantScore: number;
 };
 
 const AMOUNT_MATCH_EPSILON = 0.01;
 const MAX_TIP_PERCENTAGE = 0.3;
+const MERCHANT_STOPWORDS = new Set([
+  'sa',
+  'cv',
+  'de',
+  'del',
+  'la',
+  'las',
+  'los',
+  'el',
+  'y',
+  'the',
+  'group',
+  'grupo',
+  'servicios',
+  'servicio',
+  'mexico',
+  'restaurant',
+  'restaurante',
+  'comercializadora',
+  'comercio',
+  'company',
+  'corp',
+  'corporation',
+  'holdings',
+]);
 
 const normalizeText = (value: string) =>
   value
@@ -142,8 +168,84 @@ const diffDays = (left: string, right: string) => {
 
 const roundMoney = (value: number) => Number(value.toFixed(2));
 
+const getMerchantComparableText = (value: string) =>
+  normalizeText(value)
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const getMerchantComparableCompact = (value: string) =>
+  getMerchantComparableText(value).replace(/\s+/g, '');
+
+const getMerchantTokens = (value: string) =>
+  getMerchantComparableText(value)
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !MERCHANT_STOPWORDS.has(token));
+
+const getMerchantSimilarity = (left: string, right: string) => {
+  const leftText = getMerchantComparableText(left);
+  const rightText = getMerchantComparableText(right);
+  if (!leftText || !rightText) {
+    return 0;
+  }
+
+  const leftCompact = getMerchantComparableCompact(leftText);
+  const rightCompact = getMerchantComparableCompact(rightText);
+  if (!leftCompact || !rightCompact) {
+    return 0;
+  }
+  if (leftCompact === rightCompact) {
+    return 1;
+  }
+  if (leftCompact.includes(rightCompact) || rightCompact.includes(leftCompact)) {
+    return 0.92;
+  }
+
+  const leftTokens = Array.from(new Set(getMerchantTokens(leftText)));
+  const rightTokens = Array.from(new Set(getMerchantTokens(rightText)));
+  if (leftTokens.length === 0 || rightTokens.length === 0) {
+    return 0;
+  }
+
+  const sharedCount = leftTokens.filter((token) => rightTokens.includes(token)).length;
+  if (sharedCount === 0) {
+    return 0;
+  }
+
+  const overlap = sharedCount / Math.min(leftTokens.length, rightTokens.length);
+  const coverage = sharedCount / Math.max(leftTokens.length, rightTokens.length);
+  return Number(((overlap * 0.7) + (coverage * 0.3)).toFixed(4));
+};
+
+const getFacturaMerchantTexts = (factura: Factura) => {
+  const values = [
+    factura.razonSocial,
+    ...factura.conceptos.map((concepto) => concepto.descripcion),
+  ];
+  return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
+};
+
+const getFacturaMerchantScore = (factura: Factura, row: StatementRow) => {
+  const rowTexts = [row.comercio, `${row.comercio} ${row.concepto}`.trim()].filter(Boolean);
+  const facturaTexts = getFacturaMerchantTexts(factura);
+  let bestScore = 0;
+
+  for (const rowText of rowTexts) {
+    for (const facturaText of facturaTexts) {
+      bestScore = Math.max(bestScore, getMerchantSimilarity(rowText, facturaText));
+      if (bestScore >= 0.999) {
+        return bestScore;
+      }
+    }
+  }
+
+  return bestScore;
+};
+
 const getFacturaMatchTuple = (match: FacturaMatchResult) => [
   match.matchType === 'exacto' ? 0 : 1,
+  100 - Math.round(match.merchantScore * 100),
   match.dateDistance,
   Number(match.propinaPorcentaje.toFixed(2)),
   Number(match.propinaDetectada.toFixed(2)),
@@ -151,15 +253,15 @@ const getFacturaMatchTuple = (match: FacturaMatchResult) => [
 
 const getFacturaMatchCandidate = (
   factura: Factura,
-  montoEstadoCuenta: number,
-  fechaEstadoCuenta: string
+  row: StatementRow
 ): FacturaMatchResult | null => {
-  const dateDistance = diffDays(factura.fecha, fechaEstadoCuenta);
+  const dateDistance = diffDays(factura.fecha, row.fecha);
   if (dateDistance > 3) {
     return null;
   }
 
-  const difference = roundMoney(montoEstadoCuenta - factura.total);
+  const difference = roundMoney(row.monto - factura.total);
+  const merchantScore = getFacturaMerchantScore(factura, row);
   if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
     return {
       factura,
@@ -167,6 +269,7 @@ const getFacturaMatchCandidate = (
       propinaPorcentaje: 0,
       matchType: 'exacto',
       dateDistance,
+      merchantScore,
     };
   }
 
@@ -185,6 +288,7 @@ const getFacturaMatchCandidate = (
     propinaPorcentaje: Number((tipRatio * 100).toFixed(2)),
     matchType: 'propina',
     dateDistance,
+    merchantScore,
   };
 };
 
@@ -426,7 +530,7 @@ export default function Conciliacion() {
   const findMatchingFactura = (availableFacturas: Factura[], row: StatementRow, userId?: string) => {
     const candidates = availableFacturas
       .filter((factura) => !userId || factura.userId === userId)
-      .map((factura) => getFacturaMatchCandidate(factura, row.monto, row.fecha))
+      .map((factura) => getFacturaMatchCandidate(factura, row))
       .filter((match): match is FacturaMatchResult => Boolean(match))
       .sort(compareFacturaMatches);
 
@@ -637,7 +741,18 @@ export default function Conciliacion() {
       const notas = snapshotNotas.trim() || undefined;
 
       if (targetConsumo) {
-        const uploadedFacturaMatch = getFacturaMatchCandidate(facturaCreada, targetConsumo.monto, targetConsumo.fecha);
+        const uploadedFacturaMatch = getFacturaMatchCandidate(facturaCreada, {
+          cardNumber: targetConsumo.cardNumber || '',
+          employeeNumber: targetConsumo.employeeNumber || '',
+          employeeName: targetConsumo.userName || '',
+          fecha: targetConsumo.fecha,
+          comercio: targetConsumo.comercio,
+          paisComercio: targetConsumo.paisComercio || '',
+          tipoMovimiento: targetConsumo.tipoMovimiento || '',
+          monto: targetConsumo.monto,
+          montoUsd: 0,
+          concepto: targetConsumo.concepto || targetConsumo.categoria || '',
+        });
         const consumoActualizado = await updateConsumo(targetConsumo.id, {
           facturaId,
           facturaPdfName: snapshotPdfFile.name,
