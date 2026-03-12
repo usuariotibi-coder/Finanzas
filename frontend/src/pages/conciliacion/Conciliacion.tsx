@@ -1532,15 +1532,30 @@ export default function Conciliacion() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => openUploadModal('consumo', consumo.id)}
-                        className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        {consumo.facturaId ? 'Actualizar factura' : 'Subir factura'}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {facturaRelacionada ? (
+                          <button
+                            type="button"
+                            onClick={() => handleVerDetalles(facturaRelacionada.id)}
+                            className="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0Z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12Z" />
+                            </svg>
+                            {consumoMatchConfirmado ? 'Ver factura match' : 'Ver factura'}
+                          </button>
+                        ) : null}
+                        <button
+                          onClick={() => openUploadModal('consumo', consumo.id)}
+                          className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          {consumo.facturaId ? 'Actualizar factura' : 'Subir factura'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   );
