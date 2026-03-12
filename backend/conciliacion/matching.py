@@ -110,10 +110,10 @@ def get_pdf_date_score(factura: Factura, consumo: Consumo) -> float:
 
     distances = []
     for hint in normalized_hints:
-      try:
-        distances.append(diff_days(consumo.fecha, date.fromisoformat(hint)))
-      except ValueError:
-        continue
+        try:
+            distances.append(diff_days(consumo.fecha, date.fromisoformat(hint)))
+        except ValueError:
+            continue
 
     if not distances:
         return 0.0
@@ -128,11 +128,29 @@ def get_pdf_date_score(factura: Factura, consumo: Consumo) -> float:
 
 def get_factura_merchant_texts(factura: Factura) -> list[str]:
     validacion = factura.validacion_cfdi or {}
-    values = [factura.razon_social, validacion.get("pdfPreviewText", "")]
+    values = [
+        factura.razon_social,
+        validacion.get("pdfDetectedRazonSocial", ""),
+        validacion.get("pdfPreviewText", ""),
+    ]
     for concepto in factura.conceptos or []:
         if isinstance(concepto, dict):
             values.append(str(concepto.get("descripcion") or "").strip())
     return list({value.strip() for value in values if str(value).strip()})
+
+
+def get_factura_total_candidates(factura: Factura) -> list[Decimal]:
+    validacion = factura.validacion_cfdi or {}
+    candidates = [Decimal(factura.total)]
+    pdf_total = validacion.get("pdfDetectedTotal")
+    if pdf_total not in (None, ""):
+        try:
+            decimal_total = Decimal(str(pdf_total))
+            if decimal_total not in candidates:
+                candidates.append(decimal_total)
+        except Exception:
+            pass
+    return candidates
 
 
 def get_merchant_score(factura: Factura, consumo: Consumo) -> float:
@@ -176,8 +194,28 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
     if date_distance > max_date_distance:
         return None
 
-    difference = Decimal(consumo.monto) - Decimal(factura.total)
-    if abs(difference) <= AMOUNT_MATCH_EPSILON:
+    amount_matches: list[tuple[Decimal, str, Decimal]] = []
+    for candidate_total in get_factura_total_candidates(factura):
+        difference = Decimal(consumo.monto) - candidate_total
+        if abs(difference) <= AMOUNT_MATCH_EPSILON:
+            amount_matches.append((Decimal("0.00"), "exacto", candidate_total))
+            break
+        if difference < 0 or candidate_total <= 0:
+            continue
+        tip_ratio = difference / candidate_total
+        if tip_ratio > MAX_TIP_RATIO:
+            continue
+        amount_matches.append((difference.quantize(Decimal("0.01")), "propina", candidate_total))
+
+    if not amount_matches:
+        return None
+
+    difference, match_type, matched_total = sorted(
+        amount_matches,
+        key=lambda item: (0 if item[1] == "exacto" else 1, item[0])
+    )[0]
+
+    if match_type == "exacto":
         return ConsumoMatchResult(
             consumo=consumo,
             propina_detectada=Decimal("0.00"),
@@ -189,16 +227,11 @@ def get_consumo_match_candidate(factura: Factura, consumo: Consumo) -> ConsumoMa
             same_viatico=bool(factura.viatico_id and factura.viatico_id == consumo.viatico_id),
         )
 
-    if difference < 0 or Decimal(factura.total) <= 0:
-        return None
-
-    tip_ratio = difference / Decimal(factura.total)
-    if tip_ratio > MAX_TIP_RATIO:
-        return None
+    tip_ratio = difference / matched_total if matched_total > 0 else Decimal("0")
 
     return ConsumoMatchResult(
         consumo=consumo,
-        propina_detectada=difference.quantize(Decimal("0.01")),
+        propina_detectada=difference,
         propina_porcentaje=(tip_ratio * Decimal("100")).quantize(Decimal("0.01")),
         match_type="propina",
         date_distance=date_distance,

@@ -144,6 +144,11 @@ export interface ValidacionCFDI {
   propinaExcedida: boolean;
   pdfPreviewText?: string;
   pdfDateHints?: string[];
+  pdfDetectedTotal?: number;
+  pdfDetectedRfc?: string;
+  pdfDetectedFolio?: string;
+  pdfDetectedUuid?: string;
+  pdfDetectedRazonSocial?: string;
   propinaDetalle?: {
     monto: number;
     porcentaje: number;

@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 from accounts.models import Department, User
 from conciliacion.matching import reconcile_factura_with_consumos
 from conciliacion.models import Consumo, Factura
+from conciliacion.pdf_parser import extract_pdf_structured_hints
 
 
 class ConciliacionMatchingTests(TestCase):
@@ -44,6 +45,8 @@ class ConciliacionMatchingTests(TestCase):
             forma_pago='01',
             metodo_pago='PUE',
             validacion_cfdi={
+                'pdfDetectedTotal': 130.0,
+                'pdfDetectedRazonSocial': 'Tacos Don Pepe Centro',
                 'pdfPreviewText': 'Consumo en Tacos Don Pepe Centro ticket 456',
                 'pdfDateHints': ['2026-03-10'],
             },
@@ -57,9 +60,28 @@ class ConciliacionMatchingTests(TestCase):
         self.assertIsNotNone(matched_consumo)
         self.assertEqual(consumo.factura_id, factura.id)
         self.assertTrue(consumo.matched)
-        self.assertEqual(consumo.propina_detectada, Decimal('30.00'))
-        self.assertEqual(consumo.propina_porcentaje, Decimal('30.00'))
+        self.assertEqual(consumo.propina_detectada, Decimal('0.00'))
+        self.assertEqual(consumo.propina_porcentaje, Decimal('0.00'))
         self.assertTrue(factura.match_consumo)
+
+    def test_extract_pdf_structured_hints_detects_key_fields(self):
+        hints = extract_pdf_structured_hints(
+            '\n'.join([
+                'Nombre o razon social: EVENTOS Y ALIMENTOS DE MEXICO',
+                'RFC: EAM010110EM5',
+                'Folio: FAAG3989',
+                'UUID: 071DC4F2-2EAE-522C-9A1B-1234567890AB',
+                'Fecha: 16/02/2026',
+                'Total: 414.00',
+            ])
+        )
+
+        self.assertEqual(hints.get('pdfDetectedRazonSocial'), 'EVENTOS Y ALIMENTOS DE MEXICO')
+        self.assertEqual(hints.get('pdfDetectedRfc'), 'EAM010110EM5')
+        self.assertEqual(hints.get('pdfDetectedFolio'), 'FAAG3989')
+        self.assertEqual(hints.get('pdfDetectedUuid'), '071DC4F2-2EAE-522C-9A1B-1234567890AB')
+        self.assertEqual(hints.get('pdfDetectedTotal'), 414.0)
+        self.assertEqual(hints.get('pdfDateHints'), ['2026-02-16'])
 
 
 class FacturaViewSetTests(TestCase):

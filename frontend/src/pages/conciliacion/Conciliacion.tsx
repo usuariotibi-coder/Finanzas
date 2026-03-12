@@ -238,10 +238,20 @@ const getMerchantSimilarity = (left: string, right: string) => {
 const getFacturaMerchantTexts = (factura: Factura) => {
   const values = [
     factura.razonSocial,
+    factura.validacionCFDI?.pdfDetectedRazonSocial || '',
     factura.validacionCFDI?.pdfPreviewText || '',
     ...factura.conceptos.map((concepto) => concepto.descripcion),
   ];
   return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
+};
+
+const getFacturaTotalCandidates = (factura: Factura) => {
+  const values = [factura.total];
+  const pdfTotal = Number(factura.validacionCFDI?.pdfDetectedTotal);
+  if (Number.isFinite(pdfTotal) && pdfTotal > 0 && !values.some((value) => Math.abs(value - pdfTotal) <= AMOUNT_MATCH_EPSILON)) {
+    values.push(pdfTotal);
+  }
+  return values;
 };
 
 const getFacturaMerchantScore = (factura: Factura, row: StatementRow) => {
@@ -313,33 +323,54 @@ const getFacturaMatchCandidate = (
     return null;
   }
 
-  const difference = roundMoney(row.monto - factura.total);
-  if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
-    return {
-      factura,
-      propinaDetectada: 0,
-      propinaPorcentaje: 0,
-      matchType: 'exacto',
-      dateDistance,
-      merchantScore,
-      pdfDateScore,
-    };
-  }
+  const amountCandidates = getFacturaTotalCandidates(factura)
+    .map((candidateTotal) => {
+      const difference = roundMoney(row.monto - candidateTotal);
+      if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
+        return {
+          candidateTotal,
+          difference: 0,
+          matchType: 'exacto' as const,
+          tipRatio: 0,
+        };
+      }
+      if (difference < 0 || candidateTotal <= 0) {
+        return null;
+      }
+      const tipRatio = difference / candidateTotal;
+      if (tipRatio > MAX_TIP_PERCENTAGE + 1e-6) {
+        return null;
+      }
+      return {
+        candidateTotal,
+        difference,
+        matchType: 'propina' as const,
+        tipRatio,
+      };
+    })
+    .filter((candidate): candidate is {
+      candidateTotal: number;
+      difference: number;
+      matchType: 'exacto' | 'propina';
+      tipRatio: number;
+    } => Boolean(candidate))
+    .sort((left, right) => {
+      if (left.matchType !== right.matchType) {
+        return left.matchType === 'exacto' ? -1 : 1;
+      }
+      return left.difference - right.difference;
+    });
 
-  if (difference < 0 || factura.total <= 0) {
+  if (amountCandidates.length === 0) {
     return null;
   }
 
-  const tipRatio = difference / factura.total;
-  if (tipRatio > MAX_TIP_PERCENTAGE + 1e-6) {
-    return null;
-  }
-
+  const bestAmountCandidate = amountCandidates[0];
   return {
     factura,
-    propinaDetectada: difference,
-    propinaPorcentaje: Number((tipRatio * 100).toFixed(2)),
-    matchType: 'propina',
+    propinaDetectada: bestAmountCandidate.difference,
+    propinaPorcentaje: Number((bestAmountCandidate.tipRatio * 100).toFixed(2)),
+    matchType: bestAmountCandidate.matchType,
     dateDistance,
     merchantScore,
     pdfDateScore,
@@ -1804,6 +1835,7 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
   const xmlName = factura.archivoXML ?? consumoMatch?.facturaXmlName;
   const pdfPreviewUrl = pdfPath ? buildFacturaAssetUrl('PDF', pdfPath) : '';
   const xmlPreviewUrl = xmlPath ? buildFacturaAssetUrl('XML', xmlPath) : '';
+  const pdfDetectedData = factura.validacionCFDI;
   const [previewTipo, setPreviewTipo] = useState<'PDF' | 'XML' | null>(pdfPreviewUrl ? 'PDF' : xmlPreviewUrl ? 'XML' : null);
   const [xmlPreviewContent, setXmlPreviewContent] = useState('');
   const [xmlPreviewError, setXmlPreviewError] = useState('');
@@ -1887,6 +1919,42 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
               </div>
             </div>
           </div>
+
+          {(pdfDetectedData?.pdfDetectedRazonSocial
+            || pdfDetectedData?.pdfDetectedTotal
+            || pdfDetectedData?.pdfDetectedRfc
+            || pdfDetectedData?.pdfDetectedFolio
+            || pdfDetectedData?.pdfDetectedUuid) && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Datos detectados en PDF</h3>
+              <div className="grid grid-cols-1 gap-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 md:grid-cols-2">
+                <div>
+                  <p className="text-sm text-gray-600">Razon social detectada</p>
+                  <p className="text-sm font-semibold text-gray-900">{pdfDetectedData?.pdfDetectedRazonSocial || 'No detectada'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total detectado</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {Number.isFinite(Number(pdfDetectedData?.pdfDetectedTotal))
+                      ? `$${Number(pdfDetectedData?.pdfDetectedTotal).toLocaleString()}`
+                      : 'No detectado'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">RFC detectado</p>
+                  <p className="text-sm font-semibold text-gray-900">{pdfDetectedData?.pdfDetectedRfc || 'No detectado'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Folio detectado</p>
+                  <p className="text-sm font-semibold text-gray-900">{pdfDetectedData?.pdfDetectedFolio || 'No detectado'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-600">UUID detectado</p>
+                  <p className="break-all text-sm font-semibold text-gray-900">{pdfDetectedData?.pdfDetectedUuid || 'No detectado'}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Montos */}
           <div>
