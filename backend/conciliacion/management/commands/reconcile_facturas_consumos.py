@@ -36,6 +36,8 @@ class Command(BaseCommand):
                     propina_porcentaje=None,
                 )
                 Factura.objects.filter(id__in=factura_ids).update(match_consumo=False)
+                for factura in facturas:
+                    factura.match_consumo = False
 
         matched = 0
         unmatched = 0
