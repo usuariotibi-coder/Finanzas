@@ -13,7 +13,7 @@ import {
   updateConsumo,
   updateFactura,
 } from '../../utils/backendSync';
-import { toApiAssetUrl } from '../../utils/api';
+import { API_ROOT, toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
 const buildFacturaAssetUrl = (tipo: 'PDF' | 'XML', archivoPath?: string | null) => {
@@ -22,16 +22,29 @@ const buildFacturaAssetUrl = (tipo: 'PDF' | 'XML', archivoPath?: string | null) 
     return '';
   }
 
-  const hasPath = raw.includes('/') || /^https?:\/\//i.test(raw);
   const folder = tipo === 'PDF' ? 'pdf' : 'xml';
-  const candidate = hasPath ? raw : `/media/conciliacion/${folder}/${raw.replace(/^\/+/, '')}`;
-  const fileUrl = toApiAssetUrl(candidate);
-  if (!fileUrl) {
+  const apiOrigin = API_ROOT.replace(/\/$/, '').replace(/\/api$/i, '');
+  const candidate = raw.includes('/') || /^https?:\/\//i.test(raw)
+    ? raw
+    : `/media/conciliacion/${folder}/${raw.replace(/^\/+/, '')}`;
+  const fallbackFileUrl = toApiAssetUrl(candidate);
+  if (!fallbackFileUrl) {
     return '';
   }
 
   try {
-    const parsed = new URL(fileUrl, window.location.origin);
+    const parsedRaw = /^https?:\/\//i.test(raw) ? new URL(raw) : null;
+    const normalizedCandidate = parsedRaw
+      ? `${parsedRaw.pathname}${parsedRaw.search}${parsedRaw.hash}`
+      : candidate;
+    const fileUrl = toApiAssetUrl(normalizedCandidate);
+    if (!fileUrl) {
+      return '';
+    }
+
+    const parsed = new URL(fileUrl, apiOrigin);
+    parsed.protocol = new URL(apiOrigin).protocol;
+    parsed.host = new URL(apiOrigin).host;
     const isHttpsPage = window.location.protocol === 'https:';
     const isHttpAsset = parsed.protocol === 'http:';
     const isLocalAsset = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
@@ -40,7 +53,7 @@ const buildFacturaAssetUrl = (tipo: 'PDF' | 'XML', archivoPath?: string | null) 
     }
     return parsed.toString();
   } catch {
-    return encodeURI(fileUrl);
+    return encodeURI(fallbackFileUrl);
   }
 };
 
@@ -50,10 +63,13 @@ const openFacturaAsset = (tipo: 'PDF' | 'XML', archivoPath?: string | null) => {
     window.alert(`No se encontro el archivo ${tipo}.`);
     return;
   }
-  const opened = window.open(fileUrl, '_blank', 'noopener,noreferrer');
-  if (!opened) {
-    window.alert('Tu navegador bloqueo la apertura del archivo. Permite ventanas emergentes para este sitio.');
-  }
+  const link = document.createElement('a');
+  link.href = fileUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const downloadFacturaAsset = (tipo: 'PDF' | 'XML', archivoPath?: string | null, fallbackName?: string) => {
@@ -1093,8 +1109,10 @@ export default function Conciliacion() {
                   const facturaRelacionada = consumo.facturaId
                     ? facturasById.get(String(consumo.facturaId))
                     : undefined;
-                  const consumoPdf = facturaRelacionada?.archivoPDF || consumo.facturaPdfName;
-                  const consumoXml = facturaRelacionada?.archivoXML || consumo.facturaXmlName;
+                  const consumoPdfPath = facturaRelacionada?.archivoPDF;
+                  const consumoXmlPath = facturaRelacionada?.archivoXML;
+                  const consumoPdfLabel = facturaRelacionada?.archivoPDF || consumo.facturaPdfName;
+                  const consumoXmlLabel = facturaRelacionada?.archivoXML || consumo.facturaXmlName;
                   return (
                   <tr key={consumo.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -1141,21 +1159,21 @@ export default function Conciliacion() {
                         <div>
                           <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">Factura cargada</span>
                           <p className="text-xs text-gray-500 mt-1">Factura: {consumo.facturaId}</p>
-                          {(consumoPdf || consumoXml) && (
+                          {(consumoPdfLabel || consumoXmlLabel) && (
                             <p className="text-[10px] text-gray-400 mt-1 break-all">
-                              {consumoPdf ? `PDF: ${consumoPdf}` : ''}
-                              {consumoPdf && consumoXml ? ' · ' : ''}
-                              {consumoXml ? `XML: ${consumoXml}` : ''}
+                              {consumoPdfLabel ? `PDF: ${consumoPdfLabel}` : ''}
+                              {consumoPdfLabel && consumoXmlLabel ? ' · ' : ''}
+                              {consumoXmlLabel ? `XML: ${consumoXmlLabel}` : ''}
                             </p>
                           )}
-                          {(consumoPdf || consumoXml) && (
+                          {(consumoPdfLabel || consumoXmlLabel) && (
                             <div className="mt-1 flex items-center gap-2 text-[10px]">
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('PDF', consumoPdf)}
-                                disabled={!consumoPdf}
+                                onClick={() => handlePreviewArchivo('PDF', consumoPdfPath)}
+                                disabled={!consumoPdfPath}
                                 className={`px-2 py-0.5 rounded border ${
-                                  consumoPdf
+                                  consumoPdfPath
                                     ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -1164,10 +1182,10 @@ export default function Conciliacion() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('XML', consumoXml)}
-                                disabled={!consumoXml}
+                                onClick={() => handlePreviewArchivo('XML', consumoXmlPath)}
+                                disabled={!consumoXmlPath}
                                 className={`px-2 py-0.5 rounded border ${
-                                  consumoXml
+                                  consumoXmlPath
                                     ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -1245,8 +1263,10 @@ export default function Conciliacion() {
                   const facturaRelacionada = ticket.facturaId
                     ? facturasById.get(String(ticket.facturaId))
                     : undefined;
-                  const ticketPdf = facturaRelacionada?.archivoPDF || ticket.facturaPdfName;
-                  const ticketXml = facturaRelacionada?.archivoXML || ticket.facturaXmlName;
+                  const ticketPdfPath = facturaRelacionada?.archivoPDF;
+                  const ticketXmlPath = facturaRelacionada?.archivoXML;
+                  const ticketPdfLabel = facturaRelacionada?.archivoPDF || ticket.facturaPdfName;
+                  const ticketXmlLabel = facturaRelacionada?.archivoXML || ticket.facturaXmlName;
                   return (
                   <tr key={ticket.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -1288,21 +1308,21 @@ export default function Conciliacion() {
                         <div>
                           <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">Factura cargada</span>
                           <p className="text-xs text-gray-500 mt-1">Factura: {ticket.facturaId}</p>
-                          {(ticketPdf || ticketXml) && (
+                          {(ticketPdfLabel || ticketXmlLabel) && (
                             <p className="text-[10px] text-gray-400 mt-1 break-all">
-                              {ticketPdf ? `PDF: ${ticketPdf}` : ''}
-                              {ticketPdf && ticketXml ? ' · ' : ''}
-                              {ticketXml ? `XML: ${ticketXml}` : ''}
+                              {ticketPdfLabel ? `PDF: ${ticketPdfLabel}` : ''}
+                              {ticketPdfLabel && ticketXmlLabel ? ' · ' : ''}
+                              {ticketXmlLabel ? `XML: ${ticketXmlLabel}` : ''}
                             </p>
                           )}
-                          {(ticketPdf || ticketXml) && (
+                          {(ticketPdfLabel || ticketXmlLabel) && (
                             <div className="mt-1 flex items-center gap-2 text-[10px]">
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('PDF', ticketPdf)}
-                                disabled={!ticketPdf}
+                                onClick={() => handlePreviewArchivo('PDF', ticketPdfPath)}
+                                disabled={!ticketPdfPath}
                                 className={`px-2 py-0.5 rounded border ${
-                                  ticketPdf
+                                  ticketPdfPath
                                     ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -1311,10 +1331,10 @@ export default function Conciliacion() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handlePreviewArchivo('XML', ticketXml)}
-                                disabled={!ticketXml}
+                                onClick={() => handlePreviewArchivo('XML', ticketXmlPath)}
+                                disabled={!ticketXmlPath}
                                 className={`px-2 py-0.5 rounded border ${
-                                  ticketXml
+                                  ticketXmlPath
                                     ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                                     : 'border-gray-200 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -1549,14 +1569,16 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
 
   const [statusLocal, setStatusLocal] = useState(factura.status);
   const consumoMatch = consumos.find(c => c.facturaId === factura.id);
+  const pdfPath = factura.archivoPDF;
+  const xmlPath = factura.archivoXML;
   const pdfName = factura.archivoPDF ?? consumoMatch?.facturaPdfName;
   const xmlName = factura.archivoXML ?? consumoMatch?.facturaXmlName;
-  const handleAbrirArchivo = (tipo: 'PDF' | 'XML', nombre?: string) => {
-    openFacturaAsset(tipo, nombre);
+  const handleAbrirArchivo = (tipo: 'PDF' | 'XML', path?: string) => {
+    openFacturaAsset(tipo, path);
   };
-  const handleDescargarArchivo = (tipo: 'PDF' | 'XML', nombre?: string) => {
+  const handleDescargarArchivo = (tipo: 'PDF' | 'XML', path?: string) => {
     const defaultName = `${factura.folio || factura.id}.${tipo.toLowerCase()}`;
-    downloadFacturaAsset(tipo, nombre, defaultName);
+    downloadFacturaAsset(tipo, path, defaultName);
   };
 
   const handleStatusChange = (status: FacturaStatus) => {
@@ -1657,10 +1679,10 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleAbrirArchivo('PDF', pdfName)}
-                    disabled={!pdfName}
+                    onClick={() => handleAbrirArchivo('PDF', pdfPath)}
+                    disabled={!pdfPath}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
-                      pdfName
+                      pdfPath
                         ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
@@ -1673,10 +1695,10 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDescargarArchivo('PDF', pdfName)}
-                    disabled={!pdfName}
+                    onClick={() => handleDescargarArchivo('PDF', pdfPath)}
+                    disabled={!pdfPath}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
-                      pdfName
+                      pdfPath
                         ? 'border-blue-200 text-blue-700 hover:bg-blue-50'
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
@@ -1694,10 +1716,10 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleAbrirArchivo('XML', xmlName)}
-                    disabled={!xmlName}
+                    onClick={() => handleAbrirArchivo('XML', xmlPath)}
+                    disabled={!xmlPath}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
-                      xmlName
+                      xmlPath
                         ? 'border-teal-200 text-teal-700 hover:bg-teal-50'
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
@@ -1710,10 +1732,10 @@ function DetalleFacturaModal({ factura, consumos, onClose, onUpdateStatus }: Det
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDescargarArchivo('XML', xmlName)}
-                    disabled={!xmlName}
+                    onClick={() => handleDescargarArchivo('XML', xmlPath)}
+                    disabled={!xmlPath}
                     className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border ${
-                      xmlName
+                      xmlPath
                         ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                         : 'border-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
