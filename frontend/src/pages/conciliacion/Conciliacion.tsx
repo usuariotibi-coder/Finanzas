@@ -8,7 +8,11 @@ import {
   createConsumo,
   createFactura,
   deleteFactura,
+  fetchAlertasConciliacion,
+  fetchAmexTickets,
   fetchAmexTarjetas,
+  fetchConsumos,
+  fetchFacturas,
   syncCoreAppData,
   updateAmexTicket,
   updateConsumo,
@@ -518,7 +522,7 @@ export default function Conciliacion() {
   const [selectedMes, setSelectedMes] = useLocalStorageState('conciliacion:selectedMes', 'todos');
   const [selectedUsuario, setSelectedUsuario] = useLocalStorageState('conciliacion:selectedUsuario', 'todos');
   const [vistaActiva, setVistaActiva] = useLocalStorageState<'facturas' | 'consumos' | 'amex'>('conciliacion:vistaActiva', 'facturas');
-  const [alertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
+  const [alertas, setAlertas] = useLocalStorageState<AlertaConciliacion[]>('conciliacion:alertas', []);
   const facturasById = useMemo(
     () => new Map(facturas.map((factura) => [String(factura.id), factura])),
     [facturas]
@@ -549,6 +553,12 @@ export default function Conciliacion() {
   const filtraPorMes = (fecha: string) => selectedMes === 'todos' || getMesKey(fecha) === selectedMes;
   const filtraPorUsuario = (userId?: string | null) =>
     effectiveSelectedUsuario === 'todos' || String(userId || '') === effectiveSelectedUsuario;
+  const hasConsumoMatchConfirmado = (consumo: Consumo, facturaRelacionada?: Factura) => (
+    Boolean(consumo.facturaId && facturaRelacionada && (consumo.matched || facturaRelacionada.matchConsumo))
+  );
+  const hasAmexMatchConfirmado = (ticket: TicketAMEX, facturaRelacionada?: Factura) => (
+    Boolean(ticket.facturaId && facturaRelacionada && (ticket.matched || facturaRelacionada.matchConsumo))
+  );
   const mesesDisponibles = Array.from(
     new Set(
       [...facturas, ...consumos, ...ticketsAMEX]
@@ -595,19 +605,25 @@ export default function Conciliacion() {
   const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha) && filtraPorUsuario(ticket.userId));
   const matchedFacturaIdsDesdeConsumos = useMemo(
     () => new Set(
-      consumosFiltrados
-        .filter((consumo) => consumo.matched && consumo.facturaId)
+      consumos
+        .filter((consumo) => hasConsumoMatchConfirmado(
+          consumo,
+          consumo.facturaId ? facturasById.get(String(consumo.facturaId)) : undefined,
+        ))
         .map((consumo) => String(consumo.facturaId))
     ),
-    [consumosFiltrados]
+    [consumos, facturasById]
   );
   const matchedFacturaIdsDesdeAmex = useMemo(
     () => new Set(
-      ticketsAMEXFiltrados
-        .filter((ticket) => ticket.matched && ticket.facturaId)
+      ticketsAMEX
+        .filter((ticket) => hasAmexMatchConfirmado(
+          ticket,
+          ticket.facturaId ? facturasById.get(String(ticket.facturaId)) : undefined,
+        ))
         .map((ticket) => String(ticket.facturaId))
     ),
-    [ticketsAMEXFiltrados]
+    [ticketsAMEX, facturasById]
   );
 
   const facturasValidadas = facturasFiltradas.filter(f => f.status === 'validada').length;
@@ -616,8 +632,14 @@ export default function Conciliacion() {
   const selectedFactura = selectedFacturaId ? facturas.find((item) => item.id === selectedFacturaId) ?? null : null;
   const selectedAlerta = selectedAlertaIndex !== null ? alertas[selectedAlertaIndex] ?? null : null;
 
-  const consumosSinMatch = consumosFiltrados.filter(c => !c.matched).length;
-  const amexSinMatch = ticketsAMEXFiltrados.filter(a => !a.matched).length;
+  const consumosSinMatch = consumosFiltrados.filter((consumo) => !hasConsumoMatchConfirmado(
+    consumo,
+    consumo.facturaId ? facturasById.get(String(consumo.facturaId)) : undefined,
+  )).length;
+  const amexSinMatch = ticketsAMEXFiltrados.filter((ticket) => !hasAmexMatchConfirmado(
+    ticket,
+    ticket.facturaId ? facturasById.get(String(ticket.facturaId)) : undefined,
+  )).length;
   const uploadErrors = showUploadErrors
     ? {
       pdf: !uploadPdfFile ? 'Agrega el PDF.' : '',
@@ -655,6 +677,31 @@ export default function Conciliacion() {
       return Array.from(map.values());
     });
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void Promise.all([
+      fetchFacturas(),
+      fetchConsumos(),
+      fetchAmexTickets(),
+      fetchAlertasConciliacion(),
+    ])
+      .then(([nextFacturas, nextConsumos, nextTicketsAMEX, nextAlertas]) => {
+        if (cancelled) {
+          return;
+        }
+        setFacturas(nextFacturas);
+        setConsumos(nextConsumos);
+        setTicketsAMEX(nextTicketsAMEX);
+        setAlertas(nextAlertas);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setAlertas, setConsumos, setFacturas, setTicketsAMEX]);
 
   const findMatchingCard = (cards: TarjetaAMEX[], row: StatementRow) => {
     const cardsByNumber = cards.filter((card) => normalizeCardNumber(card.cardNumber) === row.cardNumber && card.userId);
@@ -1386,7 +1433,7 @@ export default function Conciliacion() {
                   const facturaRelacionada = consumo.facturaId
                     ? facturasById.get(String(consumo.facturaId))
                     : undefined;
-                  const consumoMatchConfirmado = Boolean(consumo.matched && consumo.facturaId && facturaRelacionada);
+                  const consumoMatchConfirmado = hasConsumoMatchConfirmado(consumo, facturaRelacionada);
                   const consumoPdfPath = facturaRelacionada?.archivoPDF;
                   const consumoXmlPath = facturaRelacionada?.archivoXML;
                   const consumoPdfLabel = facturaRelacionada?.archivoPDF || consumo.facturaPdfName;
@@ -1541,7 +1588,7 @@ export default function Conciliacion() {
                   const facturaRelacionada = ticket.facturaId
                     ? facturasById.get(String(ticket.facturaId))
                     : undefined;
-                  const ticketMatchConfirmado = Boolean(ticket.matched && ticket.facturaId && facturaRelacionada);
+                  const ticketMatchConfirmado = hasAmexMatchConfirmado(ticket, facturaRelacionada);
                   const ticketPdfPath = facturaRelacionada?.archivoPDF;
                   const ticketXmlPath = facturaRelacionada?.archivoXML;
                   const ticketPdfLabel = facturaRelacionada?.archivoPDF || ticket.facturaPdfName;
