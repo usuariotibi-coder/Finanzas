@@ -110,7 +110,7 @@ def _find_total(text: str) -> float | None:
             amount = _parse_amount(match.group(1))
             if amount is not None:
                 matches.append(amount)
-    return matches[-1] if matches else None
+    return max(matches) if matches else None
 
 
 def _looks_like_uuid(value: str) -> bool:
@@ -134,6 +134,25 @@ def _find_folio(text: str, uuid: str | None) -> str | None:
 
 
 def _find_razon_social(lines: list[str], text: str, rfc: str | None) -> str | None:
+    def is_valid_business_name(value: str) -> bool:
+        candidate = _normalize_spaces(value).strip(" :-")
+        if len(candidate) < 4:
+            return False
+        if re.fullmatch(r"\d{8,}", candidate):
+            return False
+        search_candidate = _normalize_for_search(candidate)
+        if search_candidate in {
+            "EMISOR",
+            "RAZON SOCIAL",
+            "RAZON SOCIAL EMISOR",
+            "NOMBRE O RAZON SOCIAL",
+            "NOMBRE DEL EMISOR",
+        }:
+            return False
+        if "CERTIFICADO" in search_candidate or "SELLO" in search_candidate:
+            return False
+        return True
+
     line_patterns = (
         "RAZON SOCIAL",
         "NOMBRE O RAZON SOCIAL",
@@ -149,12 +168,12 @@ def _find_razon_social(lines: list[str], text: str, rfc: str | None) -> str | No
             inline_match = re.search(rf"{pattern}\s*[:#-]?\s*(.+)$", search_line)
             if inline_match:
                 candidate = inline_match.group(1).strip(" :-")
-                if candidate and "RFC" not in candidate and len(candidate) >= 4:
+                if candidate and "RFC" not in candidate and is_valid_business_name(candidate):
                     return candidate
             if index + 1 < len(lines):
                 next_line = _normalize_spaces(lines[index + 1])
                 next_search = _normalize_for_search(next_line)
-                if next_line and "RFC" not in next_search and len(next_line) >= 4:
+                if next_line and "RFC" not in next_search and is_valid_business_name(next_line):
                     return next_line
 
     if rfc:
@@ -165,8 +184,7 @@ def _find_razon_social(lines: list[str], text: str, rfc: str | None) -> str | No
                 candidate = _normalize_spaces(lines[back_index])
                 candidate_search = _normalize_for_search(candidate)
                 if (
-                    candidate
-                    and len(candidate) >= 4
+                    is_valid_business_name(candidate)
                     and "UUID" not in candidate_search
                     and "FOLIO" not in candidate_search
                     and "RFC" not in candidate_search
@@ -181,7 +199,7 @@ def _find_razon_social(lines: list[str], text: str, rfc: str | None) -> str | No
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
             candidate = _normalize_spaces(match.group(1)).strip(" :-")
-            if candidate and "RFC" not in _normalize_for_search(candidate):
+            if candidate and "RFC" not in _normalize_for_search(candidate) and is_valid_business_name(candidate):
                 return candidate
     return None
 

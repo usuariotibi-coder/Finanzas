@@ -83,6 +83,32 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(hints.get('pdfDetectedTotal'), 414.0)
         self.assertEqual(hints.get('pdfDateHints'), ['2026-02-16'])
 
+    def test_extract_pdf_structured_hints_ignores_numeric_certificate_as_razon_social(self):
+        hints = extract_pdf_structured_hints(
+            '\n'.join([
+                'Razon social emisor:',
+                '00001000000713776116',
+                'RFC: IME120610FQA',
+                'Total: 119.01',
+            ])
+        )
+
+        self.assertIsNone(hints.get('pdfDetectedRazonSocial'))
+        self.assertEqual(hints.get('pdfDetectedRfc'), 'IME120610FQA')
+        self.assertEqual(hints.get('pdfDetectedTotal'), 119.01)
+
+    def test_extract_pdf_structured_hints_prefers_largest_total_candidate(self):
+        hints = extract_pdf_structured_hints(
+            '\n'.join([
+                'Version 1.0',
+                'SubTotal: 361.21',
+                'Impuestos Total: 57.79',
+                'Total: 419.00',
+            ])
+        )
+
+        self.assertEqual(hints.get('pdfDetectedTotal'), 419.0)
+
     def test_diagnose_factura_candidates_reports_match_reasons(self):
         consumo = Consumo.objects.create(
             user=self.user,
