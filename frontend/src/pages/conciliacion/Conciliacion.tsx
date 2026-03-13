@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { read, utils as XLSXUtils, writeFile } from 'xlsx';
+import { read, utils as XLSXUtils, writeFile } from 'xlsx-js-style';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
@@ -264,6 +264,46 @@ const buildReportDateValue = (value: string) => {
     return value;
   }
   return parsed;
+};
+
+const REPORT_BORDER = {
+  top: { style: 'thin', color: { rgb: 'FFD0D7E2' } },
+  right: { style: 'thin', color: { rgb: 'FFD0D7E2' } },
+  bottom: { style: 'thin', color: { rgb: 'FFD0D7E2' } },
+  left: { style: 'thin', color: { rgb: 'FFD0D7E2' } },
+};
+
+const REPORT_HEADER_STYLE = {
+  font: { bold: true, color: { rgb: 'FFFFFFFF' }, sz: 11 },
+  fill: { patternType: 'solid', fgColor: { rgb: 'FF1F4E78' } },
+  alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+  border: REPORT_BORDER,
+};
+
+const REPORT_TEXT_STYLE = {
+  font: { color: { rgb: 'FF0F172A' }, sz: 10 },
+  alignment: { vertical: 'center', wrapText: true },
+  border: REPORT_BORDER,
+};
+
+const REPORT_CENTER_STYLE = {
+  ...REPORT_TEXT_STYLE,
+  alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+};
+
+const REPORT_DATE_STYLE = {
+  ...REPORT_CENTER_STYLE,
+  numFmt: 'mm-dd-yy',
+};
+
+const REPORT_AMOUNT_STYLE = {
+  ...REPORT_TEXT_STYLE,
+  numFmt: '$#,##0.00',
+};
+
+const REPORT_ZERO_STYLE = {
+  ...REPORT_CENTER_STYLE,
+  numFmt: '0.00',
 };
 
 const getMerchantComparableText = (value: string) =>
@@ -1050,25 +1090,74 @@ export default function Conciliacion() {
       const workbook = XLSXUtils.book_new();
       const worksheet = XLSXUtils.aoa_to_sheet([reportHeaders, ...reportRows]);
       worksheet['!cols'] = [
-        { wch: 20 },
-        { wch: 15 },
-        { wch: 28 },
-        { wch: 22 },
-        { wch: 14 },
-        { wch: 40 },
-        { wch: 14 },
-        { wch: 18 },
-        { wch: 10 },
-        { wch: 10 },
-        { wch: 38 },
-        { wch: 30 },
-        { wch: 12 },
-        { wch: 20 },
-        { wch: 24 },
-        { wch: 18 },
-        { wch: 20 },
-        { wch: 18 },
+        { wch: 20.66 },
+        { wch: 21.66 },
+        { wch: 62.89 },
+        { wch: 20.89 },
+        { wch: 11.55 },
+        { wch: 44.89 },
+        { wch: 21.11 },
+        { wch: 27.44 },
+        { wch: 11.66 },
+        { wch: 9.44 },
+        { wch: 211.11 },
+        { wch: 197 },
+        { wch: 15.33 },
+        { wch: 30.44 },
+        { wch: 30.89 },
+        { wch: 19.66 },
+        { wch: 29.33 },
+        { wch: 20.55 },
       ];
+      worksheet['!rows'] = [
+        { hpx: 28 },
+        ...reportRows.map(() => ({ hpx: 22 })),
+      ];
+
+      for (let colIndex = 0; colIndex < reportHeaders.length; colIndex += 1) {
+        const headerRef = XLSXUtils.encode_cell({ r: 0, c: colIndex });
+        const headerCell = worksheet[headerRef];
+        if (headerCell) {
+          headerCell.s = REPORT_HEADER_STYLE;
+        }
+      }
+
+      for (let rowIndex = 0; rowIndex < reportRows.length; rowIndex += 1) {
+        const excelRow = rowIndex + 1;
+        for (let colIndex = 0; colIndex < reportHeaders.length; colIndex += 1) {
+          const cellRef = XLSXUtils.encode_cell({ r: excelRow, c: colIndex });
+          const cell = worksheet[cellRef];
+          if (!cell) {
+            continue;
+          }
+
+          if (colIndex === 4) {
+            cell.s = REPORT_DATE_STYLE;
+            continue;
+          }
+          if ([6, 7, 8, 12, 13].includes(colIndex)) {
+            cell.s = colIndex === 7 || colIndex === 8 ? REPORT_ZERO_STYLE : REPORT_AMOUNT_STYLE;
+            continue;
+          }
+          if (colIndex === 9 && String(cell.v || '').trim().toLowerCase() === 'ok') {
+            cell.s = {
+              ...REPORT_CENTER_STYLE,
+              font: { bold: true, color: { rgb: 'FF166534' }, sz: 10 },
+              fill: { patternType: 'solid', fgColor: { rgb: 'FFDCFCE7' } },
+            };
+            continue;
+          }
+          if (colIndex === 13 && Number(reportRows[rowIndex][13] || 0) > 0) {
+            cell.s = {
+              ...REPORT_AMOUNT_STYLE,
+              font: { bold: true, color: { rgb: 'FF991B1B' }, sz: 10 },
+              fill: { patternType: 'solid', fgColor: { rgb: 'FFFEE2E2' } },
+            };
+            continue;
+          }
+          cell.s = [1, 4, 8, 9, 12, 13, 14, 15, 16].includes(colIndex) ? REPORT_CENTER_STYLE : REPORT_TEXT_STYLE;
+        }
+      }
       if (reportRows.length > 0) {
         worksheet['!autofilter'] = {
           ref: XLSXUtils.encode_range({
