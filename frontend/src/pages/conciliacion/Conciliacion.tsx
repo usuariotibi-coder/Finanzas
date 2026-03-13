@@ -295,7 +295,7 @@ const resolveProyectoReportLabel = (
   const fallbackLabel = formatProyectoLabel(proyectoNombre, proyectoId) || fallback || '';
 
   if (codigo && descripcion && normalizeText(codigo) !== normalizeText(descripcion)) {
-    return `${codigo}\n${descripcion}`;
+    return `${codigo}    ${descripcion}`;
   }
   if (codigo) {
     return codigo;
