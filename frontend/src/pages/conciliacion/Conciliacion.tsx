@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { read, utils as XLSXUtils } from 'xlsx';
+import { read, utils as XLSXUtils, writeFile } from 'xlsx';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
@@ -13,12 +13,13 @@ import {
   fetchAmexTarjetas,
   fetchConsumos,
   fetchFacturas,
+  fetchViaticos,
   syncCoreAppData,
   updateAmexTicket,
   updateConsumo,
   updateFactura,
 } from '../../utils/backendSync';
-import { API_ROOT, toApiAssetUrl } from '../../utils/api';
+import { api, API_ROOT, toApiAssetUrl } from '../../utils/api';
 import { formatProyectoLabel } from '../../utils/proyectoLabel';
 
 const buildFacturaAssetUrl = (tipo: 'PDF' | 'XML', archivoPath?: string | null) => {
@@ -118,6 +119,12 @@ type FacturaMatchResult = {
   pdfDateScore: number;
 };
 
+type ReportUserRecord = {
+  id: string;
+  fullName: string;
+  department: string;
+};
+
 const AMOUNT_MATCH_EPSILON = 0.01;
 const MAX_TIP_PERCENTAGE = 0.2;
 const TIP_MATCH_MIN_MERCHANT_SCORE = 0.3;
@@ -195,6 +202,69 @@ const diffDays = (left: string, right: string) => {
 };
 
 const roundMoney = (value: number) => Number(value.toFixed(2));
+
+const toArrayRecords = (value: unknown): Record<string, unknown>[] => {
+  if (Array.isArray(value)) {
+    return value as Record<string, unknown>[];
+  }
+  if (value && typeof value === 'object') {
+    const payload = value as Record<string, unknown>;
+    if (Array.isArray(payload.results)) {
+      return payload.results as Record<string, unknown>[];
+    }
+  }
+  return [];
+};
+
+const parseReportUsers = (value: unknown): ReportUserRecord[] =>
+  toArrayRecords(value).map((item) => ({
+    id: String(item.id ?? '').trim(),
+    fullName: String(item.full_name ?? '').trim(),
+    department: String(item.department ?? '').trim(),
+  })).filter((item) => item.id);
+
+const buildConsumptionSheetLabel = (selectedMes: string, monthLabels: Record<string, string>) => {
+  if (selectedMes === 'todos') {
+    return 'CONSUMPTION REPORT';
+  }
+  const monthLabel = monthLabels[selectedMes] || selectedMes;
+  return `CONSUMPTION ${monthLabel.toUpperCase()}`;
+};
+
+const sanitizeFilenamePart = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const buildReportFilename = (sheetLabel: string, selectedUsuarioLabel?: string) => {
+  const baseName = sanitizeFilenamePart(sheetLabel) || 'CONSUMPTION_REPORT';
+  const userLabel = sanitizeFilenamePart(selectedUsuarioLabel || '');
+  return userLabel ? `${baseName}_${userLabel}` : baseName;
+};
+
+const classifyViaticoForReport = (destinoPais?: string) => {
+  const normalized = normalizeText(destinoPais || '');
+  if (!normalized) {
+    return '';
+  }
+  if (normalized === 'usa' || normalized === 'otro') {
+    return 'INTERNACIONAL';
+  }
+  return 'NACIONAL';
+};
+
+const buildReportDateValue = (value: string) => {
+  if (!value) {
+    return '';
+  }
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed;
+};
 
 const getMerchantComparableText = (value: string) =>
   normalizeText(value)
@@ -578,6 +648,7 @@ export default function Conciliacion() {
   const [uploadSaving, setUploadSaving] = useState(false);
   const [showUploadErrors, setShowUploadErrors] = useState(false);
   const [statementImporting, setStatementImporting] = useState(false);
+  const [reportGenerating, setReportGenerating] = useState(false);
   const [reprocessingConciliacion, setReprocessingConciliacion] = useState(false);
   const [showReprocessModal, setShowReprocessModal] = useState(false);
   const [statementImportMessage, setStatementImportMessage] = useState('');
@@ -667,6 +738,11 @@ export default function Conciliacion() {
   const facturasFiltradas = facturas.filter((factura) => filtraPorMes(factura.fecha) && filtraPorUsuario(factura.userId));
   const consumosFiltrados = consumos.filter((consumo) => filtraPorMes(consumo.fecha) && filtraPorUsuario(consumo.userId));
   const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha) && filtraPorUsuario(ticket.userId));
+  const selectedUsuarioLabel = effectiveSelectedUsuario === 'todos'
+    ? 'Todos'
+    : usuariosDisponibles.find((usuarioOption) => usuarioOption.id === effectiveSelectedUsuario)?.label
+      || user?.full_name
+      || effectiveSelectedUsuario;
   const matchedFacturaIdsDesdeConsumos = useMemo(
     () => new Set(
       consumos
@@ -862,6 +938,156 @@ export default function Conciliacion() {
     }
 
     return nextFacturas;
+  };
+
+  const handleGenerarReporte = async () => {
+    if (consumosFiltrados.length === 0) {
+      setStatementImportError('No hay consumos visibles para generar el reporte con los filtros actuales.');
+      setStatementImportMessage('');
+      return;
+    }
+
+    setReportGenerating(true);
+    setStatementImportError('');
+    setStatementImportMessage('');
+
+    try {
+      const [viaticos, usersResponse] = await Promise.all([
+        fetchViaticos().catch(() => []),
+        (async () => {
+          try {
+            return await api.adminUsers();
+          } catch {
+            try {
+              return await api.assignableUsers();
+            } catch {
+              return [];
+            }
+          }
+        })(),
+      ]);
+
+      const usersById = new Map<string, ReportUserRecord>(
+        parseReportUsers(usersResponse).map((reportUser) => [reportUser.id, reportUser])
+      );
+      if (user) {
+        usersById.set(String(user.id), {
+          id: String(user.id),
+          fullName: user.full_name,
+          department: user.department || '',
+        });
+      }
+
+      const viaticosById = new Map(viaticos.map((viatico) => [String(viatico.id), viatico]));
+      const reportHeaders = [
+        'Tarjeta',
+        'Num. Empleado',
+        'Empleado',
+        'Departamento',
+        'Fecha',
+        'Comercio',
+        'Importe MXN',
+        'Importe origen USD',
+        'USD',
+        'PDF',
+        'Invoice',
+        'Proyecto',
+        'Propina',
+        'Gasto No Comprobado',
+        'Clasificacion del Viatico',
+        'Pais Comercio',
+        'Tipo de movimiento',
+        'Concepto',
+      ];
+      const reportRows = consumosFiltrados
+        .slice()
+        .sort((left, right) => (
+          left.fecha.localeCompare(right.fecha)
+          || left.userName?.localeCompare(right.userName || '', 'es', { sensitivity: 'base' })
+          || left.comercio.localeCompare(right.comercio, 'es', { sensitivity: 'base' })
+        ))
+        .map((consumo) => {
+          const facturaRelacionada = consumo.facturaId
+            ? facturasById.get(String(consumo.facturaId))
+            : undefined;
+          const viaticoRelacionado = consumo.viaticoId
+            ? viaticosById.get(String(consumo.viaticoId))
+            : facturaRelacionada?.viaticoId
+              ? viaticosById.get(String(facturaRelacionada.viaticoId))
+              : undefined;
+          const usuarioRelacionado = usersById.get(String(consumo.userId || facturaRelacionada?.userId || ''));
+          const propinaDetectada = Number(consumo.propinaDetectada || 0);
+          const proyectoLabel = viaticoRelacionado
+            ? (
+              formatProyectoLabel(viaticoRelacionado.proyectoNombre, viaticoRelacionado.proyectoId)
+              || viaticoRelacionado.motivo
+            )
+            : '';
+          const gastoNoComprobado = facturaRelacionada ? 0 : roundMoney(consumo.monto);
+
+          return [
+            consumo.cardNumber || '',
+            consumo.employeeNumber || '',
+            consumo.userName || facturaRelacionada?.userName || usuarioRelacionado?.fullName || '',
+            usuarioRelacionado?.department || '',
+            buildReportDateValue(consumo.fecha),
+            consumo.comercio || '',
+            roundMoney(consumo.monto),
+            0,
+            0,
+            facturaRelacionada?.archivoPDF ? 'ok' : '',
+            facturaRelacionada?.uuid || facturaRelacionada?.folio || '',
+            proyectoLabel,
+            roundMoney(propinaDetectada),
+            gastoNoComprobado,
+            classifyViaticoForReport(viaticoRelacionado?.destinoPais),
+            consumo.paisComercio || '',
+            consumo.tipoMovimiento || '',
+            consumo.concepto || consumo.categoria || '',
+          ];
+        });
+
+      const workbook = XLSXUtils.book_new();
+      const worksheet = XLSXUtils.aoa_to_sheet([reportHeaders, ...reportRows]);
+      worksheet['!cols'] = [
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 28 },
+        { wch: 22 },
+        { wch: 14 },
+        { wch: 40 },
+        { wch: 14 },
+        { wch: 18 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 38 },
+        { wch: 30 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 18 },
+        { wch: 20 },
+        { wch: 18 },
+      ];
+      if (reportRows.length > 0) {
+        worksheet['!autofilter'] = {
+          ref: XLSXUtils.encode_range({
+            s: { r: 0, c: 0 },
+            e: { r: reportRows.length, c: reportHeaders.length - 1 },
+          }),
+        };
+      }
+
+      const sheetLabel = buildConsumptionSheetLabel(selectedMes, monthLabels);
+      XLSXUtils.book_append_sheet(workbook, worksheet, sheetLabel.slice(0, 31));
+      writeFile(workbook, `${buildReportFilename(sheetLabel, selectedUsuarioLabel)}.xlsx`);
+      setStatementImportMessage(`Reporte generado con ${reportRows.length} consumos visibles.`);
+    } catch (error) {
+      setStatementImportError(error instanceof Error ? error.message : 'No se pudo generar el reporte de conciliacion.');
+      setStatementImportMessage('');
+    } finally {
+      setReportGenerating(false);
+    }
   };
 
   const handleReprocesarConciliacion = async () => {
@@ -1237,6 +1463,14 @@ export default function Conciliacion() {
                   className="px-3 py-1.5 text-[11px] rounded-lg border border-slate-300 bg-white font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {reprocessingConciliacion ? 'Reprocesando...' : 'Reprocesar conciliacion'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleGenerarReporte()}
+                  disabled={reportGenerating}
+                  className="px-3 py-1.5 text-[11px] rounded-lg border border-emerald-300 bg-emerald-50 font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {reportGenerating ? 'Generando reporte...' : 'Generar reporte'}
                 </button>
                 <select
                   value={selectedMes}
