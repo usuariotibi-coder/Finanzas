@@ -238,10 +238,9 @@ const sanitizeFilenamePart = (value: string) =>
     .replace(/[^a-zA-Z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
 
-const buildReportFilename = (sheetLabel: string, selectedUsuarioLabel?: string) => {
+const buildReportFilename = (sheetLabel: string) => {
   const baseName = sanitizeFilenamePart(sheetLabel) || 'CONSUMPTION_REPORT';
-  const userLabel = sanitizeFilenamePart(selectedUsuarioLabel || '');
-  return userLabel ? `${baseName}_${userLabel}` : baseName;
+  return baseName;
 };
 
 const classifyViaticoForReport = (destinoPais?: string) => {
@@ -778,11 +777,6 @@ export default function Conciliacion() {
   const facturasFiltradas = facturas.filter((factura) => filtraPorMes(factura.fecha) && filtraPorUsuario(factura.userId));
   const consumosFiltrados = consumos.filter((consumo) => filtraPorMes(consumo.fecha) && filtraPorUsuario(consumo.userId));
   const ticketsAMEXFiltrados = ticketsAMEX.filter((ticket) => filtraPorMes(ticket.fecha) && filtraPorUsuario(ticket.userId));
-  const selectedUsuarioLabel = effectiveSelectedUsuario === 'todos'
-    ? 'Todos'
-    : usuariosDisponibles.find((usuarioOption) => usuarioOption.id === effectiveSelectedUsuario)?.label
-      || user?.full_name
-      || effectiveSelectedUsuario;
   const matchedFacturaIdsDesdeConsumos = useMemo(
     () => new Set(
       consumos
@@ -981,8 +975,9 @@ export default function Conciliacion() {
   };
 
   const handleGenerarReporte = async () => {
-    if (consumosFiltrados.length === 0) {
-      setStatementImportError('No hay consumos visibles para generar el reporte con los filtros actuales.');
+    const consumosReporte = consumos.filter((consumo) => filtraPorMes(consumo.fecha));
+    if (consumosReporte.length === 0) {
+      setStatementImportError('No hay consumos en el mes seleccionado para generar el reporte.');
       setStatementImportMessage('');
       return;
     }
@@ -1039,7 +1034,7 @@ export default function Conciliacion() {
         'Tipo de movimiento',
         'Concepto',
       ];
-      const reportRows = consumosFiltrados
+      const reportRows = consumosReporte
         .slice()
         .sort((left, right) => (
           left.fecha.localeCompare(right.fecha)
@@ -1169,8 +1164,8 @@ export default function Conciliacion() {
 
       const sheetLabel = buildConsumptionSheetLabel(selectedMes, monthLabels);
       XLSXUtils.book_append_sheet(workbook, worksheet, sheetLabel.slice(0, 31));
-      writeFile(workbook, `${buildReportFilename(sheetLabel, selectedUsuarioLabel)}.xlsx`);
-      setStatementImportMessage(`Reporte generado con ${reportRows.length} consumos visibles.`);
+      writeFile(workbook, `${buildReportFilename(sheetLabel)}.xlsx`);
+      setStatementImportMessage(`Reporte generado con ${reportRows.length} consumos del mes seleccionado.`);
     } catch (error) {
       setStatementImportError(error instanceof Error ? error.message : 'No se pudo generar el reporte de conciliacion.');
       setStatementImportMessage('');
