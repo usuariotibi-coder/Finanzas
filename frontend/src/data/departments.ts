@@ -48,3 +48,14 @@ export const removeDepartmentOption = (value: string) => {
   replaceDepartmentOptions(DEPARTMENT_OPTIONS.filter((item) => item.value !== normalizedValue));
 };
 
+export const getDepartmentLabel = (value: string) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return '';
+
+  const match = DEPARTMENT_OPTIONS.find(
+    (item) => item.value === normalizedValue || item.label === normalizedValue
+  );
+
+  return match?.label || normalizedValue;
+};
+

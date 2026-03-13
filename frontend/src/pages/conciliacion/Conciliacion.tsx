@@ -3,6 +3,7 @@ import { read, utils as XLSXUtils, writeFile } from 'xlsx-js-style';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
+import { getDepartmentLabel } from '../../data/departments';
 import type { Factura, AlertaConciliacion, Consumo, Proyecto, TarjetaAMEX, TicketAMEX, FacturaStatus } from '../../types';
 import {
   createConsumo,
@@ -1101,7 +1102,7 @@ export default function Conciliacion() {
             consumo.cardNumber || '',
             consumo.employeeNumber || '',
             consumo.userName || facturaRelacionada?.userName || usuarioRelacionado?.fullName || '',
-            usuarioRelacionado?.department || '',
+            getDepartmentLabel(usuarioRelacionado?.department || ''),
             buildReportDateValue(consumo.fecha),
             consumo.comercio || '',
             roundMoney(consumo.monto),

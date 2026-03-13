@@ -3,6 +3,7 @@ import useAuth from '../../hooks/useAuth';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
 import type { TicketAMEX } from '../../types';
+import { getDepartmentLabel } from '../../data/departments';
 import { TARJETAS_AMEX } from '../../data/tarjetasAMEX';
 import { CUENTAS_CONTABLES } from '../../data/cuentasContables';
 import { aprenderPatron, clasificarGastoAuto } from '../../utils/clasificadorContable';
@@ -704,7 +705,7 @@ export default function Amex() {
           <option value="all">Todas las tarjetas</option>
           {TARJETAS_AMEX.filter(t => t.activa).map(tarjeta => (
             <option key={tarjeta.id} value={tarjeta.cardNumber}>
-              {tarjeta.cardNumber} - {tarjeta.cardHolder} ({tarjeta.department})
+              {tarjeta.cardNumber} - {tarjeta.cardHolder} ({getDepartmentLabel(tarjeta.department)})
             </option>
           ))}
         </select>

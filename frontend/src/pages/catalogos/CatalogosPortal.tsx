@@ -17,6 +17,7 @@ import {
 } from '../../data/tarjetasAMEX';
 import {
   DEPARTMENT_OPTIONS,
+  getDepartmentLabel,
   replaceDepartmentOptions,
   type DepartmentOption,
 } from '../../data/departments';
@@ -534,7 +535,7 @@ export default function CatalogosPortal() {
     setEditingTarjetaForm({
       cardNumber: item.cardNumber,
       cardHolder: item.cardHolder,
-      department: item.department,
+      department: getDepartmentLabel(item.department),
       activa: item.activa,
     });
   };
@@ -1151,7 +1152,7 @@ export default function CatalogosPortal() {
                           ))}
                         </select>
                       ) : (
-                        item.department
+                        getDepartmentLabel(item.department)
                       )}
                     </td>
                     <td className="px-3 py-2">

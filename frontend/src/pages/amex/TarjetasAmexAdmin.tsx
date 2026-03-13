@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import useEscapeKey from '../../hooks/useEscapeKey';
+import { getDepartmentLabel } from '../../data/departments';
 import { replaceTarjetasAmex } from '../../data/tarjetasAMEX';
 import type { AuthUser, TarjetaAMEX } from '../../types';
 import { api } from '../../utils/api';
@@ -128,7 +129,7 @@ export default function TarjetasAmexAdmin() {
         card.cardNumber,
         card.employeeNumber,
         card.accountNumber,
-        card.department,
+        getDepartmentLabel(card.department),
         card.comodin ? 'comodin' : 'asignada',
       ]
         .map((value) => normalizeText(String(value || '')))
@@ -490,7 +491,7 @@ export default function TarjetasAmexAdmin() {
                       <tr key={card.id} className="border-t border-slate-200 align-top">
                         <td className="px-4 py-3">
                           <p className="font-semibold text-slate-900">{card.userName || card.cardHolder || 'Tarjeta comodin'}</p>
-                          <p className="text-xs text-slate-500">{card.department || 'Sin departamento'}</p>
+                          <p className="text-xs text-slate-500">{getDepartmentLabel(card.department) || 'Sin departamento'}</p>
                         </td>
                         <td className="px-4 py-3 font-mono text-slate-700">{card.cardNumber}</td>
                         <td className="px-4 py-3 text-slate-700">{card.employeeNumber || 'Sin dato'}</td>
