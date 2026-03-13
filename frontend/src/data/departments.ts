@@ -48,14 +48,31 @@ export const removeDepartmentOption = (value: string) => {
   replaceDepartmentOptions(DEPARTMENT_OPTIONS.filter((item) => item.value !== normalizedValue));
 };
 
+const prettifyDepartmentValue = (value: string) =>
+  value
+    .split('_')
+    .filter(Boolean)
+    .map((segment) => {
+      const upperSegment = segment.toUpperCase();
+      if (upperSegment === 'PLC' || upperSegment === 'RH' || upperSegment === 'BI') {
+        return upperSegment;
+      }
+      return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase();
+    })
+    .join(' ');
+
 export const getDepartmentLabel = (value: string) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue) return '';
 
-  const match = DEPARTMENT_OPTIONS.find(
+  const match = [...DEPARTMENT_OPTIONS, ...DEFAULT_DEPARTMENT_OPTIONS].find(
     (item) => item.value === normalizedValue || item.label === normalizedValue
   );
 
-  return match?.label || normalizedValue;
+  if (match?.label) {
+    return match.label;
+  }
+
+  return normalizedValue.includes('_') ? prettifyDepartmentValue(normalizedValue) : normalizedValue;
 };
 
