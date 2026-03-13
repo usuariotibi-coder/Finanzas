@@ -672,12 +672,6 @@ export default function Conciliacion() {
     setShowDetalleModal(true);
   };
 
-  const handleVerFacturaReadOnly = (facturaId: string) => {
-    setDetalleReadOnly(true);
-    setSelectedFacturaId(facturaId);
-    setShowDetalleModal(true);
-  };
-
   const handleVerMatchConsumo = (consumoId: string) => {
     setSelectedMatchConsumoId(consumoId);
     setShowMatchModal(true);
@@ -1832,10 +1826,6 @@ export default function Conciliacion() {
             setShowMatchModal(false);
             setSelectedMatchConsumoId(null);
           }}
-          onViewFactura={(facturaId) => {
-            setShowMatchModal(false);
-            handleVerFacturaReadOnly(facturaId);
-          }}
         />
       )}
 
@@ -2058,7 +2048,6 @@ interface MatchFacturaModalProps {
   consumo: Consumo;
   factura: Factura | null;
   onClose: () => void;
-  onViewFactura: (facturaId: string) => void;
 }
 
 interface SubirFacturaModalProps {
@@ -2556,7 +2545,7 @@ function DetalleFacturaModal({
   );
 }
 
-function MatchFacturaModal({ consumo, factura, onClose, onViewFactura }: MatchFacturaModalProps) {
+function MatchFacturaModal({ consumo, factura, onClose }: MatchFacturaModalProps) {
   useEscapeKey(onClose);
 
   const facturaStatusLabel = factura
@@ -2567,10 +2556,103 @@ function MatchFacturaModal({ consumo, factura, onClose, onViewFactura }: MatchFa
       conciliada: 'Conciliada',
     }[factura.status]
     : 'Sin factura';
+  const pdfPath = factura?.archivoPDF;
+  const xmlPath = factura?.archivoXML;
+  const pdfPreviewUrl = pdfPath ? buildFacturaAssetUrl('PDF', pdfPath) : '';
+  const xmlPreviewUrl = xmlPath ? buildFacturaAssetUrl('XML', xmlPath) : '';
+  const [showFacturaPreview, setShowFacturaPreview] = useState(false);
+  const [previewTipo, setPreviewTipo] = useState<'PDF' | 'XML' | null>(pdfPreviewUrl ? 'PDF' : xmlPreviewUrl ? 'XML' : null);
+  const [pdfPreviewBlobUrl, setPdfPreviewBlobUrl] = useState('');
+  const [pdfPreviewError, setPdfPreviewError] = useState('');
+  const [xmlPreviewContent, setXmlPreviewContent] = useState('');
+  const [xmlPreviewError, setXmlPreviewError] = useState('');
+
+  useEffect(() => {
+    if (!showFacturaPreview || previewTipo !== 'PDF' || !pdfPreviewUrl) {
+      setPdfPreviewBlobUrl((current) => {
+        if (current) {
+          URL.revokeObjectURL(current);
+        }
+        return '';
+      });
+      setPdfPreviewError('');
+      return;
+    }
+
+    let cancelled = false;
+    setPdfPreviewError('');
+
+    void fetch(pdfPreviewUrl, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el PDF.');
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        if (cancelled) {
+          return;
+        }
+        const nextBlobUrl = URL.createObjectURL(blob);
+        setPdfPreviewBlobUrl((current) => {
+          if (current) {
+            URL.revokeObjectURL(current);
+          }
+          return nextBlobUrl;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPdfPreviewError('No se pudo cargar la previsualizacion del PDF.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showFacturaPreview, previewTipo, pdfPreviewUrl]);
+
+  useEffect(() => {
+    if (!showFacturaPreview || previewTipo !== 'XML' || !xmlPreviewUrl) {
+      setXmlPreviewContent('');
+      setXmlPreviewError('');
+      return;
+    }
+
+    let cancelled = false;
+    setXmlPreviewContent('');
+    setXmlPreviewError('');
+
+    void fetch(xmlPreviewUrl, { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('No se pudo cargar el XML.');
+        }
+        return response.text();
+      })
+      .then((content) => {
+        if (!cancelled) {
+          setXmlPreviewContent(content);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setXmlPreviewError('No se pudo cargar la previsualizacion del XML.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showFacturaPreview, previewTipo, xmlPreviewUrl]);
+
+  const pdfViewerUrl = (pdfPreviewBlobUrl || pdfPreviewUrl)
+    ? `${pdfPreviewBlobUrl || pdfPreviewUrl}#view=FitH&zoom=page-width&pagemode=none`
+    : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+      <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <div className="border-b border-slate-200 bg-white px-5 py-4">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -2647,6 +2729,81 @@ function MatchFacturaModal({ consumo, factura, onClose, onViewFactura }: MatchFa
           </div>
         </div>
 
+        {showFacturaPreview && factura ? (
+          <div className="border-t border-slate-200 px-5 py-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Factura</h3>
+                <p className="text-xs text-slate-500">Vista previa dentro del mismo modal.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewTipo('PDF')}
+                  disabled={!pdfPath}
+                  className={`rounded-md border px-3 py-1.5 text-xs ${
+                    pdfPath
+                      ? previewTipo === 'PDF'
+                        ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                        : 'border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                      : 'border-slate-200 text-slate-400'
+                  }`}
+                >
+                  PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTipo('XML')}
+                  disabled={!xmlPath}
+                  className={`rounded-md border px-3 py-1.5 text-xs ${
+                    xmlPath
+                      ? previewTipo === 'XML'
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                        : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                      : 'border-slate-200 text-slate-400'
+                  }`}
+                >
+                  XML
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openFacturaAsset(previewTipo === 'XML' ? 'XML' : 'PDF', previewTipo === 'XML' ? xmlPath : pdfPath)}
+                  disabled={previewTipo === 'XML' ? !xmlPath : !pdfPath}
+                  className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:text-slate-400"
+                >
+                  Abrir aparte
+                </button>
+              </div>
+            </div>
+
+            {previewTipo === 'XML' ? (
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
+                {xmlPreviewError ? (
+                  <div className="px-4 py-6 text-sm text-rose-300">{xmlPreviewError}</div>
+                ) : xmlPreviewContent ? (
+                  <pre className="max-h-[48vh] min-h-[360px] overflow-auto px-4 py-4 text-xs leading-5 text-emerald-100">
+                    {xmlPreviewContent}
+                  </pre>
+                ) : (
+                  <div className="px-4 py-6 text-sm text-slate-300">Cargando XML...</div>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                {pdfPreviewError ? (
+                  <div className="px-4 py-6 text-sm text-rose-500">{pdfPreviewError}</div>
+                ) : (
+                  <iframe
+                    title={`Vista previa factura ${factura.folio || factura.id}`}
+                    src={pdfViewerUrl}
+                    className="h-[62vh] min-h-[520px] w-full bg-white"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
           <button
             type="button"
@@ -2658,10 +2815,10 @@ function MatchFacturaModal({ consumo, factura, onClose, onViewFactura }: MatchFa
           {factura ? (
             <button
               type="button"
-              onClick={() => onViewFactura(factura.id)}
+              onClick={() => setShowFacturaPreview((current) => !current)}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
             >
-              Ver factura
+              {showFacturaPreview ? 'Ocultar factura' : 'Ver factura'}
             </button>
           ) : null}
         </div>
