@@ -266,7 +266,7 @@ const buildReportDateValue = (value: string) => {
   return parsed;
 };
 
-const resolveProyectoJobLabel = (
+const resolveProyectoReportLabel = (
   proyectosById: Map<string, Proyecto>,
   proyectoId?: string,
   proyectoNombre?: string,
@@ -286,10 +286,16 @@ const resolveProyectoJobLabel = (
     });
 
   const codigo = String(proyecto?.codigo || '').trim();
+  const descripcion = String(proyecto?.descripcion || proyecto?.nombre || '').trim();
+  const fallbackLabel = formatProyectoLabel(proyectoNombre, proyectoId) || fallback || '';
+
+  if (codigo && descripcion && normalizeText(codigo) !== normalizeText(descripcion)) {
+    return `${codigo}\n${descripcion}`;
+  }
   if (codigo) {
     return codigo;
   }
-  return formatProyectoLabel(proyectoNombre, proyectoId) || fallback || '';
+  return fallbackLabel;
 };
 
 const REPORT_BORDER = {
@@ -1082,7 +1088,7 @@ export default function Conciliacion() {
           const usuarioRelacionado = usersById.get(String(consumo.userId || facturaRelacionada?.userId || ''));
           const propinaDetectada = Number(consumo.propinaDetectada || 0);
           const proyectoLabel = viaticoRelacionado
-            ? resolveProyectoJobLabel(
+            ? resolveProyectoReportLabel(
               proyectosById,
               viaticoRelacionado.proyectoId,
               viaticoRelacionado.proyectoNombre,
