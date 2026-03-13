@@ -110,6 +110,17 @@ class ConciliacionMatchingTests(TestCase):
 
         self.assertEqual(hints.get('pdfDetectedTotal'), 419.0)
 
+    def test_extract_pdf_structured_hints_detects_gran_total(self):
+        hints = extract_pdf_structured_hints(
+            '\n'.join([
+                'Subtotal 387.96',
+                'Impuestos 31.04',
+                'Gran total 419.00',
+            ])
+        )
+
+        self.assertEqual(hints.get('pdfDetectedTotal'), 419.0)
+
     def test_diagnose_factura_candidates_reports_match_reasons(self):
         consumo = Consumo.objects.create(
             user=self.user,

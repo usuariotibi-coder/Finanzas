@@ -101,7 +101,7 @@ def _find_rfc(text: str) -> str | None:
 
 def _find_total(text: str) -> float | None:
     patterns = [
-        r"(?:IMPORTE\s+TOTAL|MONTO\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL(?:\s+MXN|\s+MN|\s+USD)?)\s*[:$]?\s*([0-9][0-9,\.]+)",
+        r"(?:GRAN\s+TOTAL|TOTAL\s+GENERAL|IMPORTE\s+TOTAL|MONTO\s+TOTAL|TOTAL\s+A\s+PAGAR|TOTAL(?:\s+MXN|\s+MN|\s+USD)?)\s*[:$]?\s*([0-9][0-9,\.]+)",
         r"TOTAL\s*[:$]\s*([0-9][0-9,\.]+)",
     ]
     matches: list[float] = []
