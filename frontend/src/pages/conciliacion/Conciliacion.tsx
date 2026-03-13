@@ -260,11 +260,15 @@ const buildReportDateValue = (value: string) => {
   if (!value) {
     return '';
   }
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) {
+
+  const normalized = String(value).trim();
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!isoMatch) {
     return value;
   }
-  return parsed;
+
+  const [, year, month, day] = isoMatch;
+  return `${day}/${month}/${year}`;
 };
 
 const resolveProyectoReportLabel = (
@@ -324,10 +328,7 @@ const REPORT_CENTER_STYLE = {
   alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
 };
 
-const REPORT_DATE_STYLE = {
-  ...REPORT_CENTER_STYLE,
-  numFmt: 'mm-dd-yy',
-};
+const REPORT_DATE_STYLE = REPORT_CENTER_STYLE;
 
 const REPORT_AMOUNT_STYLE = {
   ...REPORT_TEXT_STYLE,
