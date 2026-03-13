@@ -48,6 +48,15 @@ export const removeDepartmentOption = (value: string) => {
   replaceDepartmentOptions(DEPARTMENT_OPTIONS.filter((item) => item.value !== normalizedValue));
 };
 
+const findDepartmentOption = (value: string) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return undefined;
+
+  return [...DEPARTMENT_OPTIONS, ...DEFAULT_DEPARTMENT_OPTIONS].find(
+    (item) => item.value === normalizedValue || item.label === normalizedValue
+  );
+};
+
 const prettifyDepartmentValue = (value: string) =>
   value
     .split('_')
@@ -65,14 +74,19 @@ export const getDepartmentLabel = (value: string) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue) return '';
 
-  const match = [...DEPARTMENT_OPTIONS, ...DEFAULT_DEPARTMENT_OPTIONS].find(
-    (item) => item.value === normalizedValue || item.label === normalizedValue
-  );
+  const match = findDepartmentOption(normalizedValue);
 
   if (match?.label) {
     return match.label;
   }
 
   return normalizedValue.includes('_') ? prettifyDepartmentValue(normalizedValue) : normalizedValue;
+};
+
+export const getDepartmentValue = (value: string) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return '';
+
+  return findDepartmentOption(normalizedValue)?.value || normalizedValue;
 };
 

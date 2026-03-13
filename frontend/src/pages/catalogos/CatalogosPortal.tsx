@@ -18,6 +18,7 @@ import {
 import {
   DEPARTMENT_OPTIONS,
   getDepartmentLabel,
+  getDepartmentValue,
   replaceDepartmentOptions,
   type DepartmentOption,
 } from '../../data/departments';
@@ -32,6 +33,7 @@ import {
   type ViaticoMealRates,
 } from '../../data/viaticoMealRates';
 import type { CuentaContable, TarjetaAMEX } from '../../types';
+import { api } from '../../utils/api';
 import {
   createAmexTarjeta,
   createCatalogCuentaContable,
@@ -61,6 +63,13 @@ const ACTIVITY_CATEGORIES: GSActivity['category'][] = ['job', 'travel', 'facilit
 const PROTECTED_DEPARTMENTS = new Set(['business_intelligence', 'finanzas', 'operaciones']);
 const DEFAULT_ACTIVITY_ACCOUNT = '5450';
 const DEFAULT_ACTIVITY_CODE = 'N/A';
+
+const normalizeCardNumber = (value: string) => value.replace(/\D/g, '').slice(0, 16);
+
+const formatCardNumberInput = (value: string) =>
+  normalizeCardNumber(value)
+    .replace(/(.{4})/g, '$1 ')
+    .trim();
 
 const normalizeDepartmentValue = (input: string) =>
   input
@@ -346,7 +355,7 @@ export default function CatalogosPortal() {
 
   const addTarjeta = async () => {
     clearMessages();
-    const cardNumber = tarjetaForm.cardNumber.trim();
+    const cardNumber = normalizeCardNumber(tarjetaForm.cardNumber);
     const cardHolder = tarjetaForm.cardHolder.trim();
     const department = tarjetaForm.department.trim();
     if (!cardNumber || !cardHolder || !department) {
@@ -357,7 +366,7 @@ export default function CatalogosPortal() {
       setError('Selecciona un departamento valido del catalogo.');
       return;
     }
-    if (tarjetas.some((item) => item.cardNumber === cardNumber)) {
+    if (tarjetas.some((item) => normalizeCardNumber(item.cardNumber) === cardNumber)) {
       setError('Ya existe una tarjeta con ese numero.');
       return;
     }
@@ -369,7 +378,7 @@ export default function CatalogosPortal() {
         activa: tarjetaForm.activa,
       });
       await refreshCatalogs();
-      setSuccess('Tarjeta AMEX agregada.');
+      setSuccess('Tarjeta Efectifintech agregada.');
       setTarjetaForm({ cardNumber: '', cardHolder: '', department: '', activa: true });
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
@@ -381,7 +390,7 @@ export default function CatalogosPortal() {
     try {
       await deleteAmexTarjeta(id);
       await refreshCatalogs();
-      setSuccess('Tarjeta AMEX eliminada.');
+      setSuccess('Tarjeta Efectifintech eliminada.');
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
     }
@@ -543,7 +552,7 @@ export default function CatalogosPortal() {
   const saveTarjetaEdit = async () => {
     clearMessages();
     if (!editingTarjetaId) return;
-    const cardNumber = editingTarjetaForm.cardNumber.trim();
+    const cardNumber = normalizeCardNumber(editingTarjetaForm.cardNumber);
     const cardHolder = editingTarjetaForm.cardHolder.trim();
     const department = editingTarjetaForm.department.trim();
     if (!cardNumber || !cardHolder || !department) {
@@ -554,20 +563,29 @@ export default function CatalogosPortal() {
       setError('Selecciona un departamento valido del catalogo.');
       return;
     }
-    if (tarjetas.some((item) => item.id !== editingTarjetaId && item.cardNumber === cardNumber)) {
+    if (tarjetas.some((item) => item.id !== editingTarjetaId && normalizeCardNumber(item.cardNumber) === cardNumber)) {
       setError('Ya existe una tarjeta con ese numero.');
       return;
     }
     try {
+      const currentCard = tarjetas.find((item) => item.id === editingTarjetaId) || null;
+      const departmentValue = getDepartmentValue(department);
+
+      if (currentCard?.userId) {
+        await api.adminUpdateUser(Number(currentCard.userId), {
+          department: departmentValue,
+        });
+      }
+
       await updateAmexTarjeta(editingTarjetaId, {
         cardNumber,
         cardHolder,
-        department,
+        department: currentCard?.userId ? departmentValue : department,
         activa: editingTarjetaForm.activa,
       });
       await refreshCatalogs();
       setEditingTarjetaId(null);
-      setSuccess('Tarjeta AMEX actualizada.');
+      setSuccess('Tarjeta Efectifintech actualizada.');
     } catch (unknownError) {
       setError(getErrorMessage(unknownError));
     }
@@ -1055,13 +1073,13 @@ export default function CatalogosPortal() {
 
       <section className="grid gap-6 xl:grid-cols-2">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Tarjetas AMEX</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Tarjetas Efectifintech</h2>
           <p className="mt-1 text-xs text-slate-600">Dropdown de tarjetas disponibles.</p>
 
           <div className="mt-4 grid gap-2 md:grid-cols-2">
             <input
-              value={tarjetaForm.cardNumber}
-              onChange={(event) => setTarjetaForm((prev) => ({ ...prev, cardNumber: event.target.value }))}
+              value={formatCardNumberInput(tarjetaForm.cardNumber)}
+              onChange={(event) => setTarjetaForm((prev) => ({ ...prev, cardNumber: normalizeCardNumber(event.target.value) }))}
               placeholder="Numero de tarjeta"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
@@ -1105,7 +1123,7 @@ export default function CatalogosPortal() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-slate-600">
                 <tr>
-                  <th className="px-3 py-2">Numero</th>
+                  <th className="px-3 py-2">Numero de Tarjeta</th>
                   <th className="px-3 py-2">Titular</th>
                   <th className="px-3 py-2">Departamento</th>
                   <th className="px-3 py-2">Activa</th>
@@ -1118,12 +1136,12 @@ export default function CatalogosPortal() {
                     <td className="px-3 py-2">
                       {editingTarjetaId === item.id ? (
                         <input
-                          value={editingTarjetaForm.cardNumber}
-                          onChange={(event) => setEditingTarjetaForm((prev) => ({ ...prev, cardNumber: event.target.value }))}
+                          value={formatCardNumberInput(editingTarjetaForm.cardNumber)}
+                          onChange={(event) => setEditingTarjetaForm((prev) => ({ ...prev, cardNumber: normalizeCardNumber(event.target.value) }))}
                           className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
                         />
                       ) : (
-                        item.cardNumber
+                        formatCardNumberInput(item.cardNumber)
                       )}
                     </td>
                     <td className="px-3 py-2">
