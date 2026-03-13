@@ -2651,9 +2651,9 @@ function MatchFacturaModal({ consumo, factura, onClose }: MatchFacturaModalProps
     : '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-        <div className="border-b border-slate-200 bg-white px-5 py-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/55 p-3 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-4">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">Ver Match de Factura</h2>
@@ -2667,70 +2667,71 @@ function MatchFacturaModal({ consumo, factura, onClose }: MatchFacturaModalProps
           </div>
         </div>
 
-        <div className="grid gap-4 p-5 md:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">Efectifintech</p>
-            <div className="mt-4 space-y-3">
-              <div>
-                <p className="text-xs text-slate-500">Comercio</p>
-                <p className="text-sm font-semibold text-slate-900">{consumo.comercio}</p>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid gap-4 p-5 md:grid-cols-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">Efectifintech</p>
+              <div className="mt-4 space-y-3">
+                <div>
+                  <p className="text-xs text-slate-500">Comercio</p>
+                  <p className="text-sm font-semibold text-slate-900">{consumo.comercio}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-slate-500">Fecha</p>
+                    <p className="text-sm text-slate-900">{consumo.fecha}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Monto</p>
+                    <p className="text-sm font-semibold text-slate-900">${consumo.monto.toLocaleString()}</p>
+                  </div>
+                </div>
+                {consumo.userName ? (
+                  <div>
+                    <p className="text-xs text-slate-500">Usuario</p>
+                    <p className="text-sm text-slate-900">{consumo.userName}</p>
+                  </div>
+                ) : null}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-slate-500">Fecha</p>
-                  <p className="text-sm text-slate-900">{consumo.fecha}</p>
+            </div>
+
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-700">Factura</p>
+              {factura ? (
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-emerald-700/70">Emisor</p>
+                    <p className="text-sm font-semibold text-slate-900">{factura.razonSocial}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-emerald-700/70">Fecha</p>
+                      <p className="text-sm text-slate-900">{factura.fecha}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-emerald-700/70">Total</p>
+                      <p className="text-sm font-semibold text-slate-900">${factura.total.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-emerald-700/70">Folio</p>
+                      <p className="text-sm text-slate-900">{factura.folio}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-emerald-700/70">Estado</p>
+                      <p className="text-sm text-slate-900">{facturaStatusLabel}</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-slate-500">Monto</p>
-                  <p className="text-sm font-semibold text-slate-900">${consumo.monto.toLocaleString()}</p>
-                </div>
-              </div>
-              {consumo.userName ? (
-                <div>
-                  <p className="text-xs text-slate-500">Usuario</p>
-                  <p className="text-sm text-slate-900">{consumo.userName}</p>
-                </div>
-              ) : null}
+              ) : (
+                <p className="mt-4 text-sm text-slate-600">No hay factura relacionada para este consumo.</p>
+              )}
             </div>
           </div>
 
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-700">Factura</p>
-            {factura ? (
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="text-xs text-emerald-700/70">Emisor</p>
-                  <p className="text-sm font-semibold text-slate-900">{factura.razonSocial}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-emerald-700/70">Fecha</p>
-                    <p className="text-sm text-slate-900">{factura.fecha}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-emerald-700/70">Total</p>
-                    <p className="text-sm font-semibold text-slate-900">${factura.total.toLocaleString()}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-emerald-700/70">Folio</p>
-                    <p className="text-sm text-slate-900">{factura.folio}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-emerald-700/70">Estado</p>
-                    <p className="text-sm text-slate-900">{facturaStatusLabel}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-slate-600">No hay factura relacionada para este consumo.</p>
-            )}
-          </div>
-        </div>
-
-        {showFacturaPreview && factura ? (
-          <div className="border-t border-slate-200 px-5 py-4">
+          {showFacturaPreview && factura ? (
+            <div className="border-t border-slate-200 px-5 py-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Factura</h3>
@@ -2801,8 +2802,9 @@ function MatchFacturaModal({ consumo, factura, onClose }: MatchFacturaModalProps
                 )}
               </div>
             )}
-          </div>
-        ) : null}
+            </div>
+          ) : null}
+        </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-4">
           <button
