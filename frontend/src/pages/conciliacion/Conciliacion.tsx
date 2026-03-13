@@ -3,7 +3,7 @@ import { read, utils as XLSXUtils, writeFile } from 'xlsx-js-style';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useAuth from '../../hooks/useAuth';
 import useLocalStorageState from '../../hooks/useLocalStorageState';
-import type { Factura, AlertaConciliacion, Consumo, TarjetaAMEX, TicketAMEX, FacturaStatus } from '../../types';
+import type { Factura, AlertaConciliacion, Consumo, Proyecto, TarjetaAMEX, TicketAMEX, FacturaStatus } from '../../types';
 import {
   createConsumo,
   createFactura,
@@ -13,6 +13,7 @@ import {
   fetchAmexTarjetas,
   fetchConsumos,
   fetchFacturas,
+  fetchProyectos,
   fetchViaticos,
   syncCoreAppData,
   updateAmexTicket,
@@ -263,6 +264,32 @@ const buildReportDateValue = (value: string) => {
     return value;
   }
   return parsed;
+};
+
+const resolveProyectoJobLabel = (
+  proyectosById: Map<string, Proyecto>,
+  proyectoId?: string,
+  proyectoNombre?: string,
+  fallback?: string,
+) => {
+  const normalizedProyectoId = String(proyectoId || '').trim();
+  const normalizedProyectoNombre = normalizeText(proyectoNombre || '');
+  const proyecto = normalizedProyectoId
+    ? proyectosById.get(normalizedProyectoId)
+    : Array.from(proyectosById.values()).find((item) => {
+      const candidates = [
+        item.id,
+        item.codigo,
+        item.nombre,
+      ].map((value) => normalizeText(String(value || ''))).filter(Boolean);
+      return normalizedProyectoNombre ? candidates.includes(normalizedProyectoNombre) : false;
+    });
+
+  const codigo = String(proyecto?.codigo || '').trim();
+  if (codigo) {
+    return codigo;
+  }
+  return formatProyectoLabel(proyectoNombre, proyectoId) || fallback || '';
 };
 
 const REPORT_BORDER = {
@@ -987,8 +1014,9 @@ export default function Conciliacion() {
     setStatementImportMessage('');
 
     try {
-      const [viaticos, usersResponse] = await Promise.all([
+      const [viaticos, proyectos, usersResponse] = await Promise.all([
         fetchViaticos().catch(() => []),
+        fetchProyectos().catch(() => []),
         (async () => {
           try {
             return await api.adminUsers();
@@ -1014,6 +1042,7 @@ export default function Conciliacion() {
       }
 
       const viaticosById = new Map(viaticos.map((viatico) => [String(viatico.id), viatico]));
+      const proyectosById = new Map(proyectos.map((proyecto) => [String(proyecto.id), proyecto]));
       const reportHeaders = [
         'Tarjeta',
         'Num. Empleado',
@@ -1053,9 +1082,11 @@ export default function Conciliacion() {
           const usuarioRelacionado = usersById.get(String(consumo.userId || facturaRelacionada?.userId || ''));
           const propinaDetectada = Number(consumo.propinaDetectada || 0);
           const proyectoLabel = viaticoRelacionado
-            ? (
-              formatProyectoLabel(viaticoRelacionado.proyectoNombre, viaticoRelacionado.proyectoId)
-              || viaticoRelacionado.motivo
+            ? resolveProyectoJobLabel(
+              proyectosById,
+              viaticoRelacionado.proyectoId,
+              viaticoRelacionado.proyectoNombre,
+              viaticoRelacionado.motivo,
             )
             : '';
           const gastoNoComprobado = facturaRelacionada ? 0 : roundMoney(consumo.monto);
