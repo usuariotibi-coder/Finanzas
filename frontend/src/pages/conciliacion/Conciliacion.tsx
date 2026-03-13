@@ -1673,31 +1673,31 @@ export default function Conciliacion() {
         {/* Tabla de Facturas */}
         {vistaActiva === 'facturas' && (
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed">
+            <table className="min-w-[1100px] w-full table-auto">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[22%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Folio / UUID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[24%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Razón Social
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fecha
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[14%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Match
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Archivos
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
@@ -1719,24 +1719,24 @@ export default function Conciliacion() {
                       : 'inline-flex min-w-[92px] justify-center px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium';
                     return (
                   <tr key={factura.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-900">{factura.folio}</p>
-                      <p className="text-xs text-gray-500 font-mono">{factura.uuid.substring(0, 20)}...</p>
+                    <td className="px-6 py-4 align-top">
+                      <p className="break-all text-sm font-medium text-gray-900">{factura.folio}</p>
+                      <p className="mt-1 break-all text-xs text-gray-500 font-mono">{factura.uuid.substring(0, 20)}...</p>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-900">{factura.razonSocial}</p>
-                      <p className="text-xs text-gray-500">{factura.rfc}</p>
+                    <td className="px-6 py-4 align-top">
+                      <p className="break-words text-sm text-gray-900">{factura.razonSocial}</p>
+                      <p className="mt-1 break-all text-xs text-gray-500">{factura.rfc}</p>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap align-top">
                       <p className="text-sm text-gray-900">{factura.fecha}</p>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap align-top">
                       <p className="text-sm font-semibold text-gray-900">${factura.total.toLocaleString()}</p>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 align-top">
                       <span className={matchClassName}>{matchLabel}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap align-top">
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -1767,10 +1767,10 @@ export default function Conciliacion() {
                         <p className="mt-1 text-[10px] text-gray-400">Sin archivos</p>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap align-top">
                       <StatusBadge status={factura.status} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium align-top">
                       <button
                         onClick={() => handleVerDetalles(factura.id)}
                         className="text-primary-600 hover:text-primary-900"
