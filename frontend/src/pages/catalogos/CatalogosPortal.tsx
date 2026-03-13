@@ -48,6 +48,11 @@ import {
   fetchCatalogUserCategories,
   fetchCatalogGSActivities,
   fetchViaticoMealRates,
+  updateAmexTarjeta,
+  updateCatalogCuentaContable,
+  updateCatalogDepartment,
+  updateCatalogGSActivity,
+  updateCatalogUserCategory,
   updateViaticoMealRates,
 } from '../../utils/backendSync';
 
@@ -144,6 +149,39 @@ export default function CatalogosPortal() {
     reviewed: false,
   });
   const [rateConfirmPhrase, setRateConfirmPhrase] = useState('');
+  const [editingActivityId, setEditingActivityId] = useState<number | null>(null);
+  const [editingActivityForm, setEditingActivityForm] = useState({
+    label: '',
+    category: 'travel' as GSActivity['category'],
+    proyectoRequerido: true,
+    note: '',
+  });
+  const [editingCuentaCodigo, setEditingCuentaCodigo] = useState<string | null>(null);
+  const [editingCuentaForm, setEditingCuentaForm] = useState({
+    nombre: '',
+    descripcion: '',
+    categoria: 'General',
+    proyectoRequerido: false,
+    keywords: '',
+    activa: true,
+  });
+  const [editingTarjetaId, setEditingTarjetaId] = useState<string | null>(null);
+  const [editingTarjetaForm, setEditingTarjetaForm] = useState({
+    cardNumber: '',
+    cardHolder: '',
+    department: '',
+    activa: true,
+  });
+  const [editingDepartmentValue, setEditingDepartmentValue] = useState<string | null>(null);
+  const [editingDepartmentForm, setEditingDepartmentForm] = useState({
+    label: '',
+    value: '',
+  });
+  const [editingUserCategoryValue, setEditingUserCategoryValue] = useState<string | null>(null);
+  const [editingUserCategoryForm, setEditingUserCategoryForm] = useState({
+    label: '',
+    value: '',
+  });
 
   const availableDepartmentLabels = Array.from(
     new Set(
@@ -418,6 +456,190 @@ export default function CatalogosPortal() {
     }
   };
 
+  const startEditingActivity = (item: GSActivity) => {
+    clearMessages();
+    setEditingActivityId(item.id);
+    setEditingActivityForm({
+      label: item.label,
+      category: item.category,
+      proyectoRequerido: item.proyectoRequerido,
+      note: item.note || '',
+    });
+  };
+
+  const saveActivityEdit = async () => {
+    clearMessages();
+    if (editingActivityId === null) return;
+    const label = editingActivityForm.label.trim();
+    if (!label) {
+      setError('La actividad requiere nombre.');
+      return;
+    }
+    try {
+      await updateCatalogGSActivity(editingActivityId, {
+        label,
+        category: editingActivityForm.category,
+        proyectoRequerido: editingActivityForm.proyectoRequerido,
+        note: editingActivityForm.note.trim(),
+      });
+      await refreshCatalogs();
+      setEditingActivityId(null);
+      setSuccess('Actividad actualizada.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const startEditingCuenta = (item: CuentaContable) => {
+    clearMessages();
+    setEditingCuentaCodigo(item.codigo);
+    setEditingCuentaForm({
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      categoria: item.categoria,
+      proyectoRequerido: item.proyectoRequerido,
+      keywords: item.keywords.join(', '),
+      activa: item.activa,
+    });
+  };
+
+  const saveCuentaEdit = async () => {
+    clearMessages();
+    if (!editingCuentaCodigo) return;
+    const nombre = editingCuentaForm.nombre.trim();
+    if (!nombre) {
+      setError('La cuenta requiere nombre.');
+      return;
+    }
+    try {
+      await updateCatalogCuentaContable(editingCuentaCodigo, {
+        nombre,
+        descripcion: editingCuentaForm.descripcion.trim(),
+        categoria: editingCuentaForm.categoria.trim() || 'General',
+        proyectoRequerido: editingCuentaForm.proyectoRequerido,
+        keywords: splitKeywords(editingCuentaForm.keywords),
+        activa: editingCuentaForm.activa,
+      });
+      await refreshCatalogs();
+      setEditingCuentaCodigo(null);
+      setSuccess('Cuenta contable actualizada.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const startEditingTarjeta = (item: TarjetaAMEX) => {
+    clearMessages();
+    setEditingTarjetaId(item.id);
+    setEditingTarjetaForm({
+      cardNumber: item.cardNumber,
+      cardHolder: item.cardHolder,
+      department: item.department,
+      activa: item.activa,
+    });
+  };
+
+  const saveTarjetaEdit = async () => {
+    clearMessages();
+    if (!editingTarjetaId) return;
+    const cardNumber = editingTarjetaForm.cardNumber.trim();
+    const cardHolder = editingTarjetaForm.cardHolder.trim();
+    const department = editingTarjetaForm.department.trim();
+    if (!cardNumber || !cardHolder || !department) {
+      setError('La tarjeta requiere numero, titular y departamento.');
+      return;
+    }
+    if (!availableDepartmentLabels.includes(department)) {
+      setError('Selecciona un departamento valido del catalogo.');
+      return;
+    }
+    if (tarjetas.some((item) => item.id !== editingTarjetaId && item.cardNumber === cardNumber)) {
+      setError('Ya existe una tarjeta con ese numero.');
+      return;
+    }
+    try {
+      await updateAmexTarjeta(editingTarjetaId, {
+        cardNumber,
+        cardHolder,
+        department,
+        activa: editingTarjetaForm.activa,
+      });
+      await refreshCatalogs();
+      setEditingTarjetaId(null);
+      setSuccess('Tarjeta AMEX actualizada.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const startEditingDepartment = (item: DepartmentOption) => {
+    clearMessages();
+    setEditingDepartmentValue(item.value);
+    setEditingDepartmentForm({
+      label: item.label,
+      value: item.value,
+    });
+  };
+
+  const saveDepartmentEdit = async () => {
+    clearMessages();
+    if (!editingDepartmentValue) return;
+    const label = editingDepartmentForm.label.trim();
+    const nextValue = (editingDepartmentForm.value.trim() || normalizeDepartmentValue(label)).slice(0, 50);
+    if (!label || !nextValue) {
+      setError('El departamento requiere etiqueta y valor.');
+      return;
+    }
+    if (PROTECTED_DEPARTMENTS.has(editingDepartmentValue) && nextValue !== editingDepartmentValue) {
+      setError('Los departamentos protegidos solo permiten editar la etiqueta visible.');
+      return;
+    }
+    if (departments.some((item) => item.value !== editingDepartmentValue && item.value === nextValue)) {
+      setError('Ya existe un departamento con ese valor.');
+      return;
+    }
+    try {
+      await updateCatalogDepartment(editingDepartmentValue, { label, value: nextValue });
+      await refreshCatalogs();
+      setEditingDepartmentValue(null);
+      setSuccess('Departamento actualizado.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
+  const startEditingUserCategory = (item: UserCategoryOption) => {
+    clearMessages();
+    setEditingUserCategoryValue(item.value);
+    setEditingUserCategoryForm({
+      label: item.label,
+      value: item.value,
+    });
+  };
+
+  const saveUserCategoryEdit = async () => {
+    clearMessages();
+    if (!editingUserCategoryValue) return;
+    const label = editingUserCategoryForm.label.trim();
+    const nextValue = (editingUserCategoryForm.value.trim() || normalizeCategoryValue(label)).slice(0, 50);
+    if (!label || !nextValue) {
+      setError('La categoria requiere etiqueta y valor.');
+      return;
+    }
+    if (userCategories.some((item) => item.value !== editingUserCategoryValue && item.value === nextValue)) {
+      setError('Ya existe una categoria con ese valor.');
+      return;
+    }
+    try {
+      await updateCatalogUserCategory(editingUserCategoryValue, { label, value: nextValue });
+      await refreshCatalogs();
+      setEditingUserCategoryValue(null);
+      setSuccess('Categoria de usuario actualizada.');
+    } catch (unknownError) {
+      setError(getErrorMessage(unknownError));
+    }
+  };
+
   const resetViaticoRateConfirmations = () => {
     setRateConfirmChecks({ impact: false, reviewed: false });
     setRateConfirmPhrase('');
@@ -552,17 +774,97 @@ export default function CatalogosPortal() {
                 {activities.map((item) => (
                   <tr key={item.id} className="border-t border-slate-200">
                     <td className="px-3 py-2">{item.id}</td>
-                    <td className="px-3 py-2">{item.label}</td>
-                    <td className="px-3 py-2">{CATEGORY_LABELS[item.category] || item.category}</td>
+                    <td className="px-3 py-2">
+                      {editingActivityId === item.id ? (
+                        <div className="space-y-2">
+                          <input
+                            value={editingActivityForm.label}
+                            onChange={(event) => setEditingActivityForm((prev) => ({ ...prev, label: event.target.value }))}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          />
+                          <input
+                            value={editingActivityForm.note}
+                            onChange={(event) => setEditingActivityForm((prev) => ({ ...prev, note: event.target.value }))}
+                            placeholder="Nota"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          />
+                        </div>
+                      ) : (
+                        item.label
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingActivityId === item.id ? (
+                        <div className="space-y-2">
+                          <select
+                            value={editingActivityForm.category}
+                            onChange={(event) => setEditingActivityForm((prev) => ({
+                              ...prev,
+                              category: event.target.value as GSActivity['category'],
+                            }))}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          >
+                            {ACTIVITY_CATEGORIES.map((category) => (
+                              <option key={category} value={category}>
+                                {CATEGORY_LABELS[category] || category}
+                              </option>
+                            ))}
+                          </select>
+                          <label className="flex items-center gap-2 text-xs text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={editingActivityForm.proyectoRequerido}
+                              onChange={(event) => setEditingActivityForm((prev) => ({
+                                ...prev,
+                                proyectoRequerido: event.target.checked,
+                              }))}
+                            />
+                            Requiere proyecto
+                          </label>
+                        </div>
+                      ) : (
+                        CATEGORY_LABELS[item.category] || item.category
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeActivity(item.id)}
-                        disabled={item.id === GS_ACTIVITY_OTHER_ID}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Eliminar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {editingActivityId === item.id ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveActivityEdit}
+                              className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingActivityId(null)}
+                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditingActivity(item)}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs text-blue-700"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeActivity(item.id)}
+                              disabled={item.id === GS_ACTIVITY_OTHER_ID}
+                              className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -641,17 +943,106 @@ export default function CatalogosPortal() {
               <tbody>
                 {cuentas.map((item) => (
                   <tr key={item.codigo} className="border-t border-slate-200">
-                    <td className="px-3 py-2">{item.nombre}</td>
-                    <td className="px-3 py-2">{item.categoria}</td>
-                    <td className="px-3 py-2">{item.activa ? 'Si' : 'No'}</td>
+                    <td className="px-3 py-2">
+                      {editingCuentaCodigo === item.codigo ? (
+                        <div className="space-y-2">
+                          <input
+                            value={editingCuentaForm.nombre}
+                            onChange={(event) => setEditingCuentaForm((prev) => ({ ...prev, nombre: event.target.value }))}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          />
+                          <input
+                            value={editingCuentaForm.descripcion}
+                            onChange={(event) => setEditingCuentaForm((prev) => ({ ...prev, descripcion: event.target.value }))}
+                            placeholder="Descripcion"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          />
+                        </div>
+                      ) : (
+                        item.nombre
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingCuentaCodigo === item.codigo ? (
+                        <div className="space-y-2">
+                          <input
+                            value={editingCuentaForm.categoria}
+                            onChange={(event) => setEditingCuentaForm((prev) => ({ ...prev, categoria: event.target.value }))}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          />
+                          <input
+                            value={editingCuentaForm.keywords}
+                            onChange={(event) => setEditingCuentaForm((prev) => ({ ...prev, keywords: event.target.value }))}
+                            placeholder="Keywords"
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                          />
+                        </div>
+                      ) : (
+                        item.categoria
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingCuentaCodigo === item.codigo ? (
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 text-xs text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={editingCuentaForm.activa}
+                              onChange={(event) => setEditingCuentaForm((prev) => ({ ...prev, activa: event.target.checked }))}
+                            />
+                            Activa
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={editingCuentaForm.proyectoRequerido}
+                              onChange={(event) => setEditingCuentaForm((prev) => ({ ...prev, proyectoRequerido: event.target.checked }))}
+                            />
+                            Requiere proyecto
+                          </label>
+                        </div>
+                      ) : (
+                        item.activa ? 'Si' : 'No'
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeCuenta(item.codigo)}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
-                      >
-                        Eliminar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {editingCuentaCodigo === item.codigo ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveCuentaEdit}
+                              className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingCuentaCodigo(null)}
+                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditingCuenta(item)}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs text-blue-700"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeCuenta(item.codigo)}
+                              className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -723,18 +1114,98 @@ export default function CatalogosPortal() {
               <tbody>
                 {tarjetas.map((item) => (
                   <tr key={item.id} className="border-t border-slate-200">
-                    <td className="px-3 py-2">{item.cardNumber}</td>
-                    <td className="px-3 py-2">{item.cardHolder}</td>
-                    <td className="px-3 py-2">{item.department}</td>
-                    <td className="px-3 py-2">{item.activa ? 'Si' : 'No'}</td>
+                    <td className="px-3 py-2">
+                      {editingTarjetaId === item.id ? (
+                        <input
+                          value={editingTarjetaForm.cardNumber}
+                          onChange={(event) => setEditingTarjetaForm((prev) => ({ ...prev, cardNumber: event.target.value }))}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        item.cardNumber
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingTarjetaId === item.id ? (
+                        <input
+                          value={editingTarjetaForm.cardHolder}
+                          onChange={(event) => setEditingTarjetaForm((prev) => ({ ...prev, cardHolder: event.target.value }))}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        item.cardHolder
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingTarjetaId === item.id ? (
+                        <select
+                          value={editingTarjetaForm.department}
+                          onChange={(event) => setEditingTarjetaForm((prev) => ({ ...prev, department: event.target.value }))}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        >
+                          <option value="">Selecciona departamento</option>
+                          {availableDepartmentLabels.map((label) => (
+                            <option key={label} value={label}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        item.department
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingTarjetaId === item.id ? (
+                        <label className="flex items-center gap-2 text-xs text-slate-700">
+                          <input
+                            type="checkbox"
+                            checked={editingTarjetaForm.activa}
+                            onChange={(event) => setEditingTarjetaForm((prev) => ({ ...prev, activa: event.target.checked }))}
+                          />
+                          Activa
+                        </label>
+                      ) : (
+                        item.activa ? 'Si' : 'No'
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeTarjeta(item.id)}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
-                      >
-                        Eliminar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {editingTarjetaId === item.id ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveTarjetaEdit}
+                              className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingTarjetaId(null)}
+                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditingTarjeta(item)}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs text-blue-700"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeTarjeta(item.id)}
+                              className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -782,17 +1253,68 @@ export default function CatalogosPortal() {
               <tbody>
                 {departments.map((item) => (
                   <tr key={item.value} className="border-t border-slate-200">
-                    <td className="px-3 py-2">{item.label}</td>
-                    <td className="px-3 py-2">{item.value}</td>
+                    <td className="px-3 py-2">
+                      {editingDepartmentValue === item.value ? (
+                        <input
+                          value={editingDepartmentForm.label}
+                          onChange={(event) => setEditingDepartmentForm((prev) => ({ ...prev, label: event.target.value }))}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        item.label
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingDepartmentValue === item.value ? (
+                        <input
+                          value={editingDepartmentForm.value}
+                          onChange={(event) => setEditingDepartmentForm((prev) => ({ ...prev, value: event.target.value }))}
+                          disabled={PROTECTED_DEPARTMENTS.has(item.value)}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                      ) : (
+                        item.value
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeDepartment(item.value)}
-                        disabled={PROTECTED_DEPARTMENTS.has(item.value)}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Eliminar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {editingDepartmentValue === item.value ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveDepartmentEdit}
+                              className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingDepartmentValue(null)}
+                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditingDepartment(item)}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs text-blue-700"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeDepartment(item.value)}
+                              disabled={PROTECTED_DEPARTMENTS.has(item.value)}
+                              className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -956,16 +1478,66 @@ export default function CatalogosPortal() {
               <tbody>
                 {userCategories.map((item) => (
                   <tr key={item.value} className="border-t border-slate-200">
-                    <td className="px-3 py-2">{item.label}</td>
-                    <td className="px-3 py-2">{item.value}</td>
+                    <td className="px-3 py-2">
+                      {editingUserCategoryValue === item.value ? (
+                        <input
+                          value={editingUserCategoryForm.label}
+                          onChange={(event) => setEditingUserCategoryForm((prev) => ({ ...prev, label: event.target.value }))}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        item.label
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {editingUserCategoryValue === item.value ? (
+                        <input
+                          value={editingUserCategoryForm.value}
+                          onChange={(event) => setEditingUserCategoryForm((prev) => ({ ...prev, value: event.target.value }))}
+                          className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
+                        />
+                      ) : (
+                        item.value
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeUserCategory(item.value)}
-                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
-                      >
-                        Eliminar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        {editingUserCategoryValue === item.value ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={saveUserCategoryEdit}
+                              className="rounded border border-emerald-200 px-2 py-1 text-xs text-emerald-700"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingUserCategoryValue(null)}
+                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-700"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => startEditingUserCategory(item)}
+                              className="rounded border border-blue-200 px-2 py-1 text-xs text-blue-700"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeUserCategory(item.value)}
+                              className="rounded border border-red-200 px-2 py-1 text-xs text-red-700"
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -1350,6 +1350,31 @@ export const createCatalogGSActivity = async (payload: {
   return mapGSActivityFromApi(data);
 };
 
+export const updateCatalogGSActivity = async (
+  id: number,
+  payload: Partial<{
+    label: string;
+    account: string;
+    code: string;
+    category: GSActivity['category'];
+    proyectoRequerido: boolean;
+    note: string;
+  }>
+): Promise<GSActivity> => {
+  const data = (await apiFetch(`/catalogos/gs-activities/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(payload.label !== undefined ? { label: payload.label } : {}),
+      ...(payload.account !== undefined ? { account: payload.account } : {}),
+      ...(payload.code !== undefined ? { code: payload.code } : {}),
+      ...(payload.category !== undefined ? { category: payload.category } : {}),
+      ...(payload.proyectoRequerido !== undefined ? { proyecto_requerido: payload.proyectoRequerido } : {}),
+      ...(payload.note !== undefined ? { note: payload.note } : {}),
+    }),
+  })) as RawRecord;
+  return mapGSActivityFromApi(data);
+};
+
 export const deleteCatalogGSActivity = async (id: number): Promise<void> => {
   await apiFetch(`/catalogos/gs-activities/${id}/`, { method: 'DELETE' });
 };
@@ -1378,6 +1403,31 @@ export const createCatalogCuentaContable = async (payload: {
   return mapCuentaContableFromApi(data);
 };
 
+export const updateCatalogCuentaContable = async (
+  codigo: string,
+  payload: Partial<{
+    nombre: string;
+    descripcion: string;
+    categoria: string;
+    proyectoRequerido: boolean;
+    keywords: string[];
+    activa: boolean;
+  }>
+): Promise<CuentaContable> => {
+  const data = (await apiFetch(`/catalogos/cuentas-contables/${encodeURIComponent(codigo)}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(payload.nombre !== undefined ? { nombre: payload.nombre } : {}),
+      ...(payload.descripcion !== undefined ? { descripcion: payload.descripcion } : {}),
+      ...(payload.categoria !== undefined ? { categoria: payload.categoria } : {}),
+      ...(payload.proyectoRequerido !== undefined ? { proyecto_requerido: payload.proyectoRequerido } : {}),
+      ...(payload.keywords !== undefined ? { keywords: payload.keywords } : {}),
+      ...(payload.activa !== undefined ? { activa: payload.activa } : {}),
+    }),
+  })) as RawRecord;
+  return mapCuentaContableFromApi(data);
+};
+
 export const deleteCatalogCuentaContable = async (codigo: string): Promise<void> => {
   await apiFetch(`/catalogos/cuentas-contables/${encodeURIComponent(codigo)}/`, { method: 'DELETE' });
 };
@@ -1393,6 +1443,23 @@ export const createCatalogDepartment = async (payload: {
   return mapDepartmentOptionFromApi(data);
 };
 
+export const updateCatalogDepartment = async (
+  value: string,
+  payload: Partial<{
+    value: string;
+    label: string;
+  }>
+): Promise<DepartmentOption> => {
+  const data = (await apiFetch(`/catalogos/departamentos/${encodeURIComponent(value)}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(payload.value !== undefined ? { value: payload.value } : {}),
+      ...(payload.label !== undefined ? { label: payload.label } : {}),
+    }),
+  })) as RawRecord;
+  return mapDepartmentOptionFromApi(data);
+};
+
 export const deleteCatalogDepartment = async (value: string): Promise<void> => {
   await apiFetch(`/catalogos/departamentos/${encodeURIComponent(value)}/`, { method: 'DELETE' });
 };
@@ -1404,6 +1471,23 @@ export const createCatalogUserCategory = async (payload: {
   const data = (await apiFetch('/catalogos/categorias-usuario/', {
     method: 'POST',
     body: JSON.stringify(payload),
+  })) as RawRecord;
+  return mapUserCategoryOptionFromApi(data);
+};
+
+export const updateCatalogUserCategory = async (
+  value: string,
+  payload: Partial<{
+    value: string;
+    label: string;
+  }>
+): Promise<UserCategoryOption> => {
+  const data = (await apiFetch(`/catalogos/categorias-usuario/${encodeURIComponent(value)}/`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(payload.value !== undefined ? { value: payload.value } : {}),
+      ...(payload.label !== undefined ? { label: payload.label } : {}),
+    }),
   })) as RawRecord;
   return mapUserCategoryOptionFromApi(data);
 };
