@@ -121,6 +121,8 @@ type FacturaMatchResult = {
 const AMOUNT_MATCH_EPSILON = 0.01;
 const MAX_TIP_PERCENTAGE = 0.2;
 const TIP_MATCH_MIN_MERCHANT_SCORE = 0.3;
+const WEAK_MERCHANT_TIP_MAX_RATIO = 0.15;
+const WEAK_MERCHANT_TIP_MAX_DATE_DISTANCE = 21;
 const MERCHANT_FALLBACK_MIN_SCORE = 0.75;
 const MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 10;
 const MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = 0.2;
@@ -376,9 +378,15 @@ const getFacturaMatchTuple = (match: FacturaMatchResult) => [
   Number(match.propinaDetectada.toFixed(2)),
 ] as const;
 
-const hasTipMatchContext = (merchantScore: number, pdfDateScore: number) => (
+const hasTipMatchContext = (
+  merchantScore: number,
+  pdfDateScore: number,
+  tipRatio: number,
+  dateDistance: number,
+) => (
   merchantScore >= TIP_MATCH_MIN_MERCHANT_SCORE
   || (merchantScore >= 0.2 && pdfDateScore >= 0.85)
+  || (tipRatio <= WEAK_MERCHANT_TIP_MAX_RATIO && dateDistance <= WEAK_MERCHANT_TIP_MAX_DATE_DISTANCE)
 );
 
 const getFacturaMatchCandidate = (
@@ -468,7 +476,7 @@ const getFacturaMatchCandidate = (
   }
 
   const contextualAmountCandidates = amountCandidates.filter((candidate) => (
-    candidate.matchType === 'exacto' || hasTipMatchContext(merchantScore, pdfDateScore)
+    candidate.matchType === 'exacto' || hasTipMatchContext(merchantScore, pdfDateScore, candidate.tipRatio, dateDistance)
   ));
   if (contextualAmountCandidates.length === 0) {
     return null;

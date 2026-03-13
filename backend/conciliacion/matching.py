@@ -14,6 +14,8 @@ from .models import Consumo, Factura
 AMOUNT_MATCH_EPSILON = Decimal("0.01")
 MAX_TIP_RATIO = Decimal("0.20")
 TIP_MATCH_MIN_MERCHANT_SCORE = 0.30
+WEAK_MERCHANT_TIP_MAX_RATIO = Decimal("0.15")
+WEAK_MERCHANT_TIP_MAX_DATE_DISTANCE = 21
 MERCHANT_FALLBACK_MIN_SCORE = 0.75
 MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 10
 MERCHANT_FALLBACK_MAX_AMOUNT_RATIO = Decimal("0.20")
@@ -337,9 +339,12 @@ def _get_max_date_distance(has_exact_amount: bool, merchant_score: float, pdf_da
     return 9999
 
 
-def _has_tip_context(merchant_score: float, pdf_date_score: float) -> bool:
+def _has_tip_context(merchant_score: float, pdf_date_score: float, tip_percentage: Decimal, date_distance: int) -> bool:
     return merchant_score >= TIP_MATCH_MIN_MERCHANT_SCORE or (
         merchant_score >= 0.2 and pdf_date_score >= 0.85
+    ) or (
+        tip_percentage <= WEAK_MERCHANT_TIP_MAX_RATIO
+        and date_distance <= WEAK_MERCHANT_TIP_MAX_DATE_DISTANCE
     )
 
 
@@ -363,7 +368,12 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
     for item in amount_diagnostics:
         if not item.accepted or item.match_type not in ("exacto", "propina"):
             continue
-        if item.match_type == "propina" and not _has_tip_context(merchant_score, pdf_date_score):
+        if item.match_type == "propina" and not _has_tip_context(
+            merchant_score,
+            pdf_date_score,
+            item.tip_percentage / Decimal("100"),
+            date_distance,
+        ):
             continue
         accepted_amounts.append(item)
     accepted = len(accepted_amounts) > 0

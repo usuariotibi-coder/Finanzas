@@ -269,6 +269,40 @@ class ConciliacionMatchingTests(TestCase):
         self.assertIsNone(consumo.factura_id)
         self.assertFalse(consumo.matched)
 
+    def test_reconcile_factura_accepts_low_tip_match_with_weak_merchant_if_close_in_time(self):
+        consumo = Consumo.objects.create(
+            user=self.user,
+            fecha='2026-02-08',
+            comercio='AGAVE REST TAMOROS TAM M EX',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Restaurante',
+            monto=Decimal('471.50'),
+            categoria='Alimentos',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='FAAG4199',
+            uuid='46D978D7-AD38-5F5B-A373-808FFD6A0A2B',
+            rfc='EAM010110EM5',
+            razon_social='EVENTOS Y ALIMENTOS DE MEXICO',
+            fecha='2026-02-26',
+            subtotal=Decimal('419.00'),
+            iva=Decimal('0.00'),
+            total=Decimal('419.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+        )
+
+        matched_consumo = reconcile_factura_with_consumos(factura)
+        consumo.refresh_from_db()
+
+        self.assertIsNotNone(matched_consumo)
+        self.assertEqual(consumo.factura_id, factura.id)
+        self.assertTrue(consumo.matched)
+
     def test_reconcile_factura_allows_strict_fallback_match_by_merchant_when_amount_is_close(self):
         consumo = Consumo.objects.create(
             user=self.user,
