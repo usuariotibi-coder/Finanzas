@@ -134,6 +134,7 @@ export interface ConceptoFactura {
   cantidad: number;
   valorUnitario: number;
   importe: number;
+  impuestoImporte?: number;
 }
 
 export interface ValidacionCFDI {

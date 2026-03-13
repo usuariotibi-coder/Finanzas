@@ -28,7 +28,7 @@ class ConciliacionMatchingTests(TestCase):
             pais_comercio='Mexico',
             tipo_movimiento='Compra',
             concepto='Alimentos',
-            monto=Decimal('130.00'),
+            monto=Decimal('120.00'),
             categoria='Alimentos',
             matched=False,
             autorizado=False,
@@ -61,8 +61,8 @@ class ConciliacionMatchingTests(TestCase):
         self.assertIsNotNone(matched_consumo)
         self.assertEqual(consumo.factura_id, factura.id)
         self.assertTrue(consumo.matched)
-        self.assertEqual(consumo.propina_detectada, Decimal('30.00'))
-        self.assertEqual(consumo.propina_porcentaje, Decimal('30.00'))
+        self.assertEqual(consumo.propina_detectada, Decimal('20.00'))
+        self.assertEqual(consumo.propina_porcentaje, Decimal('20.00'))
         self.assertTrue(factura.match_consumo)
 
     def test_extract_pdf_structured_hints_detects_key_fields(self):
@@ -118,7 +118,7 @@ class ConciliacionMatchingTests(TestCase):
             pais_comercio='Mexico',
             tipo_movimiento='Compra',
             concepto='Alimentos',
-            monto=Decimal('130.00'),
+            monto=Decimal('120.00'),
             categoria='Alimentos',
             matched=False,
             autorizado=False,
@@ -148,6 +148,47 @@ class ConciliacionMatchingTests(TestCase):
         self.assertEqual(diagnostics[0].consumo.id, consumo.id)
         self.assertTrue(diagnostics[0].accepted)
         self.assertEqual(diagnostics[0].match_result.match_type, 'propina')
+
+    def test_reconcile_factura_uses_xml_concept_amount_plus_tax_candidate(self):
+        consumo = Consumo.objects.create(
+            user=self.user,
+            fecha='2026-03-10',
+            comercio='Proveedor industrial',
+            pais_comercio='Mexico',
+            tipo_movimiento='Compra',
+            concepto='Material',
+            monto=Decimal('120.00'),
+            categoria='Materiales',
+            matched=False,
+            autorizado=False,
+        )
+        factura = Factura.objects.create(
+            user=self.user,
+            folio='FAC-XML-CAND',
+            uuid='UUID-XML-CAND',
+            rfc='XAXX010101000',
+            razon_social='Proveedor industrial',
+            fecha='2026-03-10',
+            subtotal=Decimal('100.00'),
+            iva=Decimal('20.00'),
+            total=Decimal('100.00'),
+            forma_pago='01',
+            metodo_pago='PUE',
+            conceptos=[{
+                'descripcion': 'Material',
+                'cantidad': 1,
+                'valorUnitario': 100.0,
+                'importe': 100.0,
+                'impuestoImporte': 20.0,
+            }],
+        )
+
+        matched_consumo = reconcile_factura_with_consumos(factura)
+        consumo.refresh_from_db()
+
+        self.assertIsNotNone(matched_consumo)
+        self.assertEqual(consumo.factura_id, factura.id)
+        self.assertTrue(consumo.matched)
 
     def test_reconcile_factura_does_not_block_match_by_invoice_date_distance(self):
         consumo = Consumo.objects.create(

@@ -119,7 +119,7 @@ type FacturaMatchResult = {
 };
 
 const AMOUNT_MATCH_EPSILON = 0.01;
-const MAX_TIP_PERCENTAGE = 0.3;
+const MAX_TIP_PERCENTAGE = 0.2;
 const TIP_MATCH_MIN_MERCHANT_SCORE = 0.3;
 const MERCHANT_FALLBACK_MIN_SCORE = 0.75;
 const MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 10;
@@ -279,7 +279,38 @@ const getFacturaPdfMerchantTexts = (factura: Factura) => {
   return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
 };
 
-const getFacturaXmlTotalCandidate = (factura: Factura) => factura.total;
+const getFacturaXmlTotalCandidates = (factura: Factura) => {
+  const candidates: Array<{ source: string; candidateTotal: number }> = [];
+  const addCandidate = (source: string, candidateTotal?: number) => {
+    if (!Number.isFinite(candidateTotal) || !candidateTotal || candidateTotal <= 0) {
+      return;
+    }
+    const normalized = roundMoney(candidateTotal);
+    if (candidates.some((candidate) => Math.abs(candidate.candidateTotal - normalized) <= AMOUNT_MATCH_EPSILON)) {
+      return;
+    }
+    candidates.push({ source, candidateTotal: normalized });
+  };
+
+  addCandidate('xml_total', factura.total);
+  addCandidate('xml_subtotal_iva', factura.subtotal + factura.iva);
+
+  if (factura.conceptos.length > 0) {
+    const conceptosImporte = factura.conceptos.reduce((sum, concepto) => sum + Number(concepto.importe || 0), 0);
+    const conceptosUnitario = factura.conceptos.reduce(
+      (sum, concepto) => sum + (Number(concepto.valorUnitario || 0) * Number(concepto.cantidad || 0)),
+      0,
+    );
+    const conceptosImpuesto = factura.conceptos.reduce((sum, concepto) => sum + Number(concepto.impuestoImporte || 0), 0);
+    addCandidate('xml_conceptos_importe', conceptosImporte);
+    addCandidate('xml_conceptos_importe_impuesto', conceptosImporte + conceptosImpuesto);
+    addCandidate('xml_valor_unitario_impuesto', conceptosUnitario + conceptosImpuesto);
+    addCandidate('xml_conceptos_importe_iva', conceptosImporte + factura.iva);
+    addCandidate('xml_valor_unitario_iva', conceptosUnitario + factura.iva);
+  }
+
+  return candidates;
+};
 
 const getFacturaPdfTotalCandidate = (factura: Factura) => {
   const pdfTotal = Number(factura.validacionCFDI?.pdfDetectedTotal);
@@ -357,46 +388,53 @@ const getFacturaMatchCandidate = (
   const dateDistance = diffDays(factura.fecha, row.fecha);
   const merchantScore = getFacturaMerchantScore(factura, row);
   const pdfDateScore = getFacturaPdfDateScore(factura, row.fecha);
-  const xmlTotal = getFacturaXmlTotalCandidate(factura);
+  const xmlAmountSources = getFacturaXmlTotalCandidates(factura);
   const amountCandidates: Array<{
+    source: string;
     candidateTotal: number;
     difference: number;
     matchType: 'exacto' | 'propina';
     tipRatio: number;
   }> = [];
 
-  const buildAmountCandidate = (candidateTotal: number) => {
-      const difference = roundMoney(row.monto - candidateTotal);
-      if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
-        return {
-          candidateTotal,
-          difference: 0,
-          matchType: 'exacto' as const,
-          tipRatio: 0,
-        };
-      }
-      if (difference < 0 || candidateTotal <= 0) {
-        return null;
-      }
-      const tipRatio = difference / candidateTotal;
-      if (tipRatio > MAX_TIP_PERCENTAGE + 1e-6) {
-        return null;
-      }
+  const buildAmountCandidate = (source: string, candidateTotal: number) => {
+    const difference = roundMoney(row.monto - candidateTotal);
+    if (Math.abs(difference) <= AMOUNT_MATCH_EPSILON) {
       return {
+        source,
         candidateTotal,
-        difference,
-        matchType: 'propina' as const,
-        tipRatio,
+        difference: 0,
+        matchType: 'exacto' as const,
+        tipRatio: 0,
       };
+    }
+    if (difference < 0 || candidateTotal <= 0) {
+      return null;
+    }
+    const tipRatio = difference / candidateTotal;
+    if (tipRatio > MAX_TIP_PERCENTAGE + 1e-6) {
+      return null;
+    }
+    return {
+      source,
+      candidateTotal,
+      difference,
+      matchType: 'propina' as const,
+      tipRatio,
+    };
   };
 
-  const xmlCandidate = buildAmountCandidate(xmlTotal);
-  if (xmlCandidate) {
-    amountCandidates.push(xmlCandidate);
-  } else {
+  for (const xmlSource of xmlAmountSources) {
+    const xmlCandidate = buildAmountCandidate(xmlSource.source, xmlSource.candidateTotal);
+    if (xmlCandidate) {
+      amountCandidates.push(xmlCandidate);
+    }
+  }
+
+  if (amountCandidates.length === 0) {
     const pdfTotal = getFacturaPdfTotalCandidate(factura);
-    if (typeof pdfTotal === 'number' && Math.abs(pdfTotal - xmlTotal) > AMOUNT_MATCH_EPSILON) {
-      const pdfCandidate = buildAmountCandidate(pdfTotal);
+    if (typeof pdfTotal === 'number' && !xmlAmountSources.some((source) => Math.abs(source.candidateTotal - pdfTotal) <= AMOUNT_MATCH_EPSILON)) {
+      const pdfCandidate = buildAmountCandidate('pdf_total', pdfTotal);
       if (pdfCandidate) {
         amountCandidates.push(pdfCandidate);
       }
@@ -405,7 +443,9 @@ const getFacturaMatchCandidate = (
 
   if (amountCandidates.length === 0) {
     const pdfTotal = getFacturaPdfTotalCandidate(factura);
-    const fallbackTotal = typeof pdfTotal === 'number' ? pdfTotal : xmlTotal;
+    const fallbackTotal = typeof pdfTotal === 'number'
+      ? pdfTotal
+      : (xmlAmountSources[0]?.candidateTotal ?? factura.total);
     const fallbackDifference = Math.abs(roundMoney(row.monto - fallbackTotal));
     const fallbackRatio = fallbackTotal > 0 ? (fallbackDifference / fallbackTotal) : Number.POSITIVE_INFINITY;
     const fallbackDateOk = pdfDateScore >= 0.65 || dateDistance <= MERCHANT_FALLBACK_MAX_DATE_DISTANCE;
@@ -998,7 +1038,7 @@ export default function Conciliacion() {
       setStatementImportMessage(
         [
           `Estado de cuenta procesado: ${createdCount} nuevos, ${updatedCount} actualizados, ${matchedCount} relacionados con XML/factura y ${skippedCount} omitidos.`,
-          tipMatchedCount > 0 ? `${tipMatchedCount} coincidencias se conciliaron usando tolerancia de propina de hasta 30%.` : '',
+          tipMatchedCount > 0 ? `${tipMatchedCount} coincidencias se conciliaron usando tolerancia de propina de hasta 20%.` : '',
           warnings.length > 0 ? `Observaciones: ${warnings.slice(0, 3).join(' ')}` : '',
         ]
           .filter(Boolean)

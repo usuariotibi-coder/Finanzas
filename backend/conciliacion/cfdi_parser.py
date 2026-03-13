@@ -142,6 +142,15 @@ def parse_cfdi_xml(file_obj: Any) -> CFDIParsedData:
         descripcion = (_find_attr_case_insensitive(concepto, "Descripcion") or "").strip()
         if not descripcion:
             continue
+        concepto_impuestos = _find_first_node(concepto, "Impuestos")
+        concepto_traslados = _find_all_nodes(concepto_impuestos, "Traslado") if concepto_impuestos is not None else []
+        impuesto_importe = sum(
+            (
+                _to_decimal(_find_attr_case_insensitive(traslado, "Importe"))
+                or Decimal("0")
+            )
+            for traslado in concepto_traslados
+        )
         conceptos.append(
             {
                 "claveProdServ": (_find_attr_case_insensitive(concepto, "ClaveProdServ") or "").strip(),
@@ -152,6 +161,7 @@ def parse_cfdi_xml(file_obj: Any) -> CFDIParsedData:
                     0.0,
                 ),
                 "importe": _decimal_to_float(_to_decimal(_find_attr_case_insensitive(concepto, "Importe")), 0.0),
+                "impuestoImporte": _decimal_to_float(impuesto_importe, 0.0),
             }
         )
 

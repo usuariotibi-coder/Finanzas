@@ -12,7 +12,7 @@ from django.db.models import Q, QuerySet
 from .models import Consumo, Factura
 
 AMOUNT_MATCH_EPSILON = Decimal("0.01")
-MAX_TIP_RATIO = Decimal("0.30")
+MAX_TIP_RATIO = Decimal("0.20")
 TIP_MATCH_MIN_MERCHANT_SCORE = 0.30
 MERCHANT_FALLBACK_MIN_SCORE = 0.75
 MERCHANT_FALLBACK_MAX_DATE_DISTANCE = 10
@@ -162,8 +162,54 @@ def get_factura_pdf_merchant_texts(factura: Factura) -> list[str]:
     return list({value.strip() for value in values if str(value).strip()})
 
 
-def get_xml_total_candidate(factura: Factura) -> Decimal:
-    return Decimal(factura.total)
+def _coerce_decimal(value: Any) -> Decimal | None:
+    if value in (None, ""):
+        return None
+    try:
+        return Decimal(str(value))
+    except Exception:
+        return None
+
+
+def get_xml_total_candidates(factura: Factura) -> list[tuple[str, Decimal]]:
+    candidates: list[tuple[str, Decimal]] = []
+
+    def add_candidate(source: str, value: Decimal | None):
+        if value is None or value <= 0:
+            return
+        normalized = value.quantize(Decimal("0.01"))
+        if any(existing_value == normalized for _, existing_value in candidates):
+            return
+        candidates.append((source, normalized))
+
+    total = _coerce_decimal(factura.total)
+    subtotal = _coerce_decimal(factura.subtotal)
+    iva = _coerce_decimal(factura.iva)
+    add_candidate("xml_total", total)
+    if subtotal is not None and iva is not None:
+        add_candidate("xml_subtotal_iva", subtotal + iva)
+
+    conceptos = factura.conceptos or []
+    if conceptos:
+        conceptos_importe = sum((_coerce_decimal(concepto.get("importe")) or Decimal("0")) for concepto in conceptos if isinstance(concepto, dict))
+        conceptos_unitario = sum(
+            (_coerce_decimal(concepto.get("valorUnitario")) or Decimal("0")) * (_coerce_decimal(concepto.get("cantidad")) or Decimal("0"))
+            for concepto in conceptos
+            if isinstance(concepto, dict)
+        )
+        conceptos_impuesto = sum(
+            (_coerce_decimal(concepto.get("impuestoImporte")) or Decimal("0"))
+            for concepto in conceptos
+            if isinstance(concepto, dict)
+        )
+        add_candidate("xml_conceptos_importe", conceptos_importe)
+        add_candidate("xml_conceptos_importe_impuesto", conceptos_importe + conceptos_impuesto)
+        add_candidate("xml_valor_unitario_impuesto", conceptos_unitario + conceptos_impuesto)
+        if iva is not None:
+            add_candidate("xml_conceptos_importe_iva", conceptos_importe + iva)
+            add_candidate("xml_valor_unitario_iva", conceptos_unitario + iva)
+
+    return candidates
 
 
 def get_pdf_total_candidate(factura: Factura) -> Decimal | None:
@@ -232,13 +278,18 @@ class ConsumoMatchDiagnostic:
 
 def _build_amount_diagnostics(factura: Factura, consumo: Consumo) -> list[AmountMatchDiagnostic]:
     diagnostics: list[AmountMatchDiagnostic] = []
-    xml_total = get_xml_total_candidate(factura)
-    amount_sources: list[tuple[str, Decimal]] = [("xml_total", xml_total)]
-    xml_difference = (Decimal(consumo.monto) - xml_total).quantize(Decimal("0.01"))
-    xml_exact = abs(xml_difference) <= AMOUNT_MATCH_EPSILON
-    xml_tip = xml_difference >= 0 and xml_total > 0 and (xml_difference / xml_total) <= MAX_TIP_RATIO
+    amount_sources = get_xml_total_candidates(factura)
+    has_xml_match = False
+    for _, xml_total in amount_sources:
+        xml_difference = (Decimal(consumo.monto) - xml_total).quantize(Decimal("0.01"))
+        xml_exact = abs(xml_difference) <= AMOUNT_MATCH_EPSILON
+        xml_tip = xml_difference >= 0 and xml_total > 0 and (xml_difference / xml_total) <= MAX_TIP_RATIO
+        if xml_exact or xml_tip:
+            has_xml_match = True
+            break
+
     pdf_total = get_pdf_total_candidate(factura)
-    if not (xml_exact or xml_tip) and pdf_total is not None and pdf_total != xml_total:
+    if not has_xml_match and pdf_total is not None and all(pdf_total != existing_value for _, existing_value in amount_sources):
         amount_sources.append(("pdf_total", pdf_total))
 
     for source, candidate_total in amount_sources:
@@ -333,7 +384,7 @@ def diagnose_consumo_candidate(factura: Factura, consumo: Consumo) -> ConsumoMat
             pdf_date_score=pdf_date_score,
         )
     else:
-        xml_total = get_xml_total_candidate(factura)
+        xml_total = get_xml_total_candidates(factura)[0][1] if get_xml_total_candidates(factura) else Decimal("0.00")
         pdf_total = get_pdf_total_candidate(factura)
         fallback_total = pdf_total if pdf_total is not None and pdf_total > 0 else xml_total
         fallback_diff = abs((Decimal(consumo.monto) - fallback_total).quantize(Decimal("0.01")))
